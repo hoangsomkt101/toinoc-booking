@@ -1,0 +1,111 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { BOOKING_STATUSES, SOCKET_EVENTS, TABLE_STATUSES } = require('../src/domain/constants');
+const { normalizeTableIds, validateBookingPayload } = require('../src/domain/validators');
+const { normalizeAreaUpdatePayload, normalizeBranchAreasPayload } = require('../src/services/branches');
+const { generateApiKey, hashApiKey, normalizeAllowedOrigin } = require('../src/services/api-clients');
+const { branchSeeds, tableNumbers } = require('../src/db/seed');
+
+test('booking and table statuses preserve the spec values', () => {
+  assert.deepEqual(BOOKING_STATUSES, [
+    'PENDING',
+    'CONFIRMED',
+    'CANCELLED',
+    'NO_SHOW',
+    'CHECKED_IN',
+    'CHECKED_OUT',
+    'COMPLETED'
+  ]);
+  assert.deepEqual(TABLE_STATUSES, ['AVAILABLE', 'RESERVED', 'OCCUPIED', 'BLOCKED']);
+});
+
+test('socket event names preserve snake_case values', () => {
+  assert.equal(SOCKET_EVENTS.booking_created, 'booking_created');
+  assert.equal(SOCKET_EVENTS.booking_updated, 'booking_updated');
+  assert.equal(SOCKET_EVENTS.booking_cancelled, 'booking_cancelled');
+  assert.equal(SOCKET_EVENTS.booking_assigned, 'booking_assigned');
+  assert.equal(SOCKET_EVENTS.booking_checked_in, 'booking_checked_in');
+  assert.equal(SOCKET_EVENTS.booking_checked_out, 'booking_checked_out');
+  assert.equal(SOCKET_EVENTS.table_assignment_changed, 'table_assignment_changed');
+  assert.equal(SOCKET_EVENTS.staff_online, 'staff_online');
+  assert.equal(SOCKET_EVENTS.staff_offline, 'staff_offline');
+});
+
+test('validateBookingPayload normalizes create input', () => {
+  const payload = validateBookingPayload({
+    customer_name: '  Linh Nguyen  ',
+    phone: ' 0909000000 ',
+    booking_time: '2027-01-01T18:30:00+07:00',
+    guest_count: '4',
+    note: ' Birthday ',
+    branch_id: '1'
+  });
+
+  assert.equal(payload.customer_name, 'Linh Nguyen');
+  assert.equal(payload.phone, '0909000000');
+  assert.equal(payload.guest_count, 4);
+  assert.equal(payload.note, 'Birthday');
+  assert.equal(payload.branch_id, 1);
+  assert.ok(payload.booking_time instanceof Date);
+});
+
+test('normalizeTableIds accepts table_ids or table_id and removes duplicates', () => {
+  assert.deepEqual(normalizeTableIds({ table_ids: ['3', 1, '3', 2] }), [1, 2, 3]);
+  assert.deepEqual(normalizeTableIds({ table_id: '7' }), [7]);
+});
+
+test('normalizeBranchAreasPayload requires areas with table counts', () => {
+  const areas = normalizeBranchAreasPayload([
+    { name: ' VIP ', table_count: '2', capacity: '', table_prefix: '' },
+    { name: 'Garden', table_count: 4, capacity: 6, table_prefix: 'G' }
+  ], { required: true });
+
+  assert.deepEqual(areas, [
+    { name: 'VIP', table_count: 2, capacity: 4, table_prefix: 'VIP' },
+    { name: 'Garden', table_count: 4, capacity: 6, table_prefix: 'G' }
+  ]);
+});
+
+test('normalizeBranchAreasPayload rejects duplicate area names in one branch', () => {
+  assert.throws(
+    () => normalizeBranchAreasPayload([
+      { name: 'VIP', table_count: 1 },
+      { name: ' vip ', table_count: 2 }
+    ], { required: true }),
+    /Tên khu vực không được trùng trong cùng chi nhánh/
+  );
+});
+
+test('normalizeAreaUpdatePayload validates and trims the area name', () => {
+  assert.deepEqual(normalizeAreaUpdatePayload({ name: '  Sân thượng  ' }), { name: 'Sân thượng' });
+  assert.throws(() => normalizeAreaUpdatePayload({}), /Chưa cung cấp thông tin khu vực cần cập nhật/);
+  assert.throws(() => normalizeAreaUpdatePayload({ name: ' ' }), /Tên khu vực là bắt buộc/);
+});
+
+test('restaurant source seed preserves branch, area, and table counts', () => {
+  const summary = branchSeeds.map((branch) => ({
+    name: branch.name,
+    areas: branch.areas.map((area) => [area.name, tableNumbers(area).length]),
+    tables: branch.areas.reduce((total, area) => total + tableNumbers(area).length, 0)
+  }));
+
+  assert.deepEqual(summary, [
+    { name: 'Quận 1', areas: [['Trong nhà', 18], ['Vỉa hè', 20], ['Trên lầu', 10]], tables: 48 },
+    { name: 'Bình Thạnh', areas: [['Trong nhà', 8], ['Vỉa hè', 21], ['Trên lầu', 14], ['Tiệm phở', 6]], tables: 49 },
+    { name: 'Quận 10', areas: [['Trong nhà', 72], ['Vỉa hè', 24]], tables: 96 }
+  ]);
+});
+
+test('normalizeAllowedOrigin stores exact URL origins for public API clients', () => {
+  assert.equal(normalizeAllowedOrigin('example.com/path?x=1'), 'https://example.com');
+  assert.equal(normalizeAllowedOrigin('http://localhost:8080/test'), 'http://localhost:8080');
+  assert.throws(() => normalizeAllowedOrigin('not a domain'), /URL hợp lệ/);
+});
+
+test('API keys are generated with stable hashable format', () => {
+  const apiKey = generateApiKey();
+
+  assert.match(apiKey, /^rb_live_/);
+  assert.equal(hashApiKey(apiKey), hashApiKey(apiKey));
+  assert.notEqual(hashApiKey(apiKey), apiKey);
+});
