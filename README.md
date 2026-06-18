@@ -21,16 +21,18 @@ The dashboard is available at `http://localhost:3000/dashboard`.
 
 ## Deploy To Dokploy From Git
 - Repository: `https://github.com/hoangsomkt101/toinoc-booking.git`.
-- Create a Dokploy application from Git and choose Dockerfile deployment from the repository root.
-- Use container port `3000`. The app also respects Dokploy's `PORT` environment variable if you set a different value.
+- Create a Dokploy application from Git and choose Docker Compose deployment from the repository root to run both `app` and `postgres` from this repository.
+- Expose the `app` service on port `3000`. The app also respects Dokploy's `PORT` environment variable if you set a different value.
 - Configure the health check path as `/healthz`. `/readyz` also verifies PostgreSQL connectivity.
-- Create or attach a PostgreSQL database and set `DATABASE_URL` to its connection string.
-- Set `DB_SSL=true` only when your PostgreSQL provider requires SSL. Leave it `false` for Dokploy's internal PostgreSQL service unless SSL is enabled there.
-- Set required production variables: `NODE_ENV=production`, `SESSION_SECRET`, `ADMIN_PASSWORD`, `MANAGER_PASSWORD`, and `SALE_PASSWORD`.
+- The included `postgres` service uses database name `restaurant_booking`, user `postgres`, and `POSTGRES_PASSWORD` from Dokploy environment variables.
+- The included `app` service sets `DATABASE_URL` automatically as `postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}`.
+- Set required production variables: `SESSION_SECRET`, `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `MANAGER_PASSWORD`, and `SALE_PASSWORD`.
 - `npm start` automatically waits for PostgreSQL, runs migrations, and seeds the default branches/tables/users only when no users exist.
 - Keep `RUN_MIGRATIONS_ON_START=true` for normal deployments. Set it to `false` only if you run migrations manually.
 - Keep `SEED_ON_START=true` for first deploy so initial users are created. After users exist, the seed step is skipped automatically.
 - Enable WebSocket support in the Dokploy proxy so Socket.IO dashboard updates work.
+
+If you prefer an external managed PostgreSQL database, deploy with the Dockerfile instead of Compose and set `DATABASE_URL` manually. Set `DB_SSL=true` only when that provider requires SSL.
 
 Default seeded login usernames are `admin`, `manager`, and `sale`; their passwords come from `ADMIN_PASSWORD`, `MANAGER_PASSWORD`, and `SALE_PASSWORD`.
 
@@ -40,6 +42,8 @@ Default seeded login usernames are `admin`, `manager`, and `sale`; their passwor
 - `npm run db:up`: start local PostgreSQL with Docker Compose.
 - `npm run db:down`: stop local PostgreSQL and remove the Compose container/network.
 - `npm run db:logs`: follow PostgreSQL logs.
+- `npm run compose:up`: build and start the full app plus PostgreSQL stack.
+- `npm run compose:logs`: follow app and PostgreSQL logs.
 - `npm run migrate`: apply SQL migrations.
 - `npm run seed`: insert demo branch, areas, tables, staff, and user accounts.
 - `npm run db:setup`: run migrations and seed data.
@@ -51,6 +55,8 @@ Default seeded login usernames are `admin`, `manager`, and `sale`; their passwor
 - `PORT`: HTTP port, default `3000`.
 - `DATABASE_URL`: PostgreSQL connection string.
 - `DB_SSL`: set `true` for SSL PostgreSQL connections, default `false`.
+- `POSTGRES_PASSWORD`: password for the included Compose PostgreSQL service.
+- `POSTGRES_DB`: database name for the included Compose PostgreSQL service, default `restaurant_booking`.
 - `CORS_ORIGIN`: optional allowed origin for Socket.IO cross-origin use.
 - `SESSION_SECRET`: required in production; use a long random value.
 - `SESSION_TTL_MINUTES`: signed login cookie lifetime, default `480`.

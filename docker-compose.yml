@@ -1,11 +1,43 @@
 services:
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: "3000"
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-restaurant_booking}
+      DB_SSL: "false"
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:-}
+      SALE_PASSWORD: ${SALE_PASSWORD:-}
+      RUN_MIGRATIONS_ON_START: "true"
+      SEED_ON_START: "true"
+      DB_CONNECT_RETRIES: "30"
+      DB_CONNECT_RETRY_DELAY_MS: "2000"
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "const http=require('http');const req=http.get({host:'127.0.0.1',port:process.env.PORT||3000,path:'/healthz',timeout:4000},res=>process.exit(res.statusCode===200?0:1));req.on('error',()=>process.exit(1));req.on('timeout',()=>{req.destroy();process.exit(1);});"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: restaurant_booking
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-restaurant_booking}
     ports:
       - "5432:5432"
     volumes:
