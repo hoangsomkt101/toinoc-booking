@@ -48,6 +48,8 @@
     onlineUsers: document.getElementById('online-users-list'),
     onlineCount: document.getElementById('online-count'),
     branchScope: document.querySelector('[data-branch-scope]'),
+    dashboardDateControls: document.querySelector('[data-dashboard-date-controls]'),
+    dashboardDateFilter: document.querySelector('[data-dashboard-date-filter]'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
     branchAreaInputs: document.getElementById('branch-area-inputs'),
@@ -123,6 +125,16 @@
     return window.__SELECTED_BRANCH_ID__ || branchId;
   }
 
+  function isDateValue(value) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+  }
+
+  function dashboardBookingDateFromUrl() {
+    const dateValue = new URLSearchParams(window.location.search).get('booking_date') || window.__SELECTED_BOOKING_DATE__ || todayDateValue();
+
+    return isDateValue(dateValue) ? dateValue : todayDateValue();
+  }
+
   function roleLabel(role) {
     return roleLabels[role] || role;
   }
@@ -196,14 +208,36 @@
     return branchIdFromUrl();
   }
 
-  function branchQuery() {
+  function selectedDashboardBookingDate() {
+    if (selectors.dashboardDateFilter) {
+      return selectors.dashboardDateFilter.value || dashboardBookingDateFromUrl();
+    }
+
+    return dashboardBookingDateFromUrl();
+  }
+
+  function dashboardQuery() {
+    const params = new URLSearchParams();
     const branchId = selectedBranchId();
 
-    return branchId ? `?branch_id=${encodeURIComponent(branchId)}` : '';
+    if (branchId) {
+      params.set('branch_id', branchId);
+    }
+
+    if (window.__DASHBOARD_SECTION__ === 'bookings') {
+      const bookingDate = selectedDashboardBookingDate();
+      if (bookingDate) {
+        params.set('booking_date', bookingDate);
+      }
+    }
+
+    const query = params.toString();
+
+    return query ? `?${query}` : '';
   }
 
   function scopedPath(path) {
-    return `${path}${branchQuery()}`;
+    return `${path}${dashboardQuery()}`;
   }
 
   function setBranchSelectValue(select, value) {
@@ -278,9 +312,33 @@
   }
 
   function updateBookingDateChips(value) {
-    for (const button of document.querySelectorAll('[data-date-offset]')) {
+    for (const button of document.querySelectorAll('#create-booking-form [data-date-offset]')) {
       button.classList.toggle('active', dateOffsetValue(button.dataset.dateOffset) === value);
     }
+  }
+
+  function updateDashboardDateChips(value) {
+    for (const button of document.querySelectorAll('[data-dashboard-date-offset]')) {
+      button.classList.toggle('active', dateOffsetValue(button.dataset.dashboardDateOffset) === value);
+    }
+  }
+
+  function syncDashboardDateControls() {
+    if (!selectors.dashboardDateFilter) {
+      return;
+    }
+
+    const dateValue = selectedDashboardBookingDate();
+    selectors.dashboardDateFilter.value = dateValue;
+    updateDashboardDateChips(dateValue);
+  }
+
+  function applyDashboardDateFilter(value) {
+    const dateValue = isDateValue(value) ? value : todayDateValue();
+    const url = new URL(window.location.href);
+
+    url.searchParams.set('booking_date', dateValue);
+    window.location.assign(`${url.pathname}${url.search}${url.hash}`);
   }
 
   function setBookingDateValue(value) {
@@ -1533,6 +1591,23 @@
     });
   }
 
+  if (selectors.dashboardDateControls) {
+    selectors.dashboardDateControls.addEventListener('click', (event) => {
+      const dateButton = event.target.closest('[data-dashboard-date-offset]');
+      if (!dateButton) {
+        return;
+      }
+
+      applyDashboardDateFilter(dateOffsetValue(dateButton.dataset.dashboardDateOffset));
+    });
+  }
+
+  if (selectors.dashboardDateFilter) {
+    selectors.dashboardDateFilter.addEventListener('change', () => {
+      applyDashboardDateFilter(selectors.dashboardDateFilter.value);
+    });
+  }
+
   const addAreaButton = document.getElementById('add-area-button');
   if (addAreaButton) {
     addAreaButton.addEventListener('click', () => addAreaInputRow());
@@ -1596,6 +1671,7 @@
   }
 
   syncBranchControls();
+  syncDashboardDateControls();
   syncBookingDateControls();
   render();
 })();

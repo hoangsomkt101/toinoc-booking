@@ -12,6 +12,35 @@ const ROLE_LABELS = Object.freeze({
   manager: 'Quản lý',
   sale: 'Nhân viên kinh doanh'
 });
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function localDateValue(date = new Date()) {
+  const offset = date.getTimezoneOffset() * 60 * 1000;
+
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function normalizeDateParam(value) {
+  if (!value) {
+    return '';
+  }
+
+  const dateValue = String(value).trim();
+  if (!DATE_ONLY_PATTERN.test(dateValue)) {
+    return '';
+  }
+
+  const parsed = new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dateValue) {
+    return '';
+  }
+
+  return dateValue;
+}
+
+function selectedBookingDate(req) {
+  return normalizeDateParam(req.query.booking_date) || localDateValue();
+}
 
 function publicBranchOptions(branches) {
   return branches.map((branch) => ({
@@ -104,9 +133,11 @@ async function renderDashboard(req, res, section) {
   const scopedQuery = canManageBranches || !selectedBranchId
     ? req.query
     : { ...req.query, branch_id: selectedBranchId };
+  const bookingDate = section === 'bookings' ? selectedBookingDate(req) : '';
+  const dashboardQuery = bookingDate ? { ...scopedQuery, booking_date: bookingDate } : scopedQuery;
   const [dashboard, bookings, users, apiClients] = await Promise.all([
-    canManageBookings ? bookingService.getDashboardData(scopedQuery) : {},
-    section === 'bookings' && canManageBookings ? bookingService.listBookings(scopedQuery) : [],
+    canManageBookings ? bookingService.getDashboardData(dashboardQuery) : {},
+    section === 'bookings' && canManageBookings ? bookingService.listBookings(dashboardQuery) : [],
     section === 'users' && canManageUsers ? userService.listUsers(req.user) : [],
     section === 'api-settings' && canManageApiSettings ? apiClientService.listApiClients() : []
   ]);
@@ -136,6 +167,7 @@ async function renderDashboard(req, res, section) {
     apiClients,
     users,
     selectedBranchId,
+    selectedBookingDate: bookingDate,
     branches: visibleBranches
   });
 }

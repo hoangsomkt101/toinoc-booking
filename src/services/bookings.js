@@ -21,6 +21,7 @@ const BOOKING_STATUS_LABELS = Object.freeze({
   CHECKED_OUT: 'đã trả bàn',
   COMPLETED: 'hoàn tất'
 });
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function bookingStatusLabel(status) {
   return BOOKING_STATUS_LABELS[status] || status;
@@ -111,8 +112,28 @@ function normalizeBookingRow(row) {
 
 function dashboardFilters(query = {}) {
   return {
-    branch_id: query.branch_id ? parsePositiveInteger(query.branch_id, 'branch_id') : undefined
+    branch_id: query.branch_id ? parsePositiveInteger(query.branch_id, 'branch_id') : undefined,
+    booking_date: normalizeBookingDate(query.booking_date)
   };
+}
+
+function normalizeBookingDate(value) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const dateValue = String(value).trim();
+
+  if (!DATE_ONLY_PATTERN.test(dateValue)) {
+    throw badRequest('Ngày đặt bàn phải có định dạng YYYY-MM-DD');
+  }
+
+  const parsed = new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dateValue) {
+    throw badRequest('Ngày đặt bàn không hợp lệ');
+  }
+
+  return dateValue;
 }
 
 async function ensureBranch(client, branchId) {
@@ -187,6 +208,14 @@ async function listBookings(filters = {}, executor = pool) {
 
     params.push(statuses);
     where.push(`b.status = ANY($${params.length}::TEXT[])`);
+  }
+
+  const bookingDate = normalizeBookingDate(filters.booking_date);
+  if (bookingDate) {
+    params.push(bookingDate);
+    const dateParam = params.length;
+    where.push(`b.booking_time >= $${dateParam}::date`);
+    where.push(`b.booking_time < $${dateParam}::date + INTERVAL '1 day'`);
   }
 
   if (filters.period === 'today') {
@@ -539,11 +568,14 @@ async function deleteBooking(id) {
 async function getDashboardData(query = {}) {
   const filters = dashboardFilters(query);
   const branchFilter = filters.branch_id ? { branch_id: filters.branch_id } : {};
+  const dateFilter = filters.booking_date ? { booking_date: filters.booking_date } : {};
 
   const [todayBookings, openBookings, closedBookings, activeTables, availableTables] = await Promise.all([
-    listBookings({ ...branchFilter, period: 'today' }),
-    listBookings({ ...branchFilter, period: 'open' }),
-    listBookings({ ...branchFilter, period: 'closed' }),
+    filters.booking_date
+      ? listBookings({ ...branchFilter, ...dateFilter })
+      : listBookings({ ...branchFilter, period: 'today' }),
+    listBookings({ ...branchFilter, ...dateFilter, period: 'open' }),
+    listBookings({ ...branchFilter, ...dateFilter, period: 'closed' }),
     listTables({ ...branchFilter, status: 'RESERVED,OCCUPIED' }),
     listTables({ ...branchFilter, status: 'AVAILABLE' })
   ]);
