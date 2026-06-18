@@ -633,12 +633,13 @@ body.booking-popup-open {
 }
 
 .scope-branch-field {
-  flex: 0 0 18rem;
-  min-width: min(100%, 15rem);
+  flex: 0 0 auto;
+  min-width: 0;
+  width: 100%;
 }
 
 .scope-branch-select {
-  min-width: min(100%, 15rem);
+  width: 100%;
 }
 
 .scope-date-field {
@@ -1112,6 +1113,11 @@ details > summary::-webkit-details-marker {
     top: 1rem;
     width: fit-content;
     z-index: 10;
+  }
+
+  .scope-branch-field {
+    flex-basis: 18rem;
+    width: 18rem;
   }
 
   .dashboard-date-row {
