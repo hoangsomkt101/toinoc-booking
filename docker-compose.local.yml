@@ -1,0 +1,8 @@
+services:
+  app:
+    ports:
+      - "${APP_HOST_PORT:-3000}:3000"
+
+  postgres:
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"

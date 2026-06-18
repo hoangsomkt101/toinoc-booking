@@ -22,7 +22,7 @@ The dashboard is available at `http://localhost:3000/dashboard`.
 ## Deploy To Dokploy From Git
 - Repository: `https://github.com/hoangsomkt101/toinoc-booking.git`.
 - Create a Dokploy application from Git and choose Docker Compose deployment from the repository root to run both `app` and `postgres` from this repository.
-- Expose the `app` service on port `3000`. The app also respects Dokploy's `PORT` environment variable if you set a different value.
+- Point the Dokploy proxy to service `app` on internal port `3000`. The base Compose file intentionally does not bind host port `3000`, avoiding `port is already allocated` errors on shared Dokploy hosts.
 - Configure the health check path as `/healthz`. `/readyz` also verifies PostgreSQL connectivity.
 - The included `postgres` service uses database name `restaurant_booking`, user `postgres`, and `POSTGRES_PASSWORD` from Dokploy environment variables.
 - The included `app` service sets `DATABASE_URL` automatically as `postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}`.
@@ -42,7 +42,7 @@ Default seeded login usernames are `admin`, `manager`, and `sale`; their passwor
 - `npm run db:up`: start local PostgreSQL with Docker Compose.
 - `npm run db:down`: stop local PostgreSQL and remove the Compose container/network.
 - `npm run db:logs`: follow PostgreSQL logs.
-- `npm run compose:up`: build and start the full app plus PostgreSQL stack.
+- `npm run compose:up`: build and start the full app plus PostgreSQL stack locally. `docker-compose.local.yml` publishes local ports `3000` and `5432`; Dokploy should use only `docker-compose.yml`.
 - `npm run compose:logs`: follow app and PostgreSQL logs.
 - `npm run migrate`: apply SQL migrations.
 - `npm run seed`: insert demo branch, areas, tables, staff, and user accounts.
@@ -53,8 +53,10 @@ Default seeded login usernames are `admin`, `manager`, and `sale`; their passwor
 ## Production Runtime Variables
 - `NODE_ENV`: use `production` on Dokploy.
 - `PORT`: HTTP port, default `3000`.
+- `APP_HOST_PORT`: local Compose host port for the app override, default `3000`.
 - `DATABASE_URL`: PostgreSQL connection string.
 - `DB_SSL`: set `true` for SSL PostgreSQL connections, default `false`.
+- `POSTGRES_HOST_PORT`: local Compose host port for PostgreSQL override, default `5432`.
 - `POSTGRES_PASSWORD`: password for the included Compose PostgreSQL service.
 - `POSTGRES_DB`: database name for the included Compose PostgreSQL service, default `restaurant_booking`.
 - `CORS_ORIGIN`: optional allowed origin for Socket.IO cross-origin use.
