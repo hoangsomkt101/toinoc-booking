@@ -196,7 +196,7 @@
       return booking.customer_name;
     }
 
-    return `${booking.customer_name}(${phoneSuffix(booking.phone)})`;
+    return `(${phoneSuffix(booking.phone)})${booking.customer_name}`;
   }
 
   function bookingCustomerMeta(booking) {
