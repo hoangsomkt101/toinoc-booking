@@ -401,8 +401,8 @@ body.booking-popup-open {
 
 .assign-table-grid {
   display: grid;
-  gap: 0.6rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.25rem), 1fr));
+  gap: 0.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .assign-table-card {
@@ -410,11 +410,13 @@ body.booking-popup-open {
   border: 1px solid var(--line);
   border-radius: 0.9rem;
   cursor: pointer;
-  display: grid;
-  gap: 0.25rem;
-  min-height: 5.75rem;
-  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.25rem;
+  padding: 0.55rem 0.4rem;
   position: relative;
+  text-align: center;
 }
 
 .assign-table-card:hover,
@@ -429,23 +431,15 @@ body.booking-popup-open {
 
 .assign-table-input {
   position: absolute;
-  right: 0.65rem;
-  top: 0.65rem;
+  right: 0.35rem;
+  top: 0.35rem;
 }
 
 .assign-table-code {
   color: var(--ink);
-  font-size: 1.45rem;
+  font-size: 1.2rem;
   font-weight: 950;
   line-height: 1;
-}
-
-.assign-table-meta {
-  color: #6d645d;
-  font-size: 0.76rem;
-  font-weight: 800;
-  line-height: 1.25;
-  padding-right: 1.25rem;
 }
 
 .booking-form-intro {

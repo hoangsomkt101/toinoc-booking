@@ -728,7 +728,6 @@
         <label class="assign-table-card ${selected ? 'selected' : ''}" data-assign-table-card>
           <input class="assign-table-input" type="checkbox" name="table_ids" value="${escapeHtml(table.id)}" ${selected ? 'checked' : ''}>
           <span class="assign-table-code">${escapeHtml(table.table_code)}</span>
-          <span class="assign-table-meta">${escapeHtml(table.capacity)} khách</span>
         </label>
       `;
     });
