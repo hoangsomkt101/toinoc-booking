@@ -97,11 +97,11 @@ Supporting endpoints:
 - `POST /api/public/bookings` for allowed API domains to create `PENDING` bookings with `X-Booking-Api-Key`.
 - `GET /api/api-clients`, `POST /api/api-clients`, `PUT /api/api-clients/:id`, `DELETE /api/api-clients/:id`, and `POST /api/api-clients/:id/rotate-key` for admin-only API Settings.
 - `GET /api/branches`
-- `POST /api/branches` with `name`, `address`, and `areas: [{ name, table_count, capacity?, table_prefix? }]`
-- `POST /api/branches/:id/areas` to add one area and auto-create its tables
+- `POST /api/branches` with `name`, `address`, `table_count`, and optional `areas: [{ name }]`
+- `POST /api/branches/:id/areas` to add one display area without changing branch tables
 - `GET /api/areas` with optional `branch_id`
 - `GET /api/areas/:id`
-- `POST /api/areas` with `branch_id`, `name`, `table_count`, `capacity?`, and `table_prefix?`
+- `POST /api/areas` with `branch_id` and `name`
 - `GET /api/users`
 - `POST /api/users`
 - `GET /api/online-users`
@@ -109,6 +109,6 @@ Supporting endpoints:
 ## Domain Anchors
 - Booking statuses: `PENDING`, `CONFIRMED`, `CANCELLED`, `NO_SHOW`, `CHECKED_IN`, `CHECKED_OUT`, `COMPLETED`.
 - Table statuses: `AVAILABLE`, `RESERVED`, `OCCUPIED`, `BLOCKED`.
-- Each branch contains one or more areas, and each area owns a configured quantity of physical `tables` records.
+- Each branch owns a configured quantity of physical `tables` records. Areas are display/operational labels only and do not own tables.
 - Dashboard endpoints accept optional `branch_id`; omitting it means total mode across all branches.
 - Socket.IO events: `booking_created`, `booking_updated`, `booking_cancelled`, `booking_assigned`, `booking_checked_in`, `booking_checked_out`, `table_assignment_changed`, `staff_online`, `staff_offline`.

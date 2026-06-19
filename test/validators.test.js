@@ -72,15 +72,15 @@ test('normalizeTableIds accepts table_ids or table_id and removes duplicates', (
   assert.deepEqual(normalizeTableIds({ table_id: '7' }), [7]);
 });
 
-test('normalizeBranchAreasPayload requires areas with table counts', () => {
+test('normalizeBranchAreasPayload normalizes area names without table ownership', () => {
   const areas = normalizeBranchAreasPayload([
     { name: ' VIP ', table_count: '2', capacity: '', table_prefix: '' },
     { name: 'Garden', table_count: 4, capacity: 6, table_prefix: 'G' }
   ], { required: true });
 
   assert.deepEqual(areas, [
-    { name: 'VIP', table_count: 2, capacity: 4, table_prefix: 'VIP' },
-    { name: 'Garden', table_count: 4, capacity: 6, table_prefix: 'G' }
+    { name: 'VIP' },
+    { name: 'Garden' }
   ]);
 });
 
@@ -103,14 +103,14 @@ test('normalizeAreaUpdatePayload validates and trims the area name', () => {
 test('restaurant source seed preserves branch, area, and table counts', () => {
   const summary = branchSeeds.map((branch) => ({
     name: branch.name,
-    areas: branch.areas.map((area) => [area.name, tableNumbers(area).length]),
-    tables: branch.areas.reduce((total, area) => total + tableNumbers(area).length, 0)
+    areas: branch.areas.map((area) => area.name),
+    tables: tableNumbers(branch).length
   }));
 
   assert.deepEqual(summary, [
-    { name: 'Quận 1', areas: [['Trong nhà', 18], ['Vỉa hè', 20], ['Trên lầu', 10]], tables: 48 },
-    { name: 'Bình Thạnh', areas: [['Trong nhà', 8], ['Vỉa hè', 21], ['Trên lầu', 14], ['Tiệm phở', 6]], tables: 49 },
-    { name: 'Quận 10', areas: [['Trong nhà', 72], ['Vỉa hè', 24]], tables: 96 }
+    { name: 'Quận 1', areas: ['Trong nhà', 'Vỉa hè', 'Trên lầu'], tables: 48 },
+    { name: 'Bình Thạnh', areas: ['Trong nhà', 'Vỉa hè', 'Trên lầu', 'Tiệm phở'], tables: 49 },
+    { name: 'Quận 10', areas: ['Trong nhà', 'Vỉa hè'], tables: 96 }
   ]);
 });
 

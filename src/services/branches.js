@@ -3,19 +3,7 @@ const { badRequest, conflict, notFound } = require('../domain/errors');
 const { parsePositiveInteger } = require('../domain/validators');
 
 const DEFAULT_TABLE_CAPACITY = 4;
-
-function normalizeTableRow(row) {
-  return {
-    id: Number(row.id),
-    branch_id: row.branch_id === undefined ? undefined : Number(row.branch_id),
-    area_id: row.area_id === undefined ? undefined : Number(row.area_id),
-    table_code: row.table_code,
-    capacity: Number(row.capacity),
-    status: row.status,
-    created_at: row.created_at,
-    updated_at: row.updated_at
-  };
-}
+const NUMERIC_TABLE_CODE_PATTERN = /^\d+$/;
 
 function normalizeAreaRow(row) {
   return {
@@ -23,12 +11,6 @@ function normalizeAreaRow(row) {
     branch_id: row.branch_id === undefined ? undefined : Number(row.branch_id),
     branch_name: row.branch_name,
     name: row.name,
-    table_count: Number(row.table_count || 0),
-    available_table_count: Number(row.available_table_count || 0),
-    reserved_table_count: Number(row.reserved_table_count || 0),
-    occupied_table_count: Number(row.occupied_table_count || 0),
-    blocked_table_count: Number(row.blocked_table_count || 0),
-    tables: Array.isArray(row.tables) ? row.tables.map(normalizeTableRow) : [],
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -41,31 +23,10 @@ function areaSelect() {
       a.branch_id,
       br.name AS branch_name,
       a.name,
-      COUNT(t.id)::INTEGER AS table_count,
-      COUNT(t.id) FILTER (WHERE t.status = 'AVAILABLE')::INTEGER AS available_table_count,
-      COUNT(t.id) FILTER (WHERE t.status = 'RESERVED')::INTEGER AS reserved_table_count,
-      COUNT(t.id) FILTER (WHERE t.status = 'OCCUPIED')::INTEGER AS occupied_table_count,
-      COUNT(t.id) FILTER (WHERE t.status = 'BLOCKED')::INTEGER AS blocked_table_count,
-      COALESCE(
-        JSON_AGG(
-          JSON_BUILD_OBJECT(
-            'id', t.id,
-            'branch_id', t.branch_id,
-            'area_id', t.area_id,
-            'table_code', t.table_code,
-            'capacity', t.capacity,
-            'status', t.status,
-            'created_at', t.created_at,
-            'updated_at', t.updated_at
-          ) ORDER BY t.table_code ASC, t.id ASC
-        ) FILTER (WHERE t.id IS NOT NULL),
-        '[]'::JSON
-      ) AS tables,
       a.created_at,
       a.updated_at
     FROM areas a
     JOIN branches br ON br.id = a.branch_id
-    LEFT JOIN tables t ON t.area_id = a.id AND t.branch_id = a.branch_id
   `;
 }
 
@@ -82,6 +43,10 @@ function normalizeBranchRow(row) {
     address: row.address,
     area_count: row.area_count === undefined ? undefined : Number(row.area_count),
     table_count: row.table_count === undefined ? undefined : Number(row.table_count),
+    available_table_count: row.available_table_count === undefined ? undefined : Number(row.available_table_count),
+    reserved_table_count: row.reserved_table_count === undefined ? undefined : Number(row.reserved_table_count),
+    occupied_table_count: row.occupied_table_count === undefined ? undefined : Number(row.occupied_table_count),
+    blocked_table_count: row.blocked_table_count === undefined ? undefined : Number(row.blocked_table_count),
     has_bookings: row.has_bookings === undefined ? undefined : Boolean(row.has_bookings),
     has_users: row.has_users === undefined ? undefined : Boolean(row.has_users),
     has_staffs: row.has_staffs === undefined ? undefined : Boolean(row.has_staffs),
@@ -89,29 +54,6 @@ function normalizeBranchRow(row) {
     created_at: row.created_at,
     updated_at: row.updated_at
   };
-}
-
-function defaultTablePrefix(name) {
-  const prefix = String(name || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\u0111/g, 'd')
-    .replace(/\u0110/g, 'D')
-    .replace(/[^a-z0-9]+/gi, '')
-    .toUpperCase();
-
-  return prefix || 'AREA';
-}
-
-function normalizeTablePrefix(value, areaName) {
-  const rawPrefix = value === undefined || value === null || value === '' ? defaultTablePrefix(areaName) : String(value).trim();
-  const prefix = defaultTablePrefix(rawPrefix);
-
-  if (prefix.length > 24) {
-    throw badRequest('Tiền tố mã bàn tối đa 24 ký tự sau khi chuẩn hóa');
-  }
-
-  return prefix;
 }
 
 function normalizeAreaName(value) {
@@ -129,17 +71,7 @@ function normalizeAreaName(value) {
 }
 
 function normalizeAreaPayload(input = {}) {
-  const payload = input || {};
-  const name = normalizeAreaName(payload.name);
-
-  return {
-    name,
-    table_count: parsePositiveInteger(payload.table_count, 'table_count'),
-    capacity: payload.capacity === undefined || payload.capacity === null || payload.capacity === ''
-      ? DEFAULT_TABLE_CAPACITY
-      : parsePositiveInteger(payload.capacity, 'capacity'),
-    table_prefix: normalizeTablePrefix(payload.table_prefix, name)
-  };
+  return { name: normalizeAreaName((input || {}).name) };
 }
 
 function normalizeAreaUpdatePayload(input = {}) {
@@ -147,7 +79,7 @@ function normalizeAreaUpdatePayload(input = {}) {
     throw badRequest('Chưa cung cấp thông tin khu vực cần cập nhật');
   }
 
-  return { name: normalizeAreaName(input.name) };
+  return normalizeAreaPayload(input);
 }
 
 function normalizeBranchAreasPayload(input, { required = false } = {}) {
@@ -163,7 +95,9 @@ function normalizeBranchAreasPayload(input, { required = false } = {}) {
     throw badRequest('Danh sách khu vực phải là một mảng');
   }
 
-  const areas = input.map(normalizeAreaPayload);
+  const areas = input
+    .filter((area) => area && String(area.name || '').trim())
+    .map(normalizeAreaPayload);
 
   if (required && areas.length === 0) {
     throw badRequest('Cần có ít nhất một khu vực');
@@ -189,9 +123,13 @@ function branchSelect() {
       b.id,
       b.name,
       b.address,
+      b.table_count,
       COALESCE(area_summary.area_count, 0) AS area_count,
-      COALESCE(area_summary.table_count, 0) AS table_count,
       COALESCE(area_summary.areas, '[]'::JSON) AS areas,
+      COALESCE(table_summary.available_table_count, 0) AS available_table_count,
+      COALESCE(table_summary.reserved_table_count, 0) AS reserved_table_count,
+      COALESCE(table_summary.occupied_table_count, 0) AS occupied_table_count,
+      COALESCE(table_summary.blocked_table_count, 0) AS blocked_table_count,
       EXISTS (SELECT 1 FROM bookings WHERE branch_id = b.id) AS has_bookings,
       EXISTS (SELECT 1 FROM users WHERE branch_id = b.id) AS has_users,
       EXISTS (SELECT 1 FROM staffs WHERE branch_id = b.id) AS has_staffs,
@@ -200,54 +138,29 @@ function branchSelect() {
     FROM branches b
     LEFT JOIN LATERAL (
       SELECT
+        COUNT(*)::INTEGER AS area_count,
         JSON_AGG(
           JSON_BUILD_OBJECT(
-            'id', area_rows.id,
-            'name', area_rows.name,
-            'table_count', area_rows.table_count,
-            'available_table_count', area_rows.available_table_count,
-            'reserved_table_count', area_rows.reserved_table_count,
-            'occupied_table_count', area_rows.occupied_table_count,
-            'blocked_table_count', area_rows.blocked_table_count,
-            'tables', area_rows.tables,
-            'created_at', area_rows.created_at,
-            'updated_at', area_rows.updated_at
-          ) ORDER BY area_rows.name ASC, area_rows.id ASC
-        ) AS areas,
-        COUNT(*) AS area_count,
-        COALESCE(SUM(area_rows.table_count), 0) AS table_count
-      FROM (
-        SELECT
-          a.id,
-          a.name,
-          a.created_at,
-          a.updated_at,
-          COUNT(t.id)::INTEGER AS table_count,
-          COUNT(t.id) FILTER (WHERE t.status = 'AVAILABLE')::INTEGER AS available_table_count,
-          COUNT(t.id) FILTER (WHERE t.status = 'RESERVED')::INTEGER AS reserved_table_count,
-          COUNT(t.id) FILTER (WHERE t.status = 'OCCUPIED')::INTEGER AS occupied_table_count,
-          COUNT(t.id) FILTER (WHERE t.status = 'BLOCKED')::INTEGER AS blocked_table_count,
-          COALESCE(
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'id', t.id,
-                'branch_id', t.branch_id,
-                'area_id', t.area_id,
-                'table_code', t.table_code,
-                'capacity', t.capacity,
-                'status', t.status,
-                'created_at', t.created_at,
-                'updated_at', t.updated_at
-              ) ORDER BY t.table_code ASC, t.id ASC
-            ) FILTER (WHERE t.id IS NOT NULL),
-            '[]'::JSON
-          ) AS tables
-        FROM areas a
-        LEFT JOIN tables t ON t.area_id = a.id AND t.branch_id = a.branch_id
-        WHERE a.branch_id = b.id
-        GROUP BY a.id
-      ) area_rows
+            'id', a.id,
+            'branch_id', a.branch_id,
+            'branch_name', b.name,
+            'name', a.name,
+            'created_at', a.created_at,
+            'updated_at', a.updated_at
+          ) ORDER BY a.name ASC, a.id ASC
+        ) AS areas
+      FROM areas a
+      WHERE a.branch_id = b.id
     ) area_summary ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(t.id) FILTER (WHERE t.status = 'AVAILABLE')::INTEGER AS available_table_count,
+        COUNT(t.id) FILTER (WHERE t.status = 'RESERVED')::INTEGER AS reserved_table_count,
+        COUNT(t.id) FILTER (WHERE t.status = 'OCCUPIED')::INTEGER AS occupied_table_count,
+        COUNT(t.id) FILTER (WHERE t.status = 'BLOCKED')::INTEGER AS blocked_table_count
+      FROM tables t
+      WHERE t.branch_id = b.id
+    ) table_summary ON TRUE
   `;
 }
 
@@ -273,6 +186,12 @@ function normalizeBranchPayload(input = {}, { partial = false } = {}) {
   if (Object.prototype.hasOwnProperty.call(input, 'address')) {
     const address = input.address === null ? '' : String(input.address || '').trim();
     data.address = address || null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, 'table_count')) {
+    data.table_count = parsePositiveInteger(input.table_count, 'table_count');
+  } else if (!partial) {
+    throw badRequest('Số bàn là bắt buộc');
   }
 
   return data;
@@ -330,7 +249,6 @@ async function listAreas(filters = {}, executor = pool) {
   const result = await executor.query(
     `${areaSelect()}
      ${whereSql}
-     GROUP BY a.id, br.name
      ORDER BY br.name ASC, a.name ASC, a.id ASC`,
     params
   );
@@ -342,8 +260,7 @@ async function getAreaById(id, executor = pool) {
   const areaId = parsePositiveInteger(id, 'id');
   const result = await executor.query(
     `${areaSelect()}
-     WHERE a.id = $1
-     GROUP BY a.id, br.name`,
+     WHERE a.id = $1`,
     [areaId]
   );
 
@@ -354,62 +271,84 @@ async function getAreaById(id, executor = pool) {
   return normalizeAreaRow(result.rows[0]);
 }
 
-function buildTableCodes(prefix, tableCount, usedTableCodes) {
-  let suffix = 1;
+function tableCodeForIndex(index) {
+  return String(index);
+}
 
-  while (suffix < 1000) {
-    const effectivePrefix = suffix === 1 ? prefix : `${prefix}${suffix}`;
-    const tableCodes = Array.from({ length: tableCount }, (_, index) =>
-      `${effectivePrefix}-${String(index + 1).padStart(2, '0')}`
-    );
+function numericTableCode(value) {
+  const tableCode = String(value || '');
 
-    if (tableCodes.every((tableCode) => !usedTableCodes.has(tableCode))) {
-      for (const tableCode of tableCodes) {
-        usedTableCodes.add(tableCode);
-      }
+  return NUMERIC_TABLE_CODE_PATTERN.test(tableCode) ? Number(tableCode) : Number.POSITIVE_INFINITY;
+}
 
-      return tableCodes;
+function tableOrderSql(alias = 't') {
+  return `CASE WHEN ${alias}.table_code ~ '^[0-9]+$' THEN ${alias}.table_code::INTEGER END ASC NULLS LAST, ${alias}.table_code ASC, ${alias}.id ASC`;
+}
+
+async function syncBranchTables(client, branchId, tableCount) {
+  const existingResult = await client.query(
+    `SELECT
+       t.id,
+       t.table_code,
+       t.status,
+       EXISTS (SELECT 1 FROM booking_tables bt WHERE bt.table_id = t.id) AS has_booking_history
+     FROM tables t
+     WHERE t.branch_id = $1
+     ORDER BY ${tableOrderSql('t')}
+     FOR UPDATE`,
+    [branchId]
+  );
+  const existingRows = existingResult.rows;
+  const existingCodes = new Set(existingRows.map((row) => String(row.table_code)));
+
+  for (let index = 1; index <= tableCount; index += 1) {
+    const tableCode = tableCodeForIndex(index);
+
+    if (existingCodes.has(tableCode)) {
+      continue;
     }
 
-    suffix += 1;
+    await client.query(
+      `INSERT INTO tables (branch_id, table_code, capacity, status)
+       VALUES ($1, $2, $3, 'AVAILABLE')`,
+      [branchId, tableCode, DEFAULT_TABLE_CAPACITY]
+    );
   }
 
-  throw conflict('Không thể tạo mã bàn duy nhất cho khu vực');
+  const extraRows = existingRows.filter((row) => numericTableCode(row.table_code) > tableCount);
+  const protectedRows = extraRows.filter((row) => row.status !== 'AVAILABLE' || row.has_booking_history);
+
+  if (protectedRows.length) {
+    throw conflict(
+      'Không thể giảm số bàn vì một số bàn cần xóa đang được sử dụng hoặc có lịch sử đặt bàn',
+      protectedRows.map((row) => row.table_code)
+    );
+  }
+
+  if (extraRows.length) {
+    await client.query(
+      'DELETE FROM tables WHERE id = ANY($1::BIGINT[])',
+      [extraRows.map((row) => row.id)]
+    );
+  }
 }
 
-async function getUsedTableCodes(client, branchId) {
-  const result = await client.query('SELECT table_code FROM tables WHERE branch_id = $1', [branchId]);
-
-  return new Set(result.rows.map((row) => row.table_code));
-}
-
-async function insertAreaWithTables(client, branchId, area, usedTableCodes) {
-  const areaResult = await client.query(
+async function insertArea(client, branchId, area) {
+  const result = await client.query(
     `INSERT INTO areas (branch_id, name)
      VALUES ($1, $2)
      RETURNING id`,
     [branchId, area.name]
   );
-  const areaId = areaResult.rows[0].id;
-  const tableCodes = buildTableCodes(area.table_prefix, area.table_count, usedTableCodes);
 
-  for (const tableCode of tableCodes) {
-    await client.query(
-      `INSERT INTO tables (branch_id, area_id, table_code, capacity, status)
-       VALUES ($1, $2, $3, $4, 'AVAILABLE')`,
-      [branchId, areaId, tableCode, area.capacity]
-    );
-  }
-
-  return areaId;
+  return result.rows[0].id;
 }
 
 async function createAreaForBranch(client, branchId, input) {
   const area = normalizeAreaPayload(input);
   await getBranchById(branchId, client);
-  const usedTableCodes = await getUsedTableCodes(client, branchId);
 
-  return insertAreaWithTables(client, branchId, area, usedTableCodes);
+  return insertArea(client, branchId, area);
 }
 
 async function createArea(input = {}) {
@@ -462,56 +401,7 @@ async function deleteArea(id) {
 
   try {
     return await withTransaction(async (client) => {
-      const areaResult = await client.query(
-        `SELECT id, branch_id
-         FROM areas
-         WHERE id = $1
-         FOR UPDATE`,
-        [areaId]
-      );
-
-      if (areaResult.rowCount === 0) {
-        throw notFound('Không tìm thấy khu vực');
-      }
-
-      const branchId = areaResult.rows[0].branch_id;
-      await client.query('SELECT id FROM branches WHERE id = $1 FOR UPDATE', [branchId]);
-
-      const areaCountResult = await client.query(
-        'SELECT COUNT(*)::INTEGER AS count FROM areas WHERE branch_id = $1',
-        [branchId]
-      );
-
-      if (areaCountResult.rows[0].count <= 1) {
-        throw conflict('Không thể xóa khu vực cuối cùng của chi nhánh');
-      }
-
-      const usageResult = await client.query(
-        `SELECT
-           EXISTS (
-             SELECT 1
-             FROM booking_tables bt
-             JOIN tables t ON t.id = bt.table_id
-             WHERE t.area_id = $1
-           ) AS has_booking_history,
-           EXISTS (
-             SELECT 1
-             FROM tables
-             WHERE area_id = $1 AND status IN ('RESERVED', 'OCCUPIED')
-           ) AS has_active_tables`,
-        [areaId]
-      );
-
-      if (usageResult.rows[0].has_active_tables) {
-        throw conflict('Không thể xóa khu vực đang có bàn được đặt hoặc đang sử dụng');
-      }
-
-      if (usageResult.rows[0].has_booking_history) {
-        throw conflict('Không thể xóa khu vực có lịch sử đặt bàn');
-      }
-
       const area = await getAreaById(areaId, client);
-      await client.query('DELETE FROM tables WHERE area_id = $1', [areaId]);
       await client.query('DELETE FROM areas WHERE id = $1', [areaId]);
 
       return area;
@@ -527,21 +417,22 @@ async function deleteArea(id) {
 
 async function createBranch(input = {}) {
   const data = normalizeBranchPayload(input);
-  const areas = normalizeBranchAreasPayload(input.areas, { required: true });
+  const areas = normalizeBranchAreasPayload(input.areas);
 
   try {
     return await withTransaction(async (client) => {
       const result = await client.query(
-        `INSERT INTO branches (name, address)
-         VALUES ($1, $2)
+        `INSERT INTO branches (name, address, table_count)
+         VALUES ($1, $2, $3)
          RETURNING id`,
-        [data.name, data.address || null]
+        [data.name, data.address || null, data.table_count]
       );
       const branchId = result.rows[0].id;
-      const usedTableCodes = new Set();
+
+      await syncBranchTables(client, branchId, data.table_count);
 
       for (const area of areas) {
-        await insertAreaWithTables(client, branchId, area, usedTableCodes);
+        await insertArea(client, branchId, area);
       }
 
       return getBranchById(branchId, client);
@@ -579,7 +470,7 @@ async function updateBranch(id, input = {}) {
   const updates = [];
   const values = [];
 
-  for (const column of ['name', 'address']) {
+  for (const column of ['name', 'address', 'table_count']) {
     if (Object.prototype.hasOwnProperty.call(data, column)) {
       values.push(data[column]);
       updates.push(`${column} = $${values.length}`);
@@ -593,19 +484,25 @@ async function updateBranch(id, input = {}) {
   values.push(branchId);
 
   try {
-    const result = await pool.query(
-      `UPDATE branches
-       SET ${updates.join(', ')}
-       WHERE id = $${values.length}
-       RETURNING id`,
-      values
-    );
+    return await withTransaction(async (client) => {
+      const result = await client.query(
+        `UPDATE branches
+         SET ${updates.join(', ')}
+         WHERE id = $${values.length}
+         RETURNING id`,
+        values
+      );
 
-    if (result.rowCount === 0) {
-      throw notFound('Không tìm thấy chi nhánh');
-    }
+      if (result.rowCount === 0) {
+        throw notFound('Không tìm thấy chi nhánh');
+      }
 
-    return getBranchById(result.rows[0].id);
+      if (Object.prototype.hasOwnProperty.call(data, 'table_count')) {
+        await syncBranchTables(client, branchId, data.table_count);
+      }
+
+      return getBranchById(result.rows[0].id, client);
+    });
   } catch (error) {
     if (error.code === '23505') {
       throw conflict('Tên chi nhánh đã tồn tại');

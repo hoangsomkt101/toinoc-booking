@@ -518,7 +518,7 @@
     return [...byId.values()]
       .map((table) => {
         const selected = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id)) ? 'selected' : '';
-        const label = `${table.table_code} - ${table.area_name} (${table.capacity})`;
+        const label = `Bàn ${table.table_code} (${table.capacity})`;
         return `<option value="${escapeHtml(table.id)}" ${selected}>${escapeHtml(label)}</option>`;
       })
       .join('');
@@ -934,9 +934,6 @@
                         <li class="area-list-item">
                           <div class="area-list-summary">
                             <strong>${escapeHtml(area.name)}</strong>
-                            <span class="area-list-separator">-</span>
-                            <span class="area-list-count">${escapeHtml(area.table_count)} bàn</span>
-                            <span class="area-list-separator">-</span>
                             <details class="area-edit-panel">
                               <summary class="btn btn-outline-secondary btn-sm">Sửa</summary>
                               <form class="area-edit-form border rounded-3 p-2 mt-2 bg-body-tertiary" data-area-update="${escapeHtml(area.id)}">
@@ -967,18 +964,6 @@
                           <label class="form-label fw-semibold small">Tên khu vực</label>
                           <input class="form-control" name="name" maxlength="120" required>
                         </div>
-                        <div class="col-6 col-sm-3 col-xl">
-                          <label class="form-label fw-semibold small">Số bàn</label>
-                          <input class="form-control" name="table_count" type="number" min="1" value="1" required>
-                        </div>
-                        <div class="col-6 col-sm-3 col-xl">
-                          <label class="form-label fw-semibold small">Sức chứa</label>
-                          <input class="form-control" name="capacity" type="number" min="1" value="4" required>
-                        </div>
-                        <div class="col-12 col-sm-8 col-xl">
-                          <label class="form-label fw-semibold small">Tiền tố mã bàn</label>
-                          <input class="form-control" name="table_prefix" maxlength="24">
-                        </div>
                         <div class="col-12 col-sm-4 col-xl-auto d-grid">
                           <button class="btn btn-warning fw-bold" type="submit">Tạo khu vực</button>
                         </div>
@@ -989,7 +974,7 @@
               const areaContent = canManageBranches()
                 ? areaSummary
                 : areas.length
-                  ? areas.map((area) => `<li class="area-list-item"><div class="area-list-summary"><strong>${escapeHtml(area.name)}</strong><span class="area-list-separator">-</span><span class="area-list-count">${escapeHtml(area.table_count)} bàn</span></div></li>`).join('')
+                  ? areas.map((area) => `<li class="area-list-item"><div class="area-list-summary"><strong>${escapeHtml(area.name)}</strong></div></li>`).join('')
                   : areaSummary;
               const branchHeading = canManageBranches()
                 ? `
@@ -1016,6 +1001,10 @@
                         <div class="col-12">
                           <label class="form-label fw-semibold small">Địa chỉ</label>
                           <input class="form-control" name="address" value="${escapeHtml(branch.address || '')}" maxlength="255">
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-semibold small">Số bàn của chi nhánh</label>
+                          <input class="form-control" name="table_count" type="number" min="1" value="${escapeHtml(branch.table_count || 1)}" required>
                         </div>
                         <div class="col-12">
                           <div class="d-grid gap-2 d-sm-flex">
@@ -1061,18 +1050,6 @@
       <div class="col-12 col-sm-6 col-xl">
         <label class="form-label fw-semibold small">Tên khu vực</label>
         <input class="form-control" data-area-field="name" maxlength="120" value="${escapeHtml(values.name || '')}" required>
-      </div>
-      <div class="col-6 col-sm-3 col-xl">
-        <label class="form-label fw-semibold small">Số bàn</label>
-        <input class="form-control" data-area-field="table_count" type="number" min="1" value="${escapeHtml(values.table_count || 1)}" required>
-      </div>
-      <div class="col-6 col-sm-3 col-xl">
-        <label class="form-label fw-semibold small">Sức chứa</label>
-        <input class="form-control" data-area-field="capacity" type="number" min="1" value="${escapeHtml(values.capacity || 4)}" required>
-      </div>
-      <div class="col-12 col-sm-8 col-xl">
-        <label class="form-label fw-semibold small">Tiền tố mã bàn</label>
-        <input class="form-control" data-area-field="table_prefix" maxlength="24" value="${escapeHtml(values.table_prefix || '')}">
       </div>
       <div class="col-12 col-sm-4 col-xl-auto d-grid">
         <button class="btn btn-outline-danger" type="button" data-remove-area>Xóa</button>
@@ -1222,7 +1199,7 @@
       state.branches = await request('/api/branches');
       form.reset();
       selectors.branchAreaInputs.innerHTML = '';
-      addAreaInputRow({ name: 'VIP', table_count: 2, capacity: 4, table_prefix: 'VIP' });
+      addAreaInputRow({ name: 'VIP' });
       refreshBranchSelects();
       syncBranchControls();
       selectors.branchFormMessage.textContent = 'Đã tạo chi nhánh.';
@@ -1470,7 +1447,7 @@
     }
 
     const areaName = button.dataset.areaName;
-    if (!window.confirm(`Xóa khu vực “${areaName}” và toàn bộ bàn chưa được sử dụng trong khu vực này?`)) {
+    if (!window.confirm(`Xóa khu vực “${areaName}”? Bàn của chi nhánh sẽ không bị ảnh hưởng.`)) {
       return;
     }
 

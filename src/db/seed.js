@@ -9,28 +9,31 @@ const branchSeeds = [
   {
     name: 'Quận 1',
     address: 'đường võ văn kiệt, Quận 1, TP.HCM',
+    table_count: 48,
     areas: [
-      { name: 'Trong nhà', first_table: 1, last_table: 18 },
-      { name: 'Vỉa hè', first_table: 19, last_table: 38 },
-      { name: 'Trên lầu', first_table: 39, last_table: 48 }
+      { name: 'Trong nhà' },
+      { name: 'Vỉa hè' },
+      { name: 'Trên lầu' }
     ]
   },
   {
     name: 'Bình Thạnh',
     address: 'đường điện biên phủ, Quận Bình Thạnh, TP.HCM',
+    table_count: 49,
     areas: [
-      { name: 'Trong nhà', first_table: 1, last_table: 8 },
-      { name: 'Vỉa hè', first_table: 9, last_table: 29 },
-      { name: 'Trên lầu', first_table: 30, last_table: 43 },
-      { name: 'Tiệm phở', first_table: 44, last_table: 49 }
+      { name: 'Trong nhà' },
+      { name: 'Vỉa hè' },
+      { name: 'Trên lầu' },
+      { name: 'Tiệm phở' }
     ]
   },
   {
     name: 'Quận 10',
     address: 'đường thành thái, Quận 10, TP.HCM',
+    table_count: 96,
     areas: [
-      { name: 'Trong nhà', first_table: 1, last_table: 72 },
-      { name: 'Vỉa hè', first_table: 73, last_table: 96 }
+      { name: 'Trong nhà' },
+      { name: 'Vỉa hè' }
     ]
   }
 ];
@@ -47,42 +50,41 @@ const userSeeds = [
   { username: 'sale', display_name: 'Nhân viên kinh doanh', role: 'sale', password: authPasswords.sale }
 ];
 
-function tableNumbers(area) {
+function tableNumbers(branch) {
   return Array.from(
-    { length: area.last_table - area.first_table + 1 },
-    (_, index) => area.first_table + index
+    { length: branch.table_count },
+    (_, index) => index + 1
   );
 }
 
 async function upsertBranchStructure(client, branch) {
   const branchResult = await client.query(
-    `INSERT INTO branches (name, address)
-     VALUES ($1, $2)
-     ON CONFLICT (name) DO UPDATE SET address = EXCLUDED.address
+    `INSERT INTO branches (name, address, table_count)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (name) DO UPDATE SET address = EXCLUDED.address,
+                                      table_count = EXCLUDED.table_count
      RETURNING id`,
-    [branch.name, branch.address]
+    [branch.name, branch.address, branch.table_count]
   );
   const branchId = branchResult.rows[0].id;
 
   for (const area of branch.areas) {
-    const areaResult = await client.query(
+    await client.query(
       `INSERT INTO areas (branch_id, name)
        VALUES ($1, $2)
-       ON CONFLICT (branch_id, name) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id`,
+       ON CONFLICT (branch_id, name) DO UPDATE SET name = EXCLUDED.name`,
       [branchId, area.name]
     );
-    const areaId = areaResult.rows[0].id;
+  }
 
-    for (const tableNumber of tableNumbers(area)) {
-      await client.query(
-        `INSERT INTO tables (branch_id, area_id, table_code, capacity, status)
-         VALUES ($1, $2, $3, $4, 'AVAILABLE')
-         ON CONFLICT (branch_id, table_code)
-         DO UPDATE SET area_id = EXCLUDED.area_id, capacity = EXCLUDED.capacity`,
-        [branchId, areaId, String(tableNumber), DEFAULT_TABLE_CAPACITY]
-      );
-    }
+  for (const tableNumber of tableNumbers(branch)) {
+    await client.query(
+      `INSERT INTO tables (branch_id, table_code, capacity, status)
+       VALUES ($1, $2, $3, 'AVAILABLE')
+       ON CONFLICT (branch_id, table_code)
+       DO UPDATE SET capacity = EXCLUDED.capacity`,
+      [branchId, String(tableNumber), DEFAULT_TABLE_CAPACITY]
+    );
   }
 
   return branchId;

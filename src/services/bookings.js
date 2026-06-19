@@ -58,14 +58,11 @@ function bookingSelect(includeLogs = false) {
           'table_code', t.table_code,
           'capacity', t.capacity,
           'status', t.status,
-          'area_id', a.id,
-          'area_name', a.name,
           'assigned_at', bt.assigned_at
-        ) ORDER BY a.name, t.table_code
+        ) ORDER BY CASE WHEN t.table_code ~ '^[0-9]+$' THEN t.table_code::INTEGER END ASC NULLS LAST, t.table_code ASC, t.id ASC
       ) AS assigned_tables
       FROM booking_tables bt
       JOIN tables t ON t.id = bt.table_id
-      JOIN areas a ON a.id = t.area_id
       WHERE bt.booking_id = b.id
     ) assigned_tables ON TRUE
     ${
@@ -94,7 +91,6 @@ function normalizeTableRow(row) {
     ...row,
     id: Number(row.id),
     branch_id: row.branch_id === undefined ? undefined : Number(row.branch_id),
-    area_id: row.area_id === null || row.area_id === undefined ? null : Number(row.area_id),
     capacity: Number(row.capacity)
   };
 }
@@ -283,8 +279,6 @@ async function listTables(filters = {}, executor = pool) {
        t.id,
        t.branch_id,
        br.name AS branch_name,
-       t.area_id,
-       a.name AS area_name,
        t.table_code,
        t.capacity,
        t.status,
@@ -292,9 +286,8 @@ async function listTables(filters = {}, executor = pool) {
        t.updated_at
      FROM tables t
      JOIN branches br ON br.id = t.branch_id
-     JOIN areas a ON a.id = t.area_id
-     ${whereSql}
-     ORDER BY a.name ASC, t.table_code ASC`,
+      ${whereSql}
+      ORDER BY CASE WHEN t.table_code ~ '^[0-9]+$' THEN t.table_code::INTEGER END ASC NULLS LAST, t.table_code ASC, t.id ASC`,
     params
   );
 

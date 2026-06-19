@@ -9,7 +9,9 @@
 ## Table
 - table_code
 - capacity
-- area_id
+- branch_id
+
+Tables belong directly to a branch. Areas are display/operational labels only and do not own or limit tables.
 
 ## Table Status
 AVAILABLE

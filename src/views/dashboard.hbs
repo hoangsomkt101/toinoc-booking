@@ -54,36 +54,28 @@
               <label class="form-label fw-semibold">Tên chi nhánh</label>
               <input class="form-control" name="name" maxlength="120" required>
             </div>
-            <div class="col-12 col-md-8">
+            <div class="col-12 col-md-4">
               <label class="form-label fw-semibold">Địa chỉ</label>
               <input class="form-control" name="address" maxlength="255">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold">Số bàn của chi nhánh</label>
+              <input class="form-control" name="table_count" type="number" min="1" value="1" required>
             </div>
             <div class="col-12">
               <div class="border rounded-4 p-3 bg-body">
                 <div class="d-flex flex-column flex-sm-row align-items-sm-start justify-content-sm-between gap-2 mb-3">
                   <div>
-                    <strong class="d-block">Khu vực và bàn</strong>
-                    <span class="text-body-secondary small">Mỗi chi nhánh cần ít nhất một khu vực. Số bàn sẽ được tạo tự động theo cấu hình của từng khu vực.</span>
+                    <strong class="d-block">Khu vực</strong>
+                    <span class="text-body-secondary small">Khu vực chỉ dùng để phân vùng hiển thị, không kiểm soát bàn. Bàn được quản lý lưu động theo tổng số bàn của chi nhánh.</span>
                   </div>
                   <button class="btn btn-outline-secondary btn-sm flex-shrink-0" type="button" id="add-area-button">Thêm khu vực</button>
                 </div>
                 <div class="d-grid gap-3" id="branch-area-inputs">
                   <div class="area-input-row row g-2 align-items-end m-0 border rounded-3 p-2 bg-body" data-area-row>
-                    <div class="col-12 col-sm-6 col-xl">
+                    <div class="col-12">
                       <label class="form-label fw-semibold small">Tên khu vực</label>
                       <input class="form-control" data-area-field="name" maxlength="120" value="VIP" required>
-                    </div>
-                    <div class="col-6 col-sm-3 col-xl">
-                      <label class="form-label fw-semibold small">Số bàn</label>
-                      <input class="form-control" data-area-field="table_count" type="number" min="1" value="2" required>
-                    </div>
-                    <div class="col-6 col-sm-3 col-xl">
-                      <label class="form-label fw-semibold small">Sức chứa</label>
-                      <input class="form-control" data-area-field="capacity" type="number" min="1" value="4" required>
-                    </div>
-                    <div class="col-12 col-sm-8 col-xl">
-                      <label class="form-label fw-semibold small">Tiền tố mã bàn</label>
-                      <input class="form-control" data-area-field="table_prefix" maxlength="24" value="VIP">
                     </div>
                   </div>
                 </div>
