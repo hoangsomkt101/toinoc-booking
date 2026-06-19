@@ -101,6 +101,7 @@ body.booking-popup-open {
 
 .sidebar-brand-logo {
   display: block;
+  filter: brightness(0) invert(1);
   max-height: 3.25rem;
   max-width: 10rem;
   object-fit: contain;
@@ -109,6 +110,7 @@ body.booking-popup-open {
 
 .auth-logo {
   display: block;
+  filter: brightness(0) invert(1);
   max-height: 4.25rem;
   max-width: 12rem;
   object-fit: contain;
@@ -1393,6 +1395,7 @@ a:hover {
 
 .app-brand-logo {
   display: block;
+  filter: brightness(0) invert(1);
   max-height: 44px;
   max-width: 150px;
   object-fit: contain;
@@ -2249,6 +2252,7 @@ a:hover {
 
 .auth-logo {
   display: block;
+  filter: brightness(0) invert(1);
   max-height: 62px;
   max-width: 150px;
   object-fit: contain;
@@ -2329,7 +2333,6 @@ a:hover {
   padding: 12px 14px 0;
 }
 
-.desktop-topbar .desktop-topbar-heading,
 .desktop-topbar .desktop-topbar-actions {
   display: none;
 }
@@ -2457,6 +2460,7 @@ a:hover {
 
   .desktop-sidebar-logo {
     display: block;
+    filter: brightness(0) invert(1);
     max-height: 3.15rem;
     max-width: 11rem;
     object-fit: contain;
@@ -2570,32 +2574,15 @@ a:hover {
   .desktop-topbar.desktop-topbar-with-scope {
     background: var(--paper);
     display: grid;
-    grid-template-areas:
-      "heading actions"
-      "scope scope";
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 1rem 1.75rem;
   }
 
-  .desktop-topbar .desktop-topbar-heading,
   .desktop-topbar .desktop-topbar-actions {
     display: flex;
   }
 
-  .desktop-topbar .desktop-topbar-heading {
-    display: block;
-  }
-
-  .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-heading {
-    grid-area: heading;
-  }
-
-  .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-scope {
-    grid-area: scope;
-  }
-
   .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-actions {
-    grid-area: actions;
     justify-self: end;
   }
 
@@ -2603,21 +2590,13 @@ a:hover {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .desktop-topbar-heading {
-    min-width: 0;
+  .desktop-topbar:not(.desktop-topbar-with-scope) .desktop-topbar-actions {
+    grid-column: 2;
+    justify-self: end;
   }
 
   .desktop-topbar .eyebrow {
     color: var(--wine);
-  }
-
-  .desktop-page-title {
-    color: var(--ink);
-    font-size: clamp(1.5rem, 2vw, 2rem);
-    font-weight: 900;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-    margin: 0;
   }
 
   .desktop-topbar-actions {
@@ -2842,10 +2821,6 @@ a:hover {
 @media (min-width: 1280px) {
   .dashboard-shell {
     grid-template-columns: 17.5rem minmax(0, 1fr);
-  }
-
-  .desktop-topbar {
-    grid-template-columns: minmax(14rem, 0.65fr) minmax(0, 2fr) auto;
   }
 
   .dashboard-page-main {

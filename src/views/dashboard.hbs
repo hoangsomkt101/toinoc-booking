@@ -94,25 +94,6 @@
         </header>
 
         <header class="desktop-topbar {{#if isBookingsSection}}{{#if showOperationsSummary}}desktop-topbar-with-scope{{/if}}{{/if}}" aria-label="Thanh thông tin quản trị">
-          <div class="desktop-topbar-heading">
-            <p class="eyebrow mb-1">Tới Nóc Admin</p>
-            {{#if isBookingsSection}}
-              <h1 class="desktop-page-title">Tổng quan đặt bàn</h1>
-            {{/if}}
-            {{#if isBranchesSection}}
-              <h1 class="desktop-page-title">Chi nhánh & khu vực</h1>
-            {{/if}}
-            {{#if isUsersSection}}
-              <h1 class="desktop-page-title">Người dùng & vai trò</h1>
-            {{/if}}
-            {{#if isApiSettingsSection}}
-              <h1 class="desktop-page-title">API Settings</h1>
-            {{/if}}
-            {{#if isSheetSettingsSection}}
-              <h1 class="desktop-page-title">Sheet Settings</h1>
-            {{/if}}
-          </div>
-
           {{#if isBookingsSection}}
             {{#if showOperationsSummary}}
               <form id="branch-scope-form" class="scope-panel desktop-topbar-scope d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/dashboard/{{dashboardSection}}">
