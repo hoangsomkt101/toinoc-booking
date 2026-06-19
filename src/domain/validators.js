@@ -15,6 +15,8 @@ const FIELD_LABELS = Object.freeze({
   check_in_at: 'Thời gian nhận bàn',
   check_out_at: 'Thời gian trả bàn'
 });
+const LOCAL_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/;
+const VIETNAM_TIME_ZONE_OFFSET = '+07:00';
 
 function fieldLabel(field) {
   return FIELD_LABELS[field] || field;
@@ -67,12 +69,18 @@ function parseOptionalPositiveInteger(value, field) {
   return parsePositiveInteger(value, field);
 }
 
-function parseDate(value, field) {
+function parseDate(value, field, options = {}) {
   if (value === undefined || value === null || value === '') {
     throw badRequest(`${fieldLabel(field)} là bắt buộc`);
   }
 
-  const parsed = new Date(value);
+  let dateValue = value;
+  if (options.assumeVietnamTimeZone && typeof value === 'string') {
+    const trimmed = value.trim();
+    dateValue = LOCAL_DATE_TIME_PATTERN.test(trimmed) ? `${trimmed}${VIETNAM_TIME_ZONE_OFFSET}` : trimmed;
+  }
+
+  const parsed = new Date(dateValue);
 
   if (Number.isNaN(parsed.getTime())) {
     throw badRequest(`${fieldLabel(field)} phải là ngày giờ hợp lệ`);
@@ -132,7 +140,7 @@ function validateBookingPayload(input, options = {}) {
   }
 
   if (hasOwn(payload, 'booking_time')) {
-    data.booking_time = parseDate(payload.booking_time, 'booking_time');
+    data.booking_time = parseDate(payload.booking_time, 'booking_time', { assumeVietnamTimeZone: true });
   }
 
   if (hasOwn(payload, 'guest_count')) {

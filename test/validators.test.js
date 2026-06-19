@@ -49,6 +49,24 @@ test('validateBookingPayload normalizes create input', () => {
   assert.ok(payload.booking_time instanceof Date);
 });
 
+test('validateBookingPayload treats local booking times as Vietnam time', () => {
+  const basePayload = {
+    customer_name: 'Linh Nguyen',
+    phone: '0909000000',
+    guest_count: '4',
+    branch_id: '1'
+  };
+
+  assert.equal(
+    validateBookingPayload({ ...basePayload, booking_time: '2027-01-01T17:00' }).booking_time.toISOString(),
+    '2027-01-01T10:00:00.000Z'
+  );
+  assert.equal(
+    validateBookingPayload({ ...basePayload, booking_time: '2027-01-01T17:30' }).booking_time.toISOString(),
+    '2027-01-01T10:30:00.000Z'
+  );
+});
+
 test('normalizeTableIds accepts table_ids or table_id and removes duplicates', () => {
   assert.deepEqual(normalizeTableIds({ table_ids: ['3', 1, '3', 2] }), [1, 2, 3]);
   assert.deepEqual(normalizeTableIds({ table_id: '7' }), [7]);
