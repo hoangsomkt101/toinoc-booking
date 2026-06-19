@@ -409,6 +409,7 @@ body.booking-popup-open {
   background: #fffdf8;
   border: 1px solid var(--line);
   border-radius: 0.9rem;
+  color: inherit;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -429,10 +430,21 @@ body.booking-popup-open {
   background: #fff4df;
 }
 
-.assign-table-input {
+.assign-table-card.selected::after {
+  align-items: center;
+  background: var(--wine);
+  border-radius: 999px;
+  color: #fff;
+  content: "✓";
+  display: flex;
+  font-size: 0.65rem;
+  font-weight: 950;
+  height: 1rem;
+  justify-content: center;
   position: absolute;
   right: 0.35rem;
   top: 0.35rem;
+  width: 1rem;
 }
 
 .assign-table-code {

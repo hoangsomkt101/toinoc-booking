@@ -725,10 +725,9 @@
       const selected = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id));
 
       return `
-        <label class="assign-table-card ${selected ? 'selected' : ''}" data-assign-table-card>
-          <input class="assign-table-input" type="checkbox" name="table_ids" value="${escapeHtml(table.id)}" ${selected ? 'checked' : ''}>
+        <button class="assign-table-card ${selected ? 'selected' : ''}" type="button" data-assign-table-card data-table-id="${escapeHtml(table.id)}" aria-pressed="${selected ? 'true' : 'false'}">
           <span class="assign-table-code">${escapeHtml(table.table_code)}</span>
-        </label>
+        </button>
       `;
     });
 
@@ -1484,12 +1483,11 @@
       return;
     }
 
-    const selectedCount = form.querySelectorAll('[name="table_ids"]:checked').length;
+    const selectedCount = form.querySelectorAll('[data-assign-table-card].selected').length;
     const counter = form.querySelector('[data-assign-selected-count]');
 
     for (const card of form.querySelectorAll('[data-assign-table-card]')) {
-      const input = card.querySelector('[name="table_ids"]');
-      card.classList.toggle('selected', Boolean(input?.checked));
+      card.setAttribute('aria-pressed', card.classList.contains('selected') ? 'true' : 'false');
     }
 
     if (counter) {
@@ -1513,6 +1511,17 @@
       areaButton.classList.toggle('selected', isSelected);
       areaButton.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     }
+  }
+
+  function toggleAssignTable(button) {
+    const form = button.closest('[data-booking-assign]');
+
+    if (!form) {
+      return;
+    }
+
+    button.classList.toggle('selected');
+    updateAssignTableSelection(form);
   }
 
   function renderTimelineBooking(booking) {
@@ -2525,7 +2534,7 @@
     event.preventDefault();
     const bookingId = form.dataset.bookingAssign;
     const button = form.querySelector('[type="submit"]');
-    const tableIds = [...form.querySelectorAll('[name="table_ids"]:checked')].map((input) => input.value);
+    const tableIds = [...form.querySelectorAll('[data-assign-table-card].selected')].map((card) => card.dataset.tableId);
     const autoConfirm = form.dataset.autoConfirm === 'true';
     button.disabled = true;
     setFormStatus(form, selectors.formMessage, autoConfirm ? 'Đang lưu bàn và xác nhận booking...' : 'Đang lưu bàn...');
@@ -2931,6 +2940,13 @@
       return;
     }
 
+    const assignTableButton = event.target.closest('[data-assign-table-card]');
+    if (assignTableButton) {
+      event.preventDefault();
+      toggleAssignTable(assignTableButton);
+      return;
+    }
+
     const openButton = event.target.closest('[data-open-booking-popup]');
     if (openButton) {
       event.preventDefault();
@@ -2986,13 +3002,6 @@
     }
     if (event.key === 'Escape' && selectors.managementPopup && !selectors.managementPopup.hidden) {
       closeManagementPopup();
-    }
-  });
-
-  document.addEventListener('change', (event) => {
-    const tableInput = event.target.closest('[name="table_ids"]');
-    if (tableInput) {
-      updateAssignTableSelection(tableInput.closest('[data-booking-assign]'));
     }
   });
 
