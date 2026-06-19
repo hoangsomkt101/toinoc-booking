@@ -1328,9 +1328,13 @@
   }
 
   function renderBookingAlert(alert) {
+    const dot = alert.tone === 'neutral'
+      ? ''
+      : '<span class="booking-alert-dot" aria-hidden="true">•</span>';
+
     return `
       <article class="booking-alert booking-alert-${escapeHtml(alert.tone)}">
-        <span class="booking-alert-dot" aria-hidden="true">•</span>
+        ${dot}
         <span class="booking-alert-title">${escapeHtml(alert.title)}</span>
         <strong>${escapeHtml(alert.detail)}</strong>
       </article>
@@ -1376,7 +1380,7 @@
       alerts.push({
         tone: 'neutral',
         title: 'CHƯA XẾP BÀN',
-        detail: `${unassignedCount} booking cần bàn`
+        detail: unassignedCount
       });
     }
 
