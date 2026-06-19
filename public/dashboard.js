@@ -1528,12 +1528,11 @@
           </div>
           <div class="timeline-meta-row">
             <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)} khách${escapeHtml(branchLabel)}</span>
-            <span class="timeline-table${tableClass}">Bàn ${escapeHtml(tables)}</span>
+            <span class="timeline-table${tableClass}" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>
           </div>
           ${notice}
           ${note}
           <div class="action-row timeline-action-row">
-            <span class="booking-tables" title="Bàn ${escapeHtml(tables)}">Bàn ${escapeHtml(tables)}</span>
             ${callAction}
             ${controls}
           </div>
