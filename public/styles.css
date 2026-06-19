@@ -765,8 +765,7 @@ body.booking-popup-open {
 }
 
 .form-control,
-.form-select,
-.btn {
+.form-select {
   min-height: 44px;
 }
 
@@ -2058,7 +2057,6 @@ a:hover {
   color: var(--wine);
 }
 
-.btn,
 .form-control,
 .form-select {
   min-height: 50px;
