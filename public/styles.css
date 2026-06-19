@@ -2333,10 +2333,6 @@ a:hover {
   padding: 12px 14px 0;
 }
 
-.desktop-topbar .desktop-topbar-actions {
-  display: none;
-}
-
 .desktop-topbar-scope {
   margin-bottom: 0 !important;
   max-width: 100%;
@@ -2546,13 +2542,41 @@ a:hover {
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 1rem;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     margin-top: auto;
     padding: 0.85rem;
   }
 
+  .desktop-sidebar-user > .min-w-0 {
+    flex: 1 1 0;
+  }
+
   .desktop-sidebar-user .small {
     color: rgba(255, 255, 255, 0.7);
+  }
+
+  .desktop-sidebar-logout-form {
+    flex: 1 0 100%;
+    margin: 0;
+  }
+
+  .desktop-sidebar-logout-button {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 0.7rem;
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 850;
+    min-height: 2.5rem;
+    padding: 0.45rem 0.7rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  .desktop-sidebar-logout-button:hover,
+  .desktop-sidebar-logout-button:focus {
+    background: rgba(255, 255, 255, 0.2);
   }
 
   .desktop-topbar {
@@ -2564,7 +2588,7 @@ a:hover {
     gap: 1rem;
     grid-column: 2;
     grid-row: 1;
-    grid-template-columns: minmax(13rem, 0.7fr) minmax(0, 1.8fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     justify-content: space-between;
     min-width: 0;
     padding: 1rem 1.75rem;
@@ -2574,40 +2598,16 @@ a:hover {
   .desktop-topbar.desktop-topbar-with-scope {
     background: var(--paper);
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     padding: 1rem 1.75rem;
-  }
-
-  .desktop-topbar .desktop-topbar-actions {
-    display: flex;
-  }
-
-  .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-actions {
-    justify-self: end;
   }
 
   .desktop-topbar:not(.desktop-topbar-with-scope) {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .desktop-topbar:not(.desktop-topbar-with-scope) .desktop-topbar-actions {
-    grid-column: 2;
-    justify-self: end;
-  }
-
   .desktop-topbar .eyebrow {
     color: var(--wine);
-  }
-
-  .desktop-topbar-actions {
-    align-items: center;
-    display: flex;
-    flex: 0 0 auto;
-    gap: 0.75rem;
-  }
-
-  .desktop-topbar-actions form {
-    margin: 0;
   }
 
   .desktop-topbar-scope {
