@@ -1715,9 +1715,9 @@
             <div class="small text-body-secondary">Hoàn tất gần nhất: ${escapeHtml(lastBooking)}</div>
             ${branchLine}
           </div>
-          <div class="d-grid d-sm-flex gap-2 flex-shrink-0">
-            <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="customer-history" data-customer-id="${customerId}">Lịch sử</button>
-            <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="customer-edit" data-customer-id="${customerId}">Chỉnh sửa</button>
+          <div class="d-flex gap-2 flex-shrink-0">
+            <button class="btn btn-outline-secondary btn-sm flex-fill" type="button" data-open-management-popup="customer-history" data-customer-id="${customerId}">Lịch sử</button>
+            <button class="btn btn-outline-secondary btn-sm flex-fill" type="button" data-open-management-popup="customer-edit" data-customer-id="${customerId}">Chỉnh sửa</button>
           </div>
         </div>
       </article>
