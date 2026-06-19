@@ -8,7 +8,7 @@ const DEFAULT_TABLE_CAPACITY = 4;
 const branchSeeds = [
   {
     name: 'Quận 1',
-    address: 'Quận 1, TP.HCM',
+    address: 'đường võ văn kiệt, Quận 1, TP.HCM',
     areas: [
       { name: 'Trong nhà', first_table: 1, last_table: 18 },
       { name: 'Vỉa hè', first_table: 19, last_table: 38 },
@@ -17,7 +17,7 @@ const branchSeeds = [
   },
   {
     name: 'Bình Thạnh',
-    address: 'Quận Bình Thạnh, TP.HCM',
+    address: 'đường điện biên phủ, Quận Bình Thạnh, TP.HCM',
     areas: [
       { name: 'Trong nhà', first_table: 1, last_table: 8 },
       { name: 'Vỉa hè', first_table: 9, last_table: 29 },
@@ -27,7 +27,7 @@ const branchSeeds = [
   },
   {
     name: 'Quận 10',
-    address: 'Quận 10, TP.HCM',
+    address: 'đường thành thái, Quận 10, TP.HCM',
     areas: [
       { name: 'Trong nhà', first_table: 1, last_table: 72 },
       { name: 'Vỉa hè', first_table: 73, last_table: 96 }

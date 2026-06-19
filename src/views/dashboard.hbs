@@ -352,32 +352,23 @@
                 <span class="section-title-note">Đồng bộ đơn</span>
               </div>
               <div>
-                <p class="text-body-secondary small mb-3">Cấu hình link Google Apps Script để tự gửi booking mới sang Sheet chi nhánh và Sheet tổng, giống cơ chế trong WordPress.</p>
+                <p class="text-body-secondary small mb-3">Cấu hình tối đa 2 link Google Apps Script: Sheet tổng và Sheet chia chi nhánh. Link chia chi nhánh tự chọn tab theo địa chỉ chi nhánh trong Apps Script.</p>
                 {{#if canManageApiSettings}}
                   <a class="btn btn-outline-secondary mb-3" href="/dashboard/api-settings">Mở API Settings</a>
                 {{/if}}
                 <form id="create-sheet-target-form" class="row g-3 mb-4">
-                  <div class="col-12 col-md-3">
+                  <div class="col-12 col-md-4">
                     <label class="form-label fw-semibold">Tên cấu hình</label>
                     <input class="form-control" name="name" maxlength="120" placeholder="Sheet tổng" required>
                   </div>
-                  <div class="col-12 col-md-2">
+                  <div class="col-12 col-md-3">
                     <label class="form-label fw-semibold">Loại Sheet</label>
                     <select class="form-select" name="target_type" data-sheet-target-type required>
                       <option value="ALL">Sheet tổng</option>
-                      <option value="BRANCH">Sheet chi nhánh</option>
+                      <option value="BRANCH">Sheet chia chi nhánh</option>
                     </select>
                   </div>
-                  <div class="col-12 col-md-3">
-                    <label class="form-label fw-semibold">Chi nhánh</label>
-                    <select class="form-select" name="branch_id" data-sheet-branch-select>
-                      <option value="">Không áp dụng</option>
-                      {{#each branches}}
-                        <option value="{{id}}">{{name}}</option>
-                      {{/each}}
-                    </select>
-                  </div>
-                  <div class="col-12 col-md-4">
+                  <div class="col-12 col-md-5">
                     <label class="form-label fw-semibold">Link Apps Script</label>
                     <input class="form-control" name="webhook_url" placeholder="https://script.google.com/macros/s/.../exec" required>
                   </div>
@@ -390,7 +381,7 @@
                   </div>
                   <p class="form-message col-12 small text-body-secondary mb-0" id="sheet-target-form-message" role="status"></p>
                 </form>
-                <div class="alert alert-warning small" role="note">Có thể cấu hình nhiều link Sheet tổng và nhiều link theo chi nhánh. Payload gửi đi gồm: date, time, people, address, name, tel, note.</div>
+                <div class="alert alert-warning small" role="note">Payload gửi đi gồm: date, time, people, address, name, tel, note. Trường address dùng địa chỉ chi nhánh để Apps Script chia tab CN_Quan1, CN_BinhThanh, CN_Q10, CN_GV hoặc BookingData.</div>
                 <div id="sheet-target-list"></div>
               </div>
             </section>

@@ -35,6 +35,7 @@ function bookingSelect(includeLogs = false) {
       b.customer_id,
       b.branch_id,
       br.name AS branch_name,
+      br.address AS branch_address,
       b.customer_name,
       b.phone,
       b.booking_time,

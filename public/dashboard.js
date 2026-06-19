@@ -192,15 +192,44 @@
       .join('');
   }
 
-  function sheetBranchOptions(selectedId, targetType = 'BRANCH') {
-    const emptyLabel = targetType === 'ALL' ? 'Không áp dụng' : 'Chọn chi nhánh';
-    return `<option value="">${emptyLabel}</option>` + state.branches
-      .map((branch) => `<option value="${escapeHtml(branch.id)}" ${String(branch.id) === String(selectedId || '') ? 'selected' : ''}>${escapeHtml(branch.name)}</option>`)
+  function sheetTargetTypeLabel(targetType) {
+    return targetType === 'ALL' ? 'Sheet tổng' : 'Sheet chia chi nhánh';
+  }
+
+  function sheetTargetScopeLabel(targetType) {
+    return targetType === 'ALL'
+      ? 'Nhận tất cả booking vào Sheet tổng'
+      : 'Nhận tất cả booking, Apps Script tự chia tab theo địa chỉ chi nhánh';
+  }
+
+  function sheetTargetTypeOptions(selectedType = '') {
+    return ['ALL', 'BRANCH']
+      .map((targetType) => {
+        const alreadyConfigured = state.sheetTargets.some((target) => target.target_type === targetType && target.target_type !== selectedType);
+        return `<option value="${targetType}" ${targetType === selectedType ? 'selected' : ''} ${alreadyConfigured ? 'disabled' : ''}>${escapeHtml(sheetTargetTypeLabel(targetType))}${alreadyConfigured ? ' - đã cấu hình' : ''}</option>`;
+      })
       .join('');
   }
 
-  function sheetTargetTypeLabel(targetType) {
-    return targetType === 'ALL' ? 'Sheet tổng' : 'Sheet chi nhánh';
+  function syncSheetTargetTypeOptions(scope = document) {
+    for (const typeSelect of scope.querySelectorAll('[data-sheet-target-type]')) {
+      const currentType = typeSelect.dataset.currentSheetTargetType || '';
+      const preferredType = typeSelect.value;
+      typeSelect.innerHTML = sheetTargetTypeOptions(currentType);
+
+      const preferredOption = Array.from(typeSelect.options).find((option) => option.value === preferredType && !option.disabled);
+      if (preferredOption) {
+        typeSelect.value = preferredType;
+      } else {
+        const firstAvailableOption = Array.from(typeSelect.options).find((option) => !option.disabled);
+        typeSelect.value = firstAvailableOption ? firstAvailableOption.value : '';
+      }
+
+      const submitButton = typeSelect.closest('form')?.querySelector('[type="submit"]');
+      if (submitButton) {
+        submitButton.disabled = !typeSelect.value;
+      }
+    }
   }
 
   function roleOptions(selectedRole) {
@@ -823,8 +852,6 @@
     selectors.sheetTargetList.innerHTML = state.sheetTargets
       .map((target) => {
         const targetId = escapeHtml(target.id);
-        const targetType = escapeHtml(target.target_type);
-        const branchName = target.target_type === 'ALL' ? 'Tất cả chi nhánh' : (target.branch_name || 'Chưa rõ chi nhánh');
         return `
           <article class="border rounded-4 p-3 bg-body mb-3 api-client-card sheet-target-card" data-sheet-target-id="${targetId}">
             <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-lg-between gap-3">
@@ -834,7 +861,7 @@
                   <span class="badge text-bg-warning">${escapeHtml(sheetTargetTypeLabel(target.target_type))}</span>
                   <span class="badge ${target.is_active ? 'text-bg-success' : 'text-bg-secondary'}">${target.is_active ? 'Đang bật' : 'Đã tắt'}</span>
                 </div>
-                <div class="small text-body-secondary">Phạm vi: ${escapeHtml(branchName)}</div>
+                <div class="small text-body-secondary">Phạm vi: ${escapeHtml(sheetTargetScopeLabel(target.target_type))}</div>
                 <div class="small text-body-secondary text-break">Apps Script: <code>${escapeHtml(target.webhook_url)}</code></div>
                 <div class="small text-body-secondary">Đồng bộ gần nhất: ${escapeHtml(formatDateTime(target.last_sync_at))}</div>
                 ${target.last_error ? `<div class="small text-danger text-break">Lỗi gần nhất: ${escapeHtml(target.last_error)}</div>` : ''}
@@ -846,22 +873,17 @@
             <details class="mt-3">
               <summary class="btn btn-outline-secondary btn-sm">Chỉnh sửa</summary>
               <form class="row g-3 border rounded-3 p-3 mt-2 bg-body-tertiary" data-sheet-target-update="${targetId}">
-                <div class="col-12 col-md-3">
+                <div class="col-12 col-md-4">
                   <label class="form-label fw-semibold small">Tên cấu hình</label>
                   <input class="form-control" name="name" maxlength="120" value="${escapeHtml(target.name)}" required>
                 </div>
-                <div class="col-12 col-md-2">
+                <div class="col-12 col-md-3">
                   <label class="form-label fw-semibold small">Loại Sheet</label>
-                  <select class="form-select" name="target_type" data-sheet-target-type>
-                    <option value="ALL" ${target.target_type === 'ALL' ? 'selected' : ''}>Sheet tổng</option>
-                    <option value="BRANCH" ${target.target_type === 'BRANCH' ? 'selected' : ''}>Sheet chi nhánh</option>
+                  <select class="form-select" name="target_type" data-sheet-target-type data-current-sheet-target-type="${escapeHtml(target.target_type)}">
+                    ${sheetTargetTypeOptions(target.target_type)}
                   </select>
                 </div>
-                <div class="col-12 col-md-3">
-                  <label class="form-label fw-semibold small">Chi nhánh</label>
-                  <select class="form-select" name="branch_id" data-sheet-branch-select>${sheetBranchOptions(target.branch_id, target.target_type)}</select>
-                </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-5">
                   <label class="form-label fw-semibold small">Link Apps Script</label>
                   <input class="form-control" name="webhook_url" value="${escapeHtml(target.webhook_url)}" required>
                 </div>
@@ -1083,7 +1105,7 @@
     renderBranches();
     renderApiClients();
     renderSheetTargets();
-    syncSheetTargetBranchState(selectors.sheetTargetList || document);
+    syncSheetTargetTypeOptions(document);
     renderUsers();
   }
 
@@ -1226,27 +1248,7 @@
   function sheetTargetFormPayload(form) {
     const data = Object.fromEntries(new FormData(form).entries());
     data.is_active = form.querySelector('[name="is_active"]')?.checked ? 'true' : 'false';
-    if (data.target_type === 'ALL') {
-      data.branch_id = '';
-    }
     return data;
-  }
-
-  function syncSheetTargetBranchState(scope = document) {
-    for (const typeSelect of scope.querySelectorAll('[data-sheet-target-type]')) {
-      const form = typeSelect.closest('form');
-      const branchSelect = form?.querySelector('[data-sheet-branch-select]');
-      if (!branchSelect) {
-        continue;
-      }
-
-      const isAll = typeSelect.value === 'ALL';
-      branchSelect.disabled = isAll;
-      branchSelect.required = !isAll;
-      if (isAll) {
-        branchSelect.value = '';
-      }
-    }
   }
 
   function apiKeyMessage(result, prefix) {
@@ -1267,7 +1269,7 @@
   async function refreshSheetTargets() {
     state.sheetTargets = await request('/api/sheet-settings');
     renderSheetTargets();
-    syncSheetTargetBranchState(selectors.sheetTargetList || document);
+    syncSheetTargetTypeOptions(document);
   }
 
   async function handleCreateApiClient(event) {
@@ -1311,10 +1313,9 @@
       if (activeInput) {
         activeInput.checked = true;
       }
-      syncSheetTargetBranchState(form);
       selectors.sheetTargetFormMessage.textContent = 'Đã lưu cấu hình Sheet.';
       renderSheetTargets();
-      syncSheetTargetBranchState(selectors.sheetTargetList || document);
+      syncSheetTargetTypeOptions(document);
     } catch (error) {
       selectors.sheetTargetFormMessage.textContent = error.message;
     } finally {
@@ -1767,12 +1768,7 @@
   const createSheetTargetForm = document.getElementById('create-sheet-target-form');
   if (createSheetTargetForm) {
     createSheetTargetForm.addEventListener('submit', handleCreateSheetTarget);
-    createSheetTargetForm.addEventListener('change', (event) => {
-      if (event.target.closest('[data-sheet-target-type]')) {
-        syncSheetTargetBranchState(createSheetTargetForm);
-      }
-    });
-    syncSheetTargetBranchState(createSheetTargetForm);
+    syncSheetTargetTypeOptions(createSheetTargetForm);
   }
 
   if (selectors.branchScope) {
@@ -1845,11 +1841,6 @@
   if (selectors.sheetTargetList) {
     selectors.sheetTargetList.addEventListener('submit', handleSheetTargetSubmit);
     selectors.sheetTargetList.addEventListener('click', handleSheetTargetDelete);
-    selectors.sheetTargetList.addEventListener('change', (event) => {
-      if (event.target.closest('[data-sheet-target-type]')) {
-        syncSheetTargetBranchState(selectors.sheetTargetList);
-      }
-    });
   }
 
   for (const bookingList of [selectors.openBookings, selectors.closedBookings].filter(Boolean)) {

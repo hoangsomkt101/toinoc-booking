@@ -114,6 +114,14 @@ test('restaurant source seed preserves branch, area, and table counts', () => {
   ]);
 });
 
+test('restaurant source seed addresses match sheet routing keywords', () => {
+  const addresses = Object.fromEntries(branchSeeds.map((branch) => [branch.name, branch.address.toLowerCase()]));
+
+  assert.match(addresses['Quận 1'], /võ văn kiệt/);
+  assert.match(addresses['Bình Thạnh'], /điện biên phủ/);
+  assert.match(addresses['Quận 10'], /thành thái/);
+});
+
 test('normalizeAllowedOrigin stores exact URL origins for public API clients', () => {
   assert.equal(normalizeAllowedOrigin('example.com/path?x=1'), 'https://example.com');
   assert.equal(normalizeAllowedOrigin('http://localhost:8080/test'), 'http://localhost:8080');
