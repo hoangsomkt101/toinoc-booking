@@ -8,6 +8,7 @@ const branchRoutes = require('./routes/branches');
 const bookingRoutes = require('./routes/bookings');
 const pageRoutes = require('./routes/pages');
 const publicApiRoutes = require('./routes/public-api');
+const sheetSettingsRoutes = require('./routes/sheet-settings');
 const userRoutes = require('./routes/users');
 const { query } = require('./db/pool');
 const { loadSession } = require('./middleware/auth');
@@ -60,6 +61,7 @@ function createApp() {
   app.use('/api/areas', areaRoutes);
   app.use('/api/branches', branchRoutes);
   app.use('/api/bookings', bookingRoutes);
+  app.use('/api/sheet-settings', sheetSettingsRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api', apiRoutes);
 

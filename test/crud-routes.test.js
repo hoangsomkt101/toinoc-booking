@@ -4,6 +4,7 @@ const apiClientRouter = require('../src/routes/api-clients');
 const bookingRouter = require('../src/routes/bookings');
 const branchRouter = require('../src/routes/branches');
 const publicApiRouter = require('../src/routes/public-api');
+const sheetSettingsRouter = require('../src/routes/sheet-settings');
 const userRouter = require('../src/routes/users');
 
 function routeMethods(router) {
@@ -57,6 +58,15 @@ test('api client API exposes admin lifecycle routes', () => {
     { path: '/:id', methods: ['put'] },
     { path: '/:id', methods: ['delete'] },
     { path: '/:id/rotate-key', methods: ['post'] }
+  ]);
+});
+
+test('sheet settings API exposes admin CRUD routes', () => {
+  assert.deepEqual(routeMethods(sheetSettingsRouter), [
+    { path: '/', methods: ['get'] },
+    { path: '/', methods: ['post'] },
+    { path: '/:id', methods: ['put'] },
+    { path: '/:id', methods: ['delete'] }
   ]);
 });
 

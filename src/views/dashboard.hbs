@@ -46,6 +46,12 @@
                 <span>API Settings</span>
               </a>
             {{/if}}
+            {{#if canManageSheetSettings}}
+              <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/dashboard/sheet-settings">
+                <span class="desktop-nav-icon" aria-hidden="true">SH</span>
+                <span>Sheet Settings</span>
+              </a>
+            {{/if}}
           </nav>
           <div class="desktop-sidebar-user">
             <span class="avatar avatar-compact" aria-hidden="true">TK</span>
@@ -81,6 +87,9 @@
           {{#if isApiSettingsSection}}
             <h1 class="screen-title">API Settings</h1>
           {{/if}}
+          {{#if isSheetSettingsSection}}
+            <h1 class="screen-title">Sheet Settings</h1>
+          {{/if}}
           <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
         </header>
 
@@ -98,6 +107,9 @@
             {{/if}}
             {{#if isApiSettingsSection}}
               <h1 class="desktop-page-title">API Settings</h1>
+            {{/if}}
+            {{#if isSheetSettingsSection}}
+              <h1 class="desktop-page-title">Sheet Settings</h1>
             {{/if}}
           </div>
 
@@ -303,6 +315,9 @@
               </div>
               <div>
                 <p class="text-body-secondary small mb-3">Quản trị viên cho phép domain bên ngoài đọc danh sách chi nhánh public và tạo booking bằng API key, không dùng cookie đăng nhập nội bộ.</p>
+                {{#if canManageSheetSettings}}
+                  <a class="btn btn-outline-secondary mb-3" href="/dashboard/sheet-settings">Mở Sheet Settings</a>
+                {{/if}}
                 <form id="create-api-client-form" class="row g-3 mb-4">
                   <div class="col-12 col-md-4">
                     <label class="form-label fw-semibold">Tên cấu hình</label>
@@ -326,6 +341,57 @@
                 </form>
                 <div class="alert alert-warning small" role="note">API key chỉ hiển thị một lần khi tạo hoặc xoay key. Hãy lưu trong WordPress server-side, không đưa vào HTML/JavaScript public.</div>
                 <div id="api-client-list"></div>
+              </div>
+            </section>
+          {{/if}}
+
+          {{#if isSheetSettingsSection}}
+            <section class="admin-panel">
+              <div class="section-title mt-0">
+                <span>Sheet Settings</span>
+                <span class="section-title-note">Đồng bộ đơn</span>
+              </div>
+              <div>
+                <p class="text-body-secondary small mb-3">Cấu hình link Google Apps Script để tự gửi booking mới sang Sheet chi nhánh và Sheet tổng, giống cơ chế trong WordPress.</p>
+                {{#if canManageApiSettings}}
+                  <a class="btn btn-outline-secondary mb-3" href="/dashboard/api-settings">Mở API Settings</a>
+                {{/if}}
+                <form id="create-sheet-target-form" class="row g-3 mb-4">
+                  <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Tên cấu hình</label>
+                    <input class="form-control" name="name" maxlength="120" placeholder="Sheet tổng" required>
+                  </div>
+                  <div class="col-12 col-md-2">
+                    <label class="form-label fw-semibold">Loại Sheet</label>
+                    <select class="form-select" name="target_type" data-sheet-target-type required>
+                      <option value="ALL">Sheet tổng</option>
+                      <option value="BRANCH">Sheet chi nhánh</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-md-3">
+                    <label class="form-label fw-semibold">Chi nhánh</label>
+                    <select class="form-select" name="branch_id" data-sheet-branch-select>
+                      <option value="">Không áp dụng</option>
+                      {{#each branches}}
+                        <option value="{{id}}">{{name}}</option>
+                      {{/each}}
+                    </select>
+                  </div>
+                  <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Link Apps Script</label>
+                    <input class="form-control" name="webhook_url" placeholder="https://script.google.com/macros/s/.../exec" required>
+                  </div>
+                  <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3">
+                    <div class="form-check">
+                      <input class="form-check-input" name="is_active" type="checkbox" value="true" id="sheet-target-active" checked>
+                      <label class="form-check-label" for="sheet-target-active">Cho phép đồng bộ ngay</label>
+                    </div>
+                    <button class="btn btn-primary fw-bold form-submit" type="submit">Lưu cấu hình Sheet</button>
+                  </div>
+                  <p class="form-message col-12 small text-body-secondary mb-0" id="sheet-target-form-message" role="status"></p>
+                </form>
+                <div class="alert alert-warning small" role="note">Có thể cấu hình nhiều link Sheet tổng và nhiều link theo chi nhánh. Payload gửi đi gồm: date, time, people, address, name, tel, note.</div>
+                <div id="sheet-target-list"></div>
               </div>
             </section>
           {{/if}}
@@ -479,6 +545,7 @@
       window.__CURRENT_USER__ = {{{json currentUser}}};
       window.__BOOKINGS__ = {{{json bookings}}};
       window.__API_CLIENTS__ = {{{json apiClients}}};
+      window.__SHEET_TARGETS__ = {{{json sheetTargets}}};
       window.__USERS__ = {{{json users}}};
       window.__BRANCHES__ = {{{json branches}}};
       window.__ONLINE_USERS__ = {{{json onlineUsers}}};

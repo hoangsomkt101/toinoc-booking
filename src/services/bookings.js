@@ -1,6 +1,7 @@
 const { pool, withTransaction } = require('../db/pool');
 const { ACTIVE_ASSIGNMENT_STATUSES, BOOKING_STATUSES, TABLE_STATUSES } = require('../domain/constants');
 const { badRequest, conflict, notFound } = require('../domain/errors');
+const { syncBookingToSheets } = require('./sheet-settings');
 const {
   normalizeTableIds,
   parseOptionalDate,
@@ -302,7 +303,7 @@ async function listTables(filters = {}, executor = pool) {
 async function createBooking(input) {
   const data = validateBookingPayload(input);
 
-  return withTransaction(async (client) => {
+  const booking = await withTransaction(async (client) => {
     await ensureBranch(client, data.branch_id);
     const customerId = await upsertCustomer(client, data);
     const bookingResult = await client.query(
@@ -316,6 +317,10 @@ async function createBooking(input) {
 
     return getBookingById(bookingResult.rows[0].id, client);
   });
+
+  syncBookingToSheets(booking);
+
+  return booking;
 }
 
 async function updateBooking(id, input = {}) {

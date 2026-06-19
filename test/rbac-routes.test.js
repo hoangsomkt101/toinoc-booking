@@ -5,6 +5,7 @@ const apiRouter = require('../src/routes/api');
 const areaRouter = require('../src/routes/areas');
 const bookingRouter = require('../src/routes/bookings');
 const branchRouter = require('../src/routes/branches');
+const sheetSettingsRouter = require('../src/routes/sheet-settings');
 const userRouter = require('../src/routes/users');
 
 function routeGuard(router, path, method) {
@@ -116,11 +117,27 @@ test('only admin can manage API client settings', () => {
   }
 });
 
+test('only admin can manage sheet settings', () => {
+  for (const [path, method] of [
+    ['/', 'get'],
+    ['/', 'post'],
+    ['/:id', 'put'],
+    ['/:id', 'delete']
+  ]) {
+    const guard = routeGuard(sheetSettingsRouter, path, method);
+    assertAllowed(guard, 'admin');
+    assertDenied(guard, 'manager');
+    assertDenied(guard, 'sale');
+    assertDenied(guard, null, 401);
+  }
+});
+
 test('admin passes all guarded route categories', () => {
   for (const [router, path, method] of [
     [bookingRouter, '/', 'post'],
     [bookingRouter, '/:id/assign', 'post'],
     [apiClientRouter, '/', 'get'],
+    [sheetSettingsRouter, '/', 'get'],
     [apiRouter, '/dashboard', 'get'],
     [branchRouter, '/', 'post'],
     [branchRouter, '/:id', 'put'],
