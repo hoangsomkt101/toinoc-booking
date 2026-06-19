@@ -42,9 +42,18 @@
   const arrivalPendingStatuses = ['PENDING', 'CONFIRMED'];
   const closedBookingStatuses = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
   const upcomingWarningMinutes = 30;
+  const bookingTabDefinitions = [
+    { key: 'all', label: 'Tất cả' },
+    { key: 'confirmed', label: 'Đã xác nhận' },
+    { key: 'upcoming', label: 'Sắp tới' },
+    { key: 'seated', label: 'Đang ngồi' },
+    { key: 'cleaning', label: 'Đang dọn' },
+    { key: 'late_cancelled', label: 'Trễ, huỷ' }
+  ];
+  let activeBookingTab = 'all';
   const selectors = {
     openBookings: document.getElementById('open-booking-list'),
-    closedBookings: document.getElementById('closed-booking-list'),
+    bookingTabs: document.getElementById('booking-tabs'),
     formMessage: document.getElementById('form-message'),
     bookingBranch: document.querySelector('[data-booking-branch]'),
     bookingBranchGrid: document.getElementById('booking-branch-grid'),
@@ -1152,6 +1161,32 @@
     return date ? localDatePart(date) === todayDateValue() : false;
   }
 
+  function isFutureBookingDay(booking) {
+    const date = bookingDate(booking);
+
+    return date ? localDatePart(date) > todayDateValue() : false;
+  }
+
+  function isLateBooking(booking, now = new Date()) {
+    const minutes = isTodayBooking(booking) ? minutesUntilBooking(booking, now) : null;
+
+    return arrivalPendingStatuses.includes(booking.status) && minutes !== null && minutes < 0;
+  }
+
+  function isUpcomingBooking(booking, now = new Date()) {
+    if (!arrivalPendingStatuses.includes(booking.status)) {
+      return false;
+    }
+
+    if (isFutureBookingDay(booking)) {
+      return true;
+    }
+
+    const minutes = isTodayBooking(booking) ? minutesUntilBooking(booking, now) : null;
+
+    return minutes !== null && minutes >= 0;
+  }
+
   function phoneCallHref(phone) {
     const phoneValue = String(phone || '').replace(/[^\d+]/g, '');
 
@@ -1162,7 +1197,7 @@
     const minutes = isTodayBooking(booking) ? minutesUntilBooking(booking, now) : null;
     const isArrivalPending = arrivalPendingStatuses.includes(booking.status);
 
-    if (isArrivalPending && minutes !== null && minutes < 0) {
+    if (isLateBooking(booking, now)) {
       return {
         tone: 'red',
         badge: `Trễ ${minuteLabel(minutes)}`,
@@ -1220,7 +1255,7 @@
       .map((booking) => ({ booking, minutes: minutesUntilBooking(booking, now) }))
       .filter((item) => item.minutes !== null && isTodayBooking(item.booking));
     const lateBooking = timedBookings
-      .filter((item) => arrivalPendingStatuses.includes(item.booking.status) && item.minutes < 0)
+      .filter((item) => isLateBooking(item.booking, now))
       .sort((left, right) => left.minutes - right.minutes)[0];
     const upcomingBooking = timedBookings
       .filter((item) => arrivalPendingStatuses.includes(item.booking.status) && item.minutes >= 0 && item.minutes <= upcomingWarningMinutes)
@@ -1254,6 +1289,94 @@
 
     selectors.bookingAlerts.hidden = alerts.length === 0;
     selectors.bookingAlerts.innerHTML = alerts.map(renderBookingAlert).join('');
+  }
+
+  function allDashboardBookings() {
+    const bookings = [];
+    const seenIds = new Set();
+
+    for (const booking of [...(state.dashboard.open_bookings || []), ...(state.dashboard.closed_bookings || [])]) {
+      const key = String(booking.id);
+      if (!seenIds.has(key)) {
+        seenIds.add(key);
+        bookings.push(booking);
+      }
+    }
+
+    return bookings.sort((left, right) => {
+      const leftDate = bookingDate(left)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const rightDate = bookingDate(right)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftDate !== rightDate) {
+        return leftDate - rightDate;
+      }
+
+      return Number(left.id) - Number(right.id);
+    });
+  }
+
+  function bookingMatchesTab(booking, tabKey, now = new Date()) {
+    if (tabKey === 'confirmed') {
+      return booking.status === 'CONFIRMED';
+    }
+
+    if (tabKey === 'upcoming') {
+      return isUpcomingBooking(booking, now);
+    }
+
+    if (tabKey === 'seated') {
+      return booking.status === 'CHECKED_IN';
+    }
+
+    if (tabKey === 'cleaning') {
+      return booking.status === 'CHECKED_OUT';
+    }
+
+    if (tabKey === 'late_cancelled') {
+      return isLateBooking(booking, now) || ['CANCELLED', 'NO_SHOW'].includes(booking.status);
+    }
+
+    return true;
+  }
+
+  function bookingTabCounts(bookings, now = new Date()) {
+    return bookingTabDefinitions.reduce((counts, tab) => {
+      counts[tab.key] = tab.key === 'all'
+        ? bookings.length
+        : bookings.filter((booking) => bookingMatchesTab(booking, tab.key, now)).length;
+
+      return counts;
+    }, {});
+  }
+
+  function renderBookingTabs(bookings) {
+    if (!selectors.bookingTabs) {
+      return;
+    }
+
+    const now = new Date();
+    const counts = bookingTabCounts(bookings, now);
+    const validTab = bookingTabDefinitions.some((tab) => tab.key === activeBookingTab);
+    if (!validTab) {
+      activeBookingTab = 'all';
+    }
+
+    selectors.bookingTabs.innerHTML = bookingTabDefinitions
+      .map((tab) => `
+        <button class="pill booking-tab ${tab.key === activeBookingTab ? 'active' : ''}" type="button" data-booking-tab="${escapeHtml(tab.key)}" aria-pressed="${tab.key === activeBookingTab ? 'true' : 'false'}">
+          ${escapeHtml(tab.label)} · ${escapeHtml(counts[tab.key] || 0)}
+        </button>
+      `)
+      .join('');
+  }
+
+  function setActiveBookingTab(tabKey) {
+    if (!bookingTabDefinitions.some((tab) => tab.key === tabKey)) {
+      return;
+    }
+
+    activeBookingTab = tabKey;
+    renderBookingBoard();
   }
 
   function renderTimelineBooking(booking) {
@@ -1319,6 +1442,16 @@
     element.innerHTML = bookings.length
       ? bookings.map(renderBooking).join('')
       : '<div class="alert alert-light border mb-0">Không có yêu cầu đặt bàn trong mục này.</div>';
+  }
+
+  function renderBookingBoard() {
+    const bookings = allDashboardBookings();
+    const now = new Date();
+    const filteredBookings = bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now));
+
+    renderBookingAlerts(bookings);
+    renderBookingTabs(bookings);
+    renderBookings(selectors.openBookings, filteredBookings);
   }
 
   function renderCounts() {
@@ -1655,9 +1788,7 @@
 
   function render() {
     renderCounts();
-    renderBookingAlerts(state.dashboard.open_bookings || []);
-    renderBookings(selectors.openBookings, state.dashboard.open_bookings || []);
-    renderBookings(selectors.closedBookings, state.dashboard.closed_bookings || []);
+    renderBookingBoard();
     renderOnlineUsers();
     renderBranches();
     renderCustomers();
@@ -2640,6 +2771,13 @@
   }
 
   document.addEventListener('click', (event) => {
+    const bookingTab = event.target.closest('[data-booking-tab]');
+    if (bookingTab) {
+      event.preventDefault();
+      setActiveBookingTab(bookingTab.dataset.bookingTab);
+      return;
+    }
+
     const openButton = event.target.closest('[data-open-booking-popup]');
     if (openButton) {
       event.preventDefault();
