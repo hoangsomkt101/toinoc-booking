@@ -392,7 +392,7 @@ async function assignTables(id, input) {
   return withTransaction(async (client) => {
     const booking = await lockBooking(client, id);
 
-    if (['CANCELLED', 'NO_SHOW', 'CHECKED_OUT', 'COMPLETED'].includes(booking.status)) {
+    if (['NO_SHOW', 'CHECKED_OUT', 'COMPLETED'].includes(booking.status)) {
       throw badRequest(`Không thể xếp bàn cho yêu cầu có trạng thái ${bookingStatusLabel(booking.status)}`);
     }
 
@@ -454,9 +454,9 @@ async function assignTables(id, input) {
     const tableStatus = booking.status === 'CHECKED_IN' ? 'OCCUPIED' : 'RESERVED';
     await client.query('UPDATE tables SET status = $1 WHERE id = ANY($2::BIGINT[])', [tableStatus, tableIds]);
 
-    if (booking.status === 'PENDING') {
+    if (['PENDING', 'CANCELLED'].includes(booking.status)) {
       await client.query("UPDATE bookings SET status = 'CONFIRMED' WHERE id = $1", [booking.id]);
-      await logStatusChange(client, booking.id, 'PENDING', 'CONFIRMED', 'Đã xếp bàn cho khách');
+      await logStatusChange(client, booking.id, booking.status, 'CONFIRMED', 'Đã xếp bàn cho khách');
     }
 
     return getBookingById(booking.id, client);

@@ -747,12 +747,12 @@
 
   function bookingAssignForm(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
-    const shouldAutoConfirm = booking.status === 'PENDING';
-    const submitLabel = booking.status === 'PENDING' ? 'Lưu bàn & xác nhận' : 'Lưu bàn';
+    const shouldAutoConfirm = booking.status === 'PENDING' || booking.status === 'CANCELLED';
+    const submitLabel = shouldAutoConfirm ? 'Lưu bàn & xác nhận' : 'Lưu bàn';
     const selectedCount = (booking.assigned_tables || []).length;
     const selectedMessage = selectedCount
       ? shouldAutoConfirm
-        ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking đang chờ.`
+        ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking.`
         : `Đã chọn ${selectedCount} bàn.`
       : 'Chọn một hoặc nhiều bàn.';
 
@@ -1171,10 +1171,14 @@
       return '';
     }
 
-    if (booking.status === 'PENDING' || (booking.status === 'CONFIRMED' && !hasAssignedTables(booking))) {
+    if (booking.status === 'PENDING' || booking.status === 'CANCELLED' || (booking.status === 'CONFIRMED' && !hasAssignedTables(booking))) {
       buttons.push(`
         <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}">Xếp bàn</button>
       `);
+    }
+
+    if (booking.status === 'PENDING') {
+      buttons.push('<button class="btn btn-outline-danger btn-sm booking-action-btn" data-action="cancel">Hủy</button>');
     }
 
     if (booking.status === 'CONFIRMED' && hasAssignedTables(booking)) {
@@ -1484,7 +1488,7 @@
     if (counter) {
       counter.textContent = selectedCount
         ? form.dataset.autoConfirm === 'true'
-          ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking đang chờ.`
+          ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking.`
           : `Đã chọn ${selectedCount} bàn.`
         : 'Chọn một hoặc nhiều bàn.';
     }
@@ -2812,6 +2816,10 @@
     }
     const booking = findBooking(bookingId);
     const action = button.dataset.action;
+
+    if (action === 'cancel' && !window.confirm(`Chuyển yêu cầu đặt bàn của “${booking ? booking.customer_name : bookingId}” sang Đã hủy?`)) {
+      return;
+    }
 
     button.disabled = true;
 
