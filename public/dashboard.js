@@ -187,6 +187,22 @@
     return bookingStatusLabels[status] || status;
   }
 
+  function isAdminUser() {
+    return state.user.role === 'admin';
+  }
+
+  function bookingCustomerTitle(booking) {
+    if (isAdminUser()) {
+      return booking.customer_name;
+    }
+
+    return `${booking.customer_name}(${phoneSuffix(booking.phone)}) - ${bookingStatusLabel(booking.status)}`;
+  }
+
+  function bookingCustomerMeta(booking) {
+    return isAdminUser() ? booking.phone || '-' : '';
+  }
+
   function formatDateTimeLocal(value) {
     if (!value) {
       return '';
@@ -1493,6 +1509,7 @@
     const note = booking.note
       ? `<div class="timeline-note">Ghi chú: ${escapeHtml(booking.note)}</div>`
       : '';
+    const customerMeta = bookingCustomerMeta(booking);
 
     return `
       <div class="booking-timeline-item timeline-${escapeHtml(timelineState.tone)}" data-booking-id="${escapeHtml(booking.id)}">
@@ -1504,8 +1521,8 @@
         <div class="card-body booking-card-body">
           <div class="timeline-card-header">
             <div class="booking-card-main">
-              <h3 class="timeline-customer">${escapeHtml(booking.customer_name)}</h3>
-              <div class="booking-meta timeline-phone">${escapeHtml(booking.phone || '-')}</div>
+              <h3 class="timeline-customer">${escapeHtml(bookingCustomerTitle(booking))}</h3>
+              ${customerMeta ? `<div class="booking-meta timeline-phone">${escapeHtml(customerMeta)}</div>` : ''}
             </div>
             <span class="badge-soft timeline-status timeline-status-${escapeHtml(timelineState.tone)} status-${escapeHtml(booking.status)}">${escapeHtml(timelineState.badge)}</span>
           </div>
