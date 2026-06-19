@@ -90,26 +90,24 @@
   </section>
 {{/if}}
 
-{{#if isApiSettingsSection}}
-  <section class="admin-panel">
+{{#if isSettingsSection}}
+  {{#if canManageApiSettings}}
+  <section class="admin-panel mb-4">
     <div class="section-title mt-0">
       <span>API Settings</span>
       <span class="section-title-note">Tích hợp</span>
     </div>
     <div>
       <p class="text-body-secondary small mb-3">Quản trị viên cho phép domain bên ngoài đọc danh sách chi nhánh public và tạo booking bằng API key, không dùng cookie đăng nhập nội bộ.</p>
-      {{#if canManageSheetSettings}}
-        <a class="btn btn-outline-secondary mb-3" href="/sheet-settings">Mở Sheet Settings</a>
-      {{/if}}
       <button class="btn btn-outline-secondary mb-3" type="button" data-open-management-popup="api-client-create">Tạo API key</button>
       <p class="form-message small text-body-secondary mb-3" id="api-client-form-message" role="status"></p>
       <div class="alert alert-warning small" role="note">API key chỉ hiển thị một lần khi tạo hoặc xoay key. Hãy lưu trong WordPress server-side, không đưa vào HTML/JavaScript public.</div>
       <div id="api-client-list"></div>
     </div>
   </section>
-{{/if}}
+  {{/if}}
 
-{{#if isSheetSettingsSection}}
+  {{#if canManageSheetSettings}}
   <section class="admin-panel">
     <div class="section-title mt-0">
       <span>Sheet Settings</span>
@@ -117,13 +115,11 @@
     </div>
     <div>
       <p class="text-body-secondary small mb-3">Cấu hình tối đa 2 link Google Apps Script: Sheet tổng và Sheet chia chi nhánh. Link chia chi nhánh tự chọn tab theo địa chỉ chi nhánh trong Apps Script.</p>
-      {{#if canManageApiSettings}}
-        <a class="btn btn-outline-secondary mb-3" href="/api-settings">Mở API Settings</a>
-      {{/if}}
       <button class="btn btn-outline-secondary mb-3" type="button" data-open-management-popup="sheet-target-create">Tạo cấu hình Sheet</button>
       <p class="form-message small text-body-secondary mb-3" id="sheet-target-form-message" role="status"></p>
       <div class="alert alert-warning small" role="note">Payload gửi đi gồm: date, time, people, address, name, tel, note. Trường address dùng địa chỉ chi nhánh để Apps Script chia tab CN_Quan1, CN_BinhThanh, CN_Q10, CN_GV hoặc BookingData.</div>
       <div id="sheet-target-list"></div>
     </div>
   </section>
+  {{/if}}
 {{/if}}

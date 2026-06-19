@@ -136,6 +136,7 @@ async function renderDashboard(req, res, section) {
   const canManageBranches = req.user.role === 'admin';
   const canManageApiSettings = req.user.role === 'admin';
   const canManageSheetSettings = req.user.role === 'admin';
+  const canManageSettings = canManageApiSettings || canManageSheetSettings;
   const branches = await branchService.listBranches();
   const realtime = req.app.locals.realtime;
   const visibleBranches = canManageBranches ? branches : publicBranchOptions(branches);
@@ -145,13 +146,14 @@ async function renderDashboard(req, res, section) {
     : { ...req.query, branch_id: selectedBranchId };
   const bookingDate = section === 'bookings' ? selectedBookingDate(req) : '';
   const dashboardQuery = bookingDate ? { ...scopedQuery, booking_date: bookingDate } : scopedQuery;
+  const isSettingsSection = section === 'setting';
   const [dashboard, bookings, customers, users, apiClients, sheetTargets] = await Promise.all([
     canManageBookings ? bookingService.getDashboardData(dashboardQuery) : {},
     section === 'bookings' && canManageBookings ? bookingService.listBookings(dashboardQuery) : [],
     section === 'customers' && canManageCustomers ? customerService.listCustomers(scopedQuery) : [],
     section === 'users' && canManageUsers ? userService.listUsers(req.user) : [],
-    section === 'api-settings' && canManageApiSettings ? apiClientService.listApiClients() : [],
-    section === 'sheet-settings' && canManageSheetSettings ? sheetSettingsService.listSheetTargets() : []
+    isSettingsSection && canManageApiSettings ? apiClientService.listApiClients() : [],
+    isSettingsSection && canManageSheetSettings ? sheetSettingsService.listSheetTargets() : []
   ]);
 
   res.render('dashboard', {
@@ -165,6 +167,7 @@ async function renderDashboard(req, res, section) {
     canManageBookings,
     canManageBranches,
     canManageCustomers,
+    canManageSettings,
     canManageSheetSettings,
     canManageUsers,
     creatableRoles: ['admin', 'manager', 'sale'].map((role) => ({
@@ -175,11 +178,10 @@ async function renderDashboard(req, res, section) {
     dashboard,
     dashboardSection: section,
     showOperationsSummary: section === 'bookings' && canManageBookings,
-    isApiSettingsSection: section === 'api-settings',
     isBookingsSection: section === 'bookings',
     isBranchesSection: section === 'branches',
     isCustomersSection: section === 'customers',
-    isSheetSettingsSection: section === 'sheet-settings',
+    isSettingsSection,
     isUsersSection: section === 'users',
     onlineUsers: canManageBranches && realtime ? realtime.getOnlineUsers() : [],
     bookings,
@@ -229,20 +231,11 @@ router.get(
 );
 
 router.get(
-  '/api-settings',
+  '/setting',
   requireAuthenticated,
   requireRole('admin'),
   asyncHandler(async (req, res) => {
-    await renderDashboard(req, res, 'api-settings');
-  })
-);
-
-router.get(
-  '/sheet-settings',
-  requireAuthenticated,
-  requireRole('admin'),
-  asyncHandler(async (req, res) => {
-    await renderDashboard(req, res, 'sheet-settings');
+    await renderDashboard(req, res, 'setting');
   })
 );
 
