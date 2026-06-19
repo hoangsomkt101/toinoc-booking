@@ -6,6 +6,7 @@ const apiRoutes = require('./routes/api');
 const areaRoutes = require('./routes/areas');
 const branchRoutes = require('./routes/branches');
 const bookingRoutes = require('./routes/bookings');
+const customerRoutes = require('./routes/customers');
 const pageRoutes = require('./routes/pages');
 const publicApiRoutes = require('./routes/public-api');
 const sheetSettingsRoutes = require('./routes/sheet-settings');
@@ -64,6 +65,7 @@ function createApp() {
   app.use('/api/areas', areaRoutes);
   app.use('/api/branches', branchRoutes);
   app.use('/api/bookings', bookingRoutes);
+  app.use('/api/customers', customerRoutes);
   app.use('/api/sheet-settings', sheetSettingsRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api', apiRoutes);

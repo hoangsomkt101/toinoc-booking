@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const apiClientRouter = require('../src/routes/api-clients');
 const bookingRouter = require('../src/routes/bookings');
 const branchRouter = require('../src/routes/branches');
+const customerRouter = require('../src/routes/customers');
 const publicApiRouter = require('../src/routes/public-api');
 const sheetSettingsRouter = require('../src/routes/sheet-settings');
 const userRouter = require('../src/routes/users');
@@ -48,6 +49,16 @@ test('user API exposes full CRUD routes', () => {
     { path: '/:id', methods: ['get'] },
     { path: '/:id', methods: ['put'] },
     { path: '/:id', methods: ['delete'] }
+  ]);
+});
+
+test('customer API exposes lookup, management and history routes', () => {
+  assert.deepEqual(routeMethods(customerRouter), [
+    { path: '/lookup', methods: ['get'] },
+    { path: '/', methods: ['get'] },
+    { path: '/:id', methods: ['get'] },
+    { path: '/:id/bookings', methods: ['get'] },
+    { path: '/:id', methods: ['put'] }
   ]);
 });
 

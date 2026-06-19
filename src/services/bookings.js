@@ -1,6 +1,7 @@
 const { pool, withTransaction } = require('../db/pool');
 const { ACTIVE_ASSIGNMENT_STATUSES, BOOKING_STATUSES, TABLE_STATUSES } = require('../domain/constants');
 const { badRequest, conflict, notFound } = require('../domain/errors');
+const { upsertCustomerByPhone } = require('./customers');
 const { syncBookingToSheets } = require('./sheet-settings');
 const {
   normalizeTableIds,
@@ -140,19 +141,6 @@ async function ensureBranch(client, branchId) {
   if (result.rowCount === 0) {
     throw badRequest('Chi nhánh không tồn tại');
   }
-}
-
-async function upsertCustomer(client, data) {
-  const result = await client.query(
-    `INSERT INTO customers (customer_name, phone)
-     VALUES ($1, $2)
-     ON CONFLICT (phone)
-     DO UPDATE SET customer_name = EXCLUDED.customer_name
-     RETURNING id`,
-    [data.customer_name, data.phone]
-  );
-
-  return result.rows[0].id;
 }
 
 async function logStatusChange(client, bookingId, fromStatus, toStatus, note, staffId) {
@@ -299,7 +287,7 @@ async function createBooking(input) {
 
   const booking = await withTransaction(async (client) => {
     await ensureBranch(client, data.branch_id);
-    const customerId = await upsertCustomer(client, data);
+    const customerId = await upsertCustomerByPhone(client, data);
     const bookingResult = await client.query(
       `INSERT INTO bookings (customer_id, branch_id, customer_name, phone, booking_time, guest_count, note, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
@@ -343,7 +331,7 @@ async function updateBooking(id, input = {}) {
     const nextPhone = data.phone || booking.phone;
 
     if (data.customer_name || data.phone) {
-      customerId = await upsertCustomer(client, {
+      customerId = await upsertCustomerByPhone(client, {
         customer_name: nextCustomerName,
         phone: nextPhone
       });
@@ -357,7 +345,7 @@ async function updateBooking(id, input = {}) {
       updates.push(`${column} = $${values.length}`);
     }
 
-    if (customerId !== booking.customer_id) {
+    if (String(customerId) !== String(booking.customer_id)) {
       setColumn('customer_id', customerId);
     }
 

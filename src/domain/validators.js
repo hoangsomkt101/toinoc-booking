@@ -39,6 +39,25 @@ function normalizeString(value, field) {
   return trimmed;
 }
 
+function normalizePhone(value, field = 'phone') {
+  const rawValue = normalizeString(value, field);
+  const digits = rawValue.replace(/\D/g, '');
+
+  if (!digits) {
+    throw badRequest(`${fieldLabel(field)} phải có ít nhất một chữ số`);
+  }
+
+  if (digits.startsWith('0084') && digits.length > 4) {
+    return `0${digits.slice(4)}`;
+  }
+
+  if (digits.startsWith('84') && digits.length >= 10) {
+    return `0${digits.slice(2)}`;
+  }
+
+  return digits;
+}
+
 function optionalString(value, field) {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -136,7 +155,7 @@ function validateBookingPayload(input, options = {}) {
   }
 
   if (hasOwn(payload, 'phone')) {
-    data.phone = normalizeString(payload.phone, 'phone');
+    data.phone = normalizePhone(payload.phone, 'phone');
   }
 
   if (hasOwn(payload, 'booking_time')) {
@@ -176,6 +195,7 @@ function normalizeTableIds(input) {
 }
 
 module.exports = {
+  normalizePhone,
   parsePositiveInteger,
   parseOptionalPositiveInteger,
   parseOptionalDate,

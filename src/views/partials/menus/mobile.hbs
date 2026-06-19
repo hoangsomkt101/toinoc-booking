@@ -19,21 +19,21 @@
   {{else}}
     <span class="fab disabled" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
   {{/if}}
+  {{#if canManageCustomers}}
+    <a class="nav-item {{#if isCustomersSection}}active{{/if}}" href="/customers{{branchQueryString}}">
+      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-address-book"></i></span>
+      <span>Khách</span>
+    </a>
+  {{else}}
+    <span class="nav-item disabled" aria-hidden="true">
+      <span class="bottom-nav-icon"><i class="fa-solid fa-address-book"></i></span>
+      <span>Khách</span>
+    </span>
+  {{/if}}
   {{#if canManageUsers}}
     <a class="nav-item {{#if isUsersSection}}active{{/if}}" href="/users{{branchQueryString}}">
       <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-users-gear"></i></span>
       <span>Người dùng</span>
-    </a>
-  {{else}}
-    <span class="nav-item disabled" aria-hidden="true">
-      <span class="bottom-nav-icon"><i class="fa-solid fa-users-gear"></i></span>
-      <span>Người dùng</span>
-    </span>
-  {{/if}}
-  {{#if canManageApiSettings}}
-    <a class="nav-item {{#if isApiSettingsSection}}active{{/if}}" href="/api-settings{{branchQueryString}}">
-      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-code"></i></span>
-      <span>API</span>
     </a>
   {{else}}
     <form class="nav-item logout-nav-form" method="post" action="/logout">

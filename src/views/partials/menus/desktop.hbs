@@ -15,6 +15,12 @@
       <span>Chi nhánh</span>
     </a>
   {{/if}}
+  {{#if canManageCustomers}}
+    <a class="desktop-nav-link {{#if isCustomersSection}}active{{/if}}" href="/customers{{branchQueryString}}">
+      <span class="desktop-nav-icon" aria-hidden="true"><i class="fa-solid fa-address-book"></i></span>
+      <span>Khách hàng</span>
+    </a>
+  {{/if}}
   {{#if canManageUsers}}
     <a class="desktop-nav-link {{#if isUsersSection}}active{{/if}}" href="/users{{branchQueryString}}">
       <span class="desktop-nav-icon" aria-hidden="true"><i class="fa-solid fa-users-gear"></i></span>

@@ -13,6 +13,7 @@
     user: window.__CURRENT_USER__ || {},
     dashboard: window.__DASHBOARD__ || {},
     bookings: window.__BOOKINGS__ || [],
+    customers: window.__CUSTOMERS__ || [],
     apiClients: window.__API_CLIENTS__ || [],
     sheetTargets: window.__SHEET_TARGETS__ || [],
     users: window.__USERS__ || [],
@@ -58,6 +59,10 @@
     dashboardDateFilter: document.querySelector('[data-dashboard-date-filter]'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
+    customerList: document.getElementById('customer-list'),
+    customerFormMessage: document.getElementById('customer-form-message'),
+    customerSearch: document.querySelector('[data-customer-search]'),
+    customerQuickfill: document.querySelector('[data-customer-quickfill]'),
     apiClientList: document.getElementById('api-client-list'),
     apiClientFormMessage: document.getElementById('api-client-form-message'),
     sheetTargetList: document.getElementById('sheet-target-list'),
@@ -108,6 +113,10 @@
 
   function canManageBranches() {
     return state.user.role === 'admin';
+  }
+
+  function canManageCustomers() {
+    return can('manager');
   }
 
   function formatDateTime(value) {
@@ -300,6 +309,34 @@
 
   function scopedPath(path) {
     return `${path}${dashboardQuery()}`;
+  }
+
+  function scopedPathWithParams(path, params = {}) {
+    const searchParams = new URLSearchParams(dashboardQuery().slice(1));
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.set(key, value);
+      }
+    }
+
+    const query = searchParams.toString();
+
+    return query ? `${path}?${query}` : path;
+  }
+
+  function normalizeClientPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+
+    if (digits.startsWith('0084') && digits.length > 4) {
+      return `0${digits.slice(4)}`;
+    }
+
+    if (digits.startsWith('84') && digits.length >= 10) {
+      return `0${digits.slice(2)}`;
+    }
+
+    return digits;
   }
 
   function setBranchSelectValue(select, value) {
@@ -589,6 +626,10 @@
 
   function findSheetTarget(id) {
     return state.sheetTargets.find((target) => String(target.id) === String(id));
+  }
+
+  function findCustomer(id) {
+    return state.customers.find((customer) => String(customer.id) === String(id));
   }
 
   function tableOptions(booking) {
@@ -975,6 +1016,56 @@
     `;
   }
 
+  function customerEditForm(customer) {
+    return `
+      <form class="management-form row g-3" data-customer-update="${escapeHtml(customer.id)}">
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Tên khách hàng</label>
+          <input class="form-control" name="customer_name" value="${escapeHtml(customer.customer_name)}" required>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Số điện thoại</label>
+          <input class="form-control" name="phone" value="${escapeHtml(customer.phone)}" inputmode="tel" required>
+        </div>
+        <div class="col-12 d-grid">
+          <button class="btn btn-warning fw-bold" type="submit">Lưu khách hàng</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function renderCustomerBookingItem(booking) {
+    const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
+
+    return `
+      <article class="customer-history-item">
+        <div class="d-flex flex-column flex-sm-row justify-content-sm-between gap-1">
+          <strong>${escapeHtml(formatDateTime(booking.booking_time))}</strong>
+          <span class="badge rounded-pill status-pill status-${escapeHtml(booking.status)}">${escapeHtml(bookingStatusLabel(booking.status))}</span>
+        </div>
+        <div class="small text-body-secondary">${escapeHtml(booking.branch_name)} · ${escapeHtml(booking.guest_count)} khách · Bàn ${escapeHtml(tables)}</div>
+        ${booking.note ? `<div class="small text-body-secondary">Ghi chú: ${escapeHtml(booking.note)}</div>` : ''}
+      </article>
+    `;
+  }
+
+  function customerHistoryBody(customer, bookings = []) {
+    const history = bookings.length
+      ? bookings.map(renderCustomerBookingItem).join('')
+      : '<div class="alert alert-light border mb-0">Khách hàng chưa có lịch sử đặt bàn trong phạm vi này.</div>';
+
+    return `
+      <div class="customer-detail">
+        <div class="management-form-note">
+          <strong class="d-block">${escapeHtml(customer.customer_name)}</strong>
+          <span>${escapeHtml(customer.phone)} · ${escapeHtml(customer.booking_count || 0)} booking</span>
+        </div>
+        <div class="customer-history-list mt-3">${history}</div>
+      </div>
+    `;
+  }
+
   function actionButtons(booking) {
     const buttons = [];
 
@@ -1152,6 +1243,43 @@
         </table>
       </div>
     `;
+  }
+
+  function renderCustomer(customer) {
+    const lastBooking = customer.last_booking_time
+      ? `${formatDateTime(customer.last_booking_time)} · ${bookingStatusLabel(customer.last_booking_status)}`
+      : 'Chưa có booking';
+    const customerId = escapeHtml(customer.id);
+
+    return `
+      <article class="customer-card border rounded-4 p-3 bg-body" data-customer-id="${customerId}">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-start justify-content-lg-between gap-3">
+          <div class="min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <strong class="text-gray-800">${escapeHtml(customer.customer_name)}</strong>
+              <span class="badge text-bg-warning">${escapeHtml(customer.booking_count || 0)} booking</span>
+            </div>
+            <div class="small text-body-secondary">SĐT: <strong>${escapeHtml(customer.phone)}</strong></div>
+            <div class="small text-body-secondary">Gần nhất: ${escapeHtml(lastBooking)}</div>
+            ${customer.last_booking_branch_name ? `<div class="small text-body-secondary">Chi nhánh: ${escapeHtml(customer.last_booking_branch_name)} · ${escapeHtml(customer.last_booking_guest_count || 0)} khách</div>` : ''}
+          </div>
+          <div class="d-grid d-sm-flex gap-2 flex-shrink-0">
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="customer-history" data-customer-id="${customerId}">Lịch sử</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="customer-edit" data-customer-id="${customerId}">Chỉnh sửa</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderCustomers() {
+    if (!selectors.customerList) {
+      return;
+    }
+
+    selectors.customerList.innerHTML = state.customers.length
+      ? state.customers.map(renderCustomer).join('')
+      : '<div class="alert alert-light border mb-0">Chưa có khách hàng trong phạm vi này.</div>';
   }
 
   function renderApiClients() {
@@ -1355,6 +1483,7 @@
     renderBookings(selectors.closedBookings, state.dashboard.closed_bookings || []);
     renderOnlineUsers();
     renderBranches();
+    renderCustomers();
     renderApiClients();
     renderSheetTargets();
     syncSheetTargetTypeOptions(document);
@@ -1432,6 +1561,7 @@
       setBranchSelectValue(selectors.bookingBranch, selectedBranchId());
       setBookingTimeSlot('');
       setGuestCount(2);
+      clearCustomerQuickfill();
       selectors.formMessage.textContent = 'Đã tạo yêu cầu đặt bàn.';
       if (canManageBookings()) {
         await refreshDashboard();
@@ -1533,6 +1663,72 @@
     state.sheetTargets = await request('/api/sheet-settings');
     renderSheetTargets();
     syncSheetTargetTypeOptions(document);
+  }
+
+  async function refreshCustomers(query) {
+    const q = query === undefined ? selectors.customerSearch?.value : query;
+    state.customers = await request(scopedPathWithParams('/api/customers', { q }));
+    renderCustomers();
+  }
+
+  function clearCustomerQuickfill() {
+    if (selectors.customerQuickfill) {
+      selectors.customerQuickfill.innerHTML = '';
+    }
+  }
+
+  function renderCustomerQuickfill(result) {
+    if (!selectors.customerQuickfill) {
+      return;
+    }
+
+    if (!result || !result.customer) {
+      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Khách mới, chưa có lịch sử đặt bàn.</div>';
+      return;
+    }
+
+    const customer = result.customer;
+    const recentBookings = result.recent_bookings || [];
+    const history = recentBookings.length
+      ? recentBookings
+          .slice(0, 3)
+          .map((booking) => escapeHtml(`${formatDateTime(booking.booking_time)} · ${bookingStatusLabel(booking.status)} · ${booking.guest_count} khách`))
+          .join('<br>')
+      : 'Chưa có booking trong phạm vi chi nhánh này.';
+
+    selectors.customerQuickfill.innerHTML = `
+      <div class="customer-quickfill-card">
+        <strong>Đã nhận diện: ${escapeHtml(customer.customer_name)}</strong>
+        <span>${escapeHtml(customer.booking_count || 0)} booking trước đó</span>
+        <small>${history}</small>
+      </div>
+    `;
+  }
+
+  async function lookupCustomerForBooking(phoneValue) {
+    const phone = normalizeClientPhone(phoneValue);
+
+    if (phone.length < 8) {
+      clearCustomerQuickfill();
+      return;
+    }
+
+    if (selectors.customerQuickfill) {
+      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Đang tìm khách hàng...</div>';
+    }
+
+    try {
+      const result = await request(scopedPathWithParams('/api/customers/lookup', { phone }));
+      const nameInput = document.getElementById('booking-customer-name');
+      if (result?.customer && nameInput && !nameInput.value.trim()) {
+        nameInput.value = result.customer.customer_name;
+      }
+      renderCustomerQuickfill(result);
+    } catch (error) {
+      if (selectors.customerQuickfill) {
+        selectors.customerQuickfill.innerHTML = `<div class="customer-quickfill-note text-danger">${escapeHtml(error.message)}</div>`;
+      }
+    }
   }
 
   async function handleCreateApiClient(event) {
@@ -1927,6 +2123,29 @@
     }
   }
 
+  async function handleCustomerSubmit(event) {
+    const form = event.target.closest('[data-customer-update]');
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    setFormStatus(form, selectors.customerFormMessage, 'Đang cập nhật khách hàng...');
+
+    try {
+      const data = Object.fromEntries(new FormData(form).entries());
+      await request(`/api/customers/${form.dataset.customerUpdate}`, { method: 'PUT', body: data });
+      setFormStatus(form, selectors.customerFormMessage, 'Đã cập nhật khách hàng.');
+      await refreshCustomers();
+      closeManagementPopup();
+    } catch (error) {
+      setFormStatus(form, selectors.customerFormMessage, error.message);
+      button.disabled = false;
+    }
+  }
+
   async function handleUserDelete(event) {
     const button = event.target.closest('[data-delete-user]');
     if (!button) {
@@ -2008,6 +2227,38 @@
       const user = findUser(button.dataset.userId);
       if (user) {
         openManagementPopup({ eyebrow: 'Người dùng', title: 'Chỉnh sửa tài khoản', body: userEditForm(user) });
+      }
+      return;
+    }
+
+    if (type === 'customer-edit') {
+      const customer = findCustomer(button.dataset.customerId);
+      if (customer) {
+        openManagementPopup({ eyebrow: 'Khách hàng', title: 'Chỉnh sửa khách hàng', body: customerEditForm(customer) });
+      }
+      return;
+    }
+
+    if (type === 'customer-history') {
+      const customer = findCustomer(button.dataset.customerId);
+      if (customer) {
+        openManagementPopup({
+          eyebrow: 'Khách hàng',
+          title: 'Lịch sử đặt bàn',
+          body: customerHistoryBody(customer, []),
+          afterRender: async () => {
+            try {
+              const bookings = await request(scopedPathWithParams(`/api/customers/${customer.id}/bookings`, { limit: 30 }));
+              if (selectors.managementPopupBody && !selectors.managementPopup.hidden) {
+                selectors.managementPopupBody.innerHTML = customerHistoryBody(customer, bookings || []);
+              }
+            } catch (error) {
+              if (selectors.managementPopupBody) {
+                selectors.managementPopupBody.innerHTML = `<div class="alert alert-danger mb-0">${escapeHtml(error.message)}</div>`;
+              }
+            }
+          }
+        });
       }
       return;
     }
@@ -2191,6 +2442,7 @@
   document.addEventListener('submit', handleApiClientSubmit);
   document.addEventListener('submit', handleSheetTargetSubmit);
   document.addEventListener('submit', handleUserSubmit);
+  document.addEventListener('submit', handleCustomerSubmit);
   document.addEventListener('click', handleBookingDelete);
   document.addEventListener('click', handleAreaDelete);
   document.addEventListener('click', handleBranchDelete);
@@ -2228,6 +2480,32 @@
     selectors.dashboardDateFilter.addEventListener('change', () => {
       applyDashboardDateFilter(selectors.dashboardDateFilter.value);
     });
+  }
+
+  if (selectors.customerSearch) {
+    let customerSearchTimer;
+    selectors.customerSearch.addEventListener('input', () => {
+      window.clearTimeout(customerSearchTimer);
+      customerSearchTimer = window.setTimeout(async () => {
+        selectors.customerFormMessage.textContent = 'Đang tìm khách hàng...';
+        try {
+          await refreshCustomers(selectors.customerSearch.value);
+          selectors.customerFormMessage.textContent = '';
+        } catch (error) {
+          selectors.customerFormMessage.textContent = error.message;
+        }
+      }, 250);
+    });
+  }
+
+  const bookingPhoneInput = document.getElementById('booking-phone');
+  if (bookingPhoneInput) {
+    let phoneLookupTimer;
+    bookingPhoneInput.addEventListener('input', () => {
+      window.clearTimeout(phoneLookupTimer);
+      phoneLookupTimer = window.setTimeout(() => lookupCustomerForBooking(bookingPhoneInput.value), 350);
+    });
+    bookingPhoneInput.addEventListener('blur', () => lookupCustomerForBooking(bookingPhoneInput.value));
   }
 
   document.addEventListener('click', handleAction);

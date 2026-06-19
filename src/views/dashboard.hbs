@@ -57,6 +57,24 @@
   </section>
 {{/if}}
 
+{{#if isCustomersSection}}
+  <section class="admin-panel">
+    <div class="section-title mt-0">
+      <span>Khách hàng</span>
+      <span class="section-title-note">Lịch sử đặt bàn</span>
+    </div>
+    <div>
+      <p class="text-body-secondary small mb-3">Số điện thoại là khóa khách hàng. Khi tạo booking, nhập số đã từng đặt sẽ tự điền nhanh tên và hiển thị lịch sử gần nhất.</p>
+      <div class="customer-toolbar mb-3">
+        <label class="visually-hidden" for="customer-search">Tìm khách hàng</label>
+        <input class="form-control" id="customer-search" type="search" placeholder="Tìm theo tên hoặc số điện thoại" autocomplete="off" data-customer-search>
+      </div>
+      <p class="form-message small text-body-secondary mb-3" id="customer-form-message" role="status"></p>
+      <div class="customer-card-grid" id="customer-list"></div>
+    </div>
+  </section>
+{{/if}}
+
 {{#if isUsersSection}}
   <section class="admin-panel">
     <div class="section-title mt-0">

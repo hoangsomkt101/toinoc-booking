@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { BOOKING_STATUSES, SOCKET_EVENTS, TABLE_STATUSES } = require('../src/domain/constants');
-const { normalizeTableIds, validateBookingPayload } = require('../src/domain/validators');
+const { normalizePhone, normalizeTableIds, validateBookingPayload } = require('../src/domain/validators');
 const { normalizeAreaUpdatePayload, normalizeBranchAreasPayload } = require('../src/services/branches');
 const { generateApiKey, hashApiKey, normalizeAllowedOrigin } = require('../src/services/api-clients');
 const { branchSeeds, tableNumbers } = require('../src/db/seed');
@@ -47,6 +47,12 @@ test('validateBookingPayload normalizes create input', () => {
   assert.equal(payload.note, 'Birthday');
   assert.equal(payload.branch_id, 1);
   assert.ok(payload.booking_time instanceof Date);
+});
+
+test('normalizePhone stores a stable customer key', () => {
+  assert.equal(normalizePhone(' 090 900 0000 '), '0909000000');
+  assert.equal(normalizePhone('+84 90 900 0000'), '0909000000');
+  assert.equal(normalizePhone('0084-90-900-0000'), '0909000000');
 });
 
 test('validateBookingPayload treats local booking times as Vietnam time', () => {

@@ -1818,9 +1818,56 @@ a:hover {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.customer-card-grid,
+.customer-history-list {
+  display: grid;
+  gap: 14px;
+}
+
 .branch-card,
-.api-client-card {
+.api-client-card,
+.customer-card,
+.customer-history-item {
   padding: 18px !important;
+}
+
+.customer-card,
+.customer-history-item {
+  background: #fff;
+  border: 1px solid rgba(231, 221, 206, 0.85) !important;
+  box-shadow: 0 10px 22px rgba(83, 58, 35, 0.07);
+}
+
+.customer-history-item {
+  border-radius: 16px;
+}
+
+.customer-quickfill {
+  margin-top: 0.55rem;
+}
+
+.customer-quickfill-card,
+.customer-quickfill-note {
+  background: #fff8e5;
+  border: 1px solid rgba(246, 194, 62, 0.35);
+  border-radius: 0.85rem;
+  color: #6a514c;
+  font-size: 0.82rem;
+  padding: 0.75rem;
+}
+
+.customer-quickfill-card {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.customer-quickfill-card strong {
+  color: var(--app-dark);
+}
+
+.customer-quickfill-card small {
+  color: #7a6a60;
+  line-height: 1.5;
 }
 
 .area-list-item {
