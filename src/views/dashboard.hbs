@@ -19,11 +19,12 @@
 
 {{#if isBookingsSection}}
   {{#if canManageBookings}}
+    <section class="booking-alert-grid mb-3" id="booking-alerts" aria-label="Thông báo đặt bàn" hidden></section>
     <div class="booking-board">
       <section class="booking-section">
         <div class="section-title">
-          <span>Cần xử lý ngay</span>
-          <span class="section-title-note">Trong ca</span>
+          <span>Dòng thời gian đặt bàn</span>
+          <span class="section-title-note">Trễ / sắp tới / đang ngồi</span>
         </div>
         <div class="booking-card-list" id="open-booking-list"></div>
       </section>

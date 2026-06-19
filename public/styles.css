@@ -1553,6 +1553,131 @@ a:hover {
   gap: 14px;
 }
 
+.booking-alert-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.75rem), 1fr));
+}
+
+.booking-alert-grid[hidden] {
+  display: none;
+}
+
+.booking-alert {
+  background: #fffaf1;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  color: #5b5148;
+  display: grid;
+  gap: 2px 6px;
+  min-height: 58px;
+  padding: 9px 12px;
+}
+
+.booking-alert-dot,
+.booking-alert-title {
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.booking-alert strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.booking-alert-danger {
+  background: #fee9e8;
+  border-color: rgba(201, 58, 51, 0.18);
+  color: var(--red);
+}
+
+.booking-alert-warning {
+  background: #fff4df;
+  border-color: rgba(237, 174, 50, 0.32);
+  color: #9a6f0c;
+}
+
+.booking-alert-neutral {
+  background: #f3ecdf;
+  color: #5b5148;
+}
+
+.booking-timeline-list {
+  display: grid;
+  gap: 0;
+}
+
+.booking-timeline-item {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  position: relative;
+}
+
+.booking-timeline-item::before {
+  background: #d9cdbc;
+  bottom: -12px;
+  content: "";
+  left: 58px;
+  position: absolute;
+  top: 32px;
+  width: 1px;
+}
+
+.booking-timeline-item:last-child::before {
+  display: none;
+}
+
+.booking-time-mark {
+  color: var(--wine);
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1.1;
+  padding-right: 13px;
+  padding-top: 7px;
+  position: relative;
+  text-align: right;
+}
+
+.booking-time-mark::after {
+  background: currentColor;
+  border-radius: 999px;
+  content: "";
+  height: 11px;
+  position: absolute;
+  right: -5px;
+  top: 12px;
+  width: 11px;
+  z-index: 1;
+}
+
+.booking-time-mark small {
+  color: currentColor;
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.booking-time-mark.red {
+  color: var(--red);
+}
+
+.booking-time-mark.gold {
+  color: #b99112;
+}
+
+.booking-time-mark.green {
+  color: var(--green);
+}
+
+.booking-time-mark.neutral {
+  color: var(--muted);
+}
+
 .booking-section {
   min-width: 0;
 }
@@ -1576,6 +1701,27 @@ a:hover {
   position: relative;
 }
 
+.timeline-card {
+  border-left: 5px solid var(--wine) !important;
+  margin-bottom: 16px;
+}
+
+.timeline-card.red {
+  border-left-color: var(--red) !important;
+}
+
+.timeline-card.gold {
+  border-left-color: var(--gold) !important;
+}
+
+.timeline-card.green {
+  border-left-color: var(--green) !important;
+}
+
+.timeline-card.neutral {
+  border-left-color: #b8aa9a !important;
+}
+
 .booking-card:hover,
 .table-card:hover {
   border-color: rgba(143, 16, 45, 0.28) !important;
@@ -1584,6 +1730,97 @@ a:hover {
 
 .booking-card-body {
   padding: 18px;
+}
+
+.timeline-card-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.timeline-customer {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.timeline-phone {
+  margin-top: 3px;
+}
+
+.timeline-status {
+  flex: 0 0 auto;
+  max-width: 45%;
+  text-align: center;
+}
+
+.badge-soft.timeline-status-red {
+  background: #fee9e8;
+  color: var(--red);
+}
+
+.badge-soft.timeline-status-gold {
+  background: #fbf0d0;
+  color: #95720b;
+}
+
+.badge-soft.timeline-status-green {
+  background: #e8f5ef;
+  color: var(--green);
+}
+
+.badge-soft.timeline-status-neutral {
+  background: #f3ecdf;
+  color: #5b5148;
+}
+
+.timeline-meta-row {
+  color: #6d645d;
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.timeline-meta-row i {
+  color: var(--wine);
+}
+
+.timeline-table {
+  color: #5b5148;
+}
+
+.timeline-table-missing {
+  color: #b99112;
+}
+
+.timeline-notice,
+.timeline-note {
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.35;
+  margin-top: 12px;
+  padding: 9px 11px;
+}
+
+.timeline-notice-red {
+  background: #fee9e8;
+  color: var(--red);
+}
+
+.timeline-notice-gold {
+  background: #fff4df;
+  color: #9a6f0c;
+}
+
+.timeline-note {
+  background: #f8f1e7;
+  color: #6d645d;
 }
 
 .booking-summary-line {
@@ -1625,6 +1862,10 @@ a:hover {
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 16px;
+}
+
+.timeline-action-row {
+  margin-top: 14px;
 }
 
 .booking-tables {

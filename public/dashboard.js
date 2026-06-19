@@ -39,6 +39,9 @@
     CHECKED_OUT: 'Đã trả bàn',
     COMPLETED: 'Hoàn tất'
   };
+  const arrivalPendingStatuses = ['PENDING', 'CONFIRMED'];
+  const closedBookingStatuses = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
+  const upcomingWarningMinutes = 30;
   const selectors = {
     openBookings: document.getElementById('open-booking-list'),
     closedBookings: document.getElementById('closed-booking-list'),
@@ -57,6 +60,7 @@
     branchScope: document.querySelector('[data-branch-scope]'),
     dashboardDateControls: document.querySelector('[data-dashboard-date-controls]'),
     dashboardDateFilter: document.querySelector('[data-dashboard-date-filter]'),
+    bookingAlerts: document.getElementById('booking-alerts'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
     customerList: document.getElementById('customer-list'),
@@ -1106,39 +1110,211 @@
     `;
   }
 
-  function renderBooking(booking) {
+  function hasAssignedTables(booking) {
+    return (booking.assigned_tables || []).length > 0;
+  }
+
+  function bookingDate(booking) {
+    const date = new Date(booking.booking_time);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function minutesUntilBooking(booking, now = new Date()) {
+    const date = bookingDate(booking);
+
+    if (!date) {
+      return null;
+    }
+
+    const differenceMinutes = (date.getTime() - now.getTime()) / 60000;
+
+    return differenceMinutes < 0 ? Math.floor(differenceMinutes) : Math.ceil(differenceMinutes);
+  }
+
+  function minuteLabel(minutes) {
+    return `${Math.abs(Number(minutes) || 0)}'`;
+  }
+
+  function localDatePart(date) {
+    if (!date) {
+      return '';
+    }
+
+    const offset = date.getTimezoneOffset() * 60 * 1000;
+
+    return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+  }
+
+  function isTodayBooking(booking) {
+    const date = bookingDate(booking);
+
+    return date ? localDatePart(date) === todayDateValue() : false;
+  }
+
+  function phoneCallHref(phone) {
+    const phoneValue = String(phone || '').replace(/[^\d+]/g, '');
+
+    return phoneValue ? `tel:${phoneValue}` : '';
+  }
+
+  function bookingTimelineState(booking, now = new Date()) {
+    const minutes = isTodayBooking(booking) ? minutesUntilBooking(booking, now) : null;
+    const isArrivalPending = arrivalPendingStatuses.includes(booking.status);
+
+    if (isArrivalPending && minutes !== null && minutes < 0) {
+      return {
+        tone: 'red',
+        badge: `Trễ ${minuteLabel(minutes)}`,
+        offset: `-${minuteLabel(minutes)}`,
+        notice: 'Cảnh báo trễ giờ. Ưu tiên gọi khách hoặc cập nhật trạng thái.'
+      };
+    }
+
+    if (isArrivalPending && minutes !== null && minutes >= 0 && minutes <= upcomingWarningMinutes) {
+      return {
+        tone: 'gold',
+        badge: minutes <= 5 ? 'Sắp đến' : `Sắp tới ${minuteLabel(minutes)}`,
+        offset: `+${minuteLabel(minutes)}`,
+        notice: 'Khách sắp tới. Kiểm tra bàn và xác nhận chuẩn bị đón khách.'
+      };
+    }
+
+    if (booking.status === 'CHECKED_IN') {
+      return { tone: 'green', badge: 'Đang ngồi', offset: '', notice: '' };
+    }
+
+    if (booking.status === 'CHECKED_OUT' || booking.status === 'COMPLETED') {
+      return { tone: 'green', badge: bookingStatusLabel(booking.status), offset: '', notice: '' };
+    }
+
+    if (booking.status === 'CANCELLED' || booking.status === 'NO_SHOW') {
+      return { tone: 'red', badge: bookingStatusLabel(booking.status), offset: '', notice: '' };
+    }
+
+    if (booking.status === 'PENDING' || booking.status === 'CONFIRMED') {
+      return { tone: 'gold', badge: bookingStatusLabel(booking.status), offset: '', notice: '' };
+    }
+
+    return { tone: 'neutral', badge: bookingStatusLabel(booking.status), offset: '', notice: '' };
+  }
+
+  function renderBookingAlert(alert) {
+    return `
+      <article class="booking-alert booking-alert-${escapeHtml(alert.tone)}">
+        <span class="booking-alert-dot" aria-hidden="true">•</span>
+        <span class="booking-alert-title">${escapeHtml(alert.title)}</span>
+        <strong>${escapeHtml(alert.detail)}</strong>
+      </article>
+    `;
+  }
+
+  function renderBookingAlerts(bookings = []) {
+    if (!selectors.bookingAlerts) {
+      return;
+    }
+
+    const now = new Date();
+    const activeBookings = bookings.filter((booking) => !closedBookingStatuses.includes(booking.status));
+    const timedBookings = activeBookings
+      .map((booking) => ({ booking, minutes: minutesUntilBooking(booking, now) }))
+      .filter((item) => item.minutes !== null && isTodayBooking(item.booking));
+    const lateBooking = timedBookings
+      .filter((item) => arrivalPendingStatuses.includes(item.booking.status) && item.minutes < 0)
+      .sort((left, right) => left.minutes - right.minutes)[0];
+    const upcomingBooking = timedBookings
+      .filter((item) => arrivalPendingStatuses.includes(item.booking.status) && item.minutes >= 0 && item.minutes <= upcomingWarningMinutes)
+      .sort((left, right) => left.minutes - right.minutes)[0];
+    const unassignedCount = activeBookings.filter((booking) => arrivalPendingStatuses.includes(booking.status) && !hasAssignedTables(booking)).length;
+    const alerts = [];
+
+    if (lateBooking) {
+      alerts.push({
+        tone: 'danger',
+        title: 'TRỄ GIỜ',
+        detail: `${lateBooking.booking.customer_name} · ${minuteLabel(lateBooking.minutes)}`
+      });
+    }
+
+    if (upcomingBooking) {
+      alerts.push({
+        tone: 'warning',
+        title: 'SẮP TỚI',
+        detail: `${upcomingBooking.booking.customer_name} · ${minuteLabel(upcomingBooking.minutes)}`
+      });
+    }
+
+    if (unassignedCount > 0) {
+      alerts.push({
+        tone: 'neutral',
+        title: 'CHƯA XẾP BÀN',
+        detail: `${unassignedCount} booking cần bàn`
+      });
+    }
+
+    selectors.bookingAlerts.hidden = alerts.length === 0;
+    selectors.bookingAlerts.innerHTML = alerts.map(renderBookingAlert).join('');
+  }
+
+  function renderTimelineBooking(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
     const controls = `${bookingManagement(booking)}${actionButtons(booking)}`;
+    const timelineState = bookingTimelineState(booking);
+    const callHref = phoneCallHref(booking.phone);
+    const callAction = callHref && !closedBookingStatuses.includes(booking.status)
+      ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Gọi khách</a>`
+      : '';
+    const tableClass = hasAssignedTables(booking) ? '' : ' timeline-table-missing';
+    const branchLabel = booking.branch_name ? ` · ${booking.branch_name}` : '';
+    const notice = timelineState.notice
+      ? `<div class="timeline-notice timeline-notice-${escapeHtml(timelineState.tone)}">${escapeHtml(timelineState.notice)}</div>`
+      : '';
+    const note = booking.note
+      ? `<div class="timeline-note">Ghi chú: ${escapeHtml(booking.note)}</div>`
+      : '';
 
     return `
-      <article class="card booking-card" data-booking-id="${escapeHtml(booking.id)}">
+      <div class="booking-timeline-item timeline-${escapeHtml(timelineState.tone)}" data-booking-id="${escapeHtml(booking.id)}">
+        <div class="booking-time-mark ${escapeHtml(timelineState.tone)}">
+          ${escapeHtml(formatBookingHour(booking.booking_time))}
+          ${timelineState.offset ? `<small>${escapeHtml(timelineState.offset)}</small>` : ''}
+        </div>
+        <article class="card booking-card timeline-card ${escapeHtml(timelineState.tone)}" data-booking-id="${escapeHtml(booking.id)}">
         <div class="card-body booking-card-body">
-          <div class="booking-card-main">
-            <div class="booking-summary-line" title="${escapeHtml(formatDateTime(booking.booking_time))} - ${escapeHtml(booking.customer_name)} - ${escapeHtml(phoneSuffix(booking.phone))} - ${escapeHtml(booking.guest_count)}K - ${escapeHtml(bookingStatusLabel(booking.status))}">
-              <span class="booking-time">${escapeHtml(formatBookingHour(booking.booking_time))}</span>
-              <span class="booking-separator">-</span>
-              <strong class="booking-customer">${escapeHtml(booking.customer_name)}</strong>
-              <span class="booking-separator">-</span>
-              <span>${escapeHtml(phoneSuffix(booking.phone))}</span>
-              <span class="booking-separator">-</span>
-              <span class="booking-guest-count">${escapeHtml(booking.guest_count)}K</span>
-              <span class="booking-separator">-</span>
-              <span class="badge rounded-pill status-pill booking-status-pill status-${escapeHtml(booking.status)}">${escapeHtml(bookingStatusLabel(booking.status))}</span>
+          <div class="timeline-card-header">
+            <div class="booking-card-main">
+              <h3 class="timeline-customer">${escapeHtml(booking.customer_name)}</h3>
+              <div class="booking-meta timeline-phone">${escapeHtml(booking.phone || '-')}</div>
             </div>
+            <span class="badge-soft timeline-status timeline-status-${escapeHtml(timelineState.tone)} status-${escapeHtml(booking.status)}">${escapeHtml(timelineState.badge)}</span>
           </div>
-          <div class="action-row">
-            <span class="booking-tables" title="B ${escapeHtml(tables)}">B ${escapeHtml(tables)}</span>
+          <div class="timeline-meta-row">
+            <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)} khách${escapeHtml(branchLabel)}</span>
+            <span class="timeline-table${tableClass}">Bàn ${escapeHtml(tables)}</span>
+          </div>
+          ${notice}
+          ${note}
+          <div class="action-row timeline-action-row">
+            <span class="booking-tables" title="Bàn ${escapeHtml(tables)}">Bàn ${escapeHtml(tables)}</span>
+            ${callAction}
             ${controls}
           </div>
         </div>
-      </article>
+        </article>
+      </div>
     `;
+  }
+
+  function renderBooking(booking) {
+    return renderTimelineBooking(booking);
   }
 
   function renderBookings(element, bookings) {
     if (!element) {
       return;
     }
+
+    element.classList.toggle('booking-timeline-list', bookings.length > 0);
 
     element.innerHTML = bookings.length
       ? bookings.map(renderBooking).join('')
@@ -1479,6 +1655,7 @@
 
   function render() {
     renderCounts();
+    renderBookingAlerts(state.dashboard.open_bookings || []);
     renderBookings(selectors.openBookings, state.dashboard.open_bookings || []);
     renderBookings(selectors.closedBookings, state.dashboard.closed_bookings || []);
     renderOnlineUsers();
