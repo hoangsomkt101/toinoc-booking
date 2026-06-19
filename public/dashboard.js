@@ -175,9 +175,19 @@
   }
 
   function dashboardBookingDateFromUrl() {
-    const dateValue = new URLSearchParams(window.location.search).get('booking_date') || window.__SELECTED_BOOKING_DATE__ || todayDateValue();
+    const dateValue = window.__SELECTED_BOOKING_DATE__ || todayDateValue();
 
     return isDateValue(dateValue) ? dateValue : todayDateValue();
+  }
+
+  function removeDashboardDateFromUrl() {
+    if (window.__DASHBOARD_SECTION__ !== 'bookings' || !new URLSearchParams(window.location.search).has('booking_date')) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('booking_date');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }
 
   function roleLabel(role) {
@@ -468,10 +478,9 @@
 
   function applyDashboardDateFilter(value) {
     const dateValue = isDateValue(value) ? value : todayDateValue();
-    const url = new URL(window.location.href);
-
-    url.searchParams.set('booking_date', dateValue);
-    window.location.assign(`${url.pathname}${url.search}${url.hash}`);
+    selectors.dashboardDateFilter.value = dateValue;
+    updateDashboardDateChips(dateValue);
+    refreshDashboard();
   }
 
   function setBookingDateValue(value) {
@@ -3102,6 +3111,7 @@
   }
 
   syncBranchControls();
+  removeDashboardDateFromUrl();
   syncDashboardDateControls();
   syncBookingDateControls();
   render();
