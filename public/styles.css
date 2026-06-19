@@ -1365,7 +1365,7 @@ a:hover {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 0;
 }
 
 .app-brand {

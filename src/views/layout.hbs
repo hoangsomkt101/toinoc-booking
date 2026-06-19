@@ -28,23 +28,6 @@
                 </button>
               </form>
             </div>
-            <p class="eyebrow mb-2">Tới Nóc Admin</p>
-            {{#if isBookingsSection}}
-              <h1 class="screen-title">Tổng quan</h1>
-            {{/if}}
-            {{#if isBranchesSection}}
-              <h1 class="screen-title">Chi nhánh & khu vực</h1>
-            {{/if}}
-            {{#if isUsersSection}}
-              <h1 class="screen-title">Người dùng & vai trò</h1>
-            {{/if}}
-            {{#if isApiSettingsSection}}
-              <h1 class="screen-title">API Settings</h1>
-            {{/if}}
-            {{#if isSheetSettingsSection}}
-              <h1 class="screen-title">Sheet Settings</h1>
-            {{/if}}
-            <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
           </header>
 
           {{> menus/topbar_scope}}
