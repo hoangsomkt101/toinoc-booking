@@ -3,17 +3,6 @@
     <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-calendar-check"></i></span>
     <span>Đặt bàn</span>
   </a>
-  {{#if canManageBranches}}
-    <a class="nav-item {{#if isBranchesSection}}active{{/if}}" href="/branches{{branchQueryString}}">
-      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-store"></i></span>
-      <span>Chi nhánh</span>
-    </a>
-  {{else}}
-    <span class="nav-item disabled" aria-hidden="true">
-      <span class="bottom-nav-icon"><i class="fa-solid fa-store"></i></span>
-      <span>Chi nhánh</span>
-    </span>
-  {{/if}}
   {{#if canCreateBooking}}
     <button class="fab" type="button" data-open-booking-popup aria-label="Tạo đặt bàn"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
   {{else}}
@@ -30,17 +19,10 @@
       <span>Khách</span>
     </span>
   {{/if}}
-  {{#if canManageUsers}}
-    <a class="nav-item {{#if isUsersSection}}active{{/if}}" href="/users{{branchQueryString}}">
-      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-users-gear"></i></span>
-      <span>Người dùng</span>
-    </a>
-  {{else}}
-    <form class="nav-item logout-nav-form" method="post" action="/logout">
-      <button class="logout-nav-button" type="submit">
-        <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-right-from-bracket"></i></span>
-        <span>Tài khoản</span>
-      </button>
-    </form>
-  {{/if}}
+  <form class="nav-item logout-nav-form" method="post" action="/logout">
+    <button class="logout-nav-button" type="submit">
+      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-right-from-bracket"></i></span>
+      <span>Tài khoản</span>
+    </button>
+  </form>
 </nav>
