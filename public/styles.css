@@ -2310,6 +2310,14 @@ a:hover {
     width: 100%;
   }
 
+  .desktop-topbar-scope-with-date {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .desktop-topbar-scope-with-date .scope-date-field {
+    grid-column: 2 / 4;
+  }
+
   .desktop-topbar-scope .dashboard-date-row {
     display: grid;
     gap: 0.4rem;
@@ -2335,16 +2343,6 @@ a:hover {
 
   .desktop-topbar-scope .dashboard-date-input {
     display: none;
-  }
-}
-
-@media (min-width: 520px) and (max-width: 991.98px) {
-  .desktop-topbar-scope-with-date {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 2fr);
-  }
-
-  .desktop-topbar-scope-with-date .scope-date-field {
-    grid-column: 2;
   }
 }
 
