@@ -1401,23 +1401,24 @@ a:hover {
   display: grid;
   min-height: 100svh;
   min-height: 100dvh;
-  padding: 24px 12px;
-  place-items: start center;
+  padding: 0;
+  place-items: stretch;
 }
 
 .mobile-shell {
   background: var(--cream);
-  border: 12px solid #1d1719;
-  border-radius: 46px;
-  box-shadow: 0 22px 50px rgba(45, 30, 24, 0.23);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  height: min(880px, calc(100svh - 48px));
-  height: min(880px, calc(100dvh - 48px));
-  min-height: 720px;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 100svh;
+  min-height: 100dvh;
   overflow: hidden;
   position: relative;
-  width: min(100%, 430px);
+  width: 100%;
 }
 
 .dashboard-shell {
@@ -2018,7 +2019,6 @@ a:hover {
   border-radius: 13px;
   font-size: 13px;
   font-weight: 900;
-  min-height: 44px;
   padding: 8px 12px;
   width: 100%;
 }
