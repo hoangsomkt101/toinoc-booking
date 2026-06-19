@@ -8,83 +8,41 @@
     <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/styles.css">
   </head>
-  <body class="dashboard-body" id="page-top">
-    <div class="admin-wrapper">
-      <aside class="admin-sidebar" aria-label="Trình đơn tổng quan">
-        <a class="sidebar-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
-          <img class="sidebar-brand-logo" src="/logo.webp" alt="Restaurant Booking">
-        </a>
-
-        <hr class="sidebar-divider">
-        <div class="sidebar-heading">Vận hành</div>
-        <nav class="nav flex-nowrap flex-md-column gap-2 mobile-nav">
-          <a class="nav-link flex-shrink-0 {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
-            <span class="nav-icon" aria-hidden="true">01</span>
-            <span>
-              <strong class="d-block">Đặt bàn</strong>
-            </span>
-          </a>
-          {{#if canManageBranches}}
-            <a class="nav-link flex-shrink-0 {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
-              <span class="nav-icon" aria-hidden="true">02</span>
-              <span>
-                <strong class="d-block">Chi nhánh</strong>
-              </span>
+  <body class="dashboard-body mobile-app-body" id="page-top">
+    <div class="prototype-stage">
+      <section class="mobile-shell dashboard-shell">
+        <header class="app-header dashboard-app-header">
+          <div class="app-header-top">
+            <a class="app-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
+              <img class="app-brand-logo" src="/logo.webp" alt="Restaurant Booking">
             </a>
-          {{/if}}
-          {{#if canCreateBooking}}
-            <button class="nav-link sidebar-booking-action flex-shrink-0" type="button" data-open-booking-popup>
-              <span class="nav-icon" aria-hidden="true">+</span>
-              <span>
-                <strong class="d-block">Tạo đặt bàn</strong>
-              </span>
-            </button>
-          {{/if}}
-          {{#if canManageUsers}}
-            <a class="nav-link flex-shrink-0 {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
-              <span class="nav-icon" aria-hidden="true">03</span>
-              <span>
-                <strong class="d-block">Người dùng</strong>
-              </span>
-            </a>
-          {{/if}}
-          {{#if canManageApiSettings}}
-            <a class="nav-link flex-shrink-0 {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
-              <span class="nav-icon" aria-hidden="true">04</span>
-              <span>
-                <strong class="d-block">API Settings</strong>
-              </span>
-            </a>
-          {{/if}}
-          <form class="mobile-logout-form d-md-none" method="post" action="/logout">
-            <button class="nav-link mobile-logout-button" type="submit">
-              <span class="nav-icon" aria-hidden="true">X</span>
-              <span>
-                <strong class="d-block">Đăng xuất</strong>
-                <small class="d-block text-truncate">{{currentUser.display_name}}</small>
-              </span>
-            </button>
-          </form>
-        </nav>
-
-        <div class="sidebar-user-card">
-          <div class="user-summary sidebar-user-summary">
-            <span class="user-avatar" aria-hidden="true">{{currentUser.role_label}}</span>
-            <div class="min-w-0">
-              <span class="d-block fw-semibold text-truncate">{{currentUser.display_name}}</span>
-              <span class="small">{{currentUser.role_label}}</span>
-            </div>
+            <form class="header-logout-form" method="post" action="/logout">
+              <button class="header-user-button" type="submit" aria-label="Đăng xuất {{currentUser.display_name}}">
+                <span class="avatar avatar-compact" aria-hidden="true">TK</span>
+                <span class="header-user-name">Thoát</span>
+              </button>
+            </form>
           </div>
-          <form method="post" action="/logout">
-            <button class="btn btn-outline-danger btn-sm w-100" type="submit">Đăng xuất</button>
-          </form>
-        </div>
-      </aside>
+          <p class="eyebrow mb-2">Tới Nóc Admin</p>
+          {{#if isBookingsSection}}
+            <h1 class="screen-title">Tổng quan</h1>
+          {{/if}}
+          {{#if isBranchesSection}}
+            <h1 class="screen-title">Chi nhánh & khu vực</h1>
+          {{/if}}
+          {{#if isUsersSection}}
+            <h1 class="screen-title">Người dùng & vai trò</h1>
+          {{/if}}
+          {{#if isApiSettingsSection}}
+            <h1 class="screen-title">API Settings</h1>
+          {{/if}}
+          <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
+        </header>
 
-      <div class="admin-content-wrapper">
-        <main class="container-fluid px-3 px-lg-4 py-4">
-          {{#if showOperationsSummary}}
-            <form id="branch-scope-form" class="scope-panel d-flex flex-column flex-md-row flex-md-nowrap align-items-md-end justify-content-start gap-3 mb-4" method="get" action="/dashboard/{{dashboardSection}}">
+        <main class="page-main dashboard-page-main">
+          {{#if isBookingsSection}}
+            {{#if showOperationsSummary}}
+              <form id="branch-scope-form" class="scope-panel d-flex flex-column flex-md-row flex-md-nowrap align-items-md-end justify-content-start gap-3 mb-4" method="get" action="/dashboard/{{dashboardSection}}">
               <div class="scope-field scope-branch-field">
                 <label class="form-label fw-bold mb-0 text-nowrap" for="branch-scope-select">Chi nhánh</label>
                 <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" data-branch-scope>
@@ -106,80 +64,53 @@
                   </div>
                 </div>
               {{/if}}
-            </form>
+              </form>
 
-            <section class="row g-3 mb-4" aria-label="Tình hình theo ngày được chọn">
-              <div class="col-12 col-sm-4">
-                <article class="card metric-card border-left-primary shadow-sm h-100">
-                  <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between gap-3">
-                      <div>
-                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Đặt bàn trong ngày</div>
-                        <div class="h5 mb-0 fw-bold text-gray-800" id="count-today">0</div>
-                      </div>
-                      <span class="metric-icon" aria-hidden="true">01</span>
-                    </div>
-                  </div>
+              <section class="metric-grid mb-4" aria-label="Tình hình theo ngày được chọn">
+                <article class="metric">
+                  <strong id="count-today">0</strong>
+                  <small>Đặt bàn</small>
                 </article>
-              </div>
-              <div class="col-12 col-sm-4">
-                <article class="card metric-card border-left-success shadow-sm h-100">
-                  <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between gap-3">
-                      <div>
-                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Bàn trống</div>
-                        <div class="h5 mb-0 fw-bold text-gray-800" id="count-available-tables">0</div>
-                      </div>
-                      <span class="metric-icon" aria-hidden="true">02</span>
-                    </div>
-                  </div>
+                <article class="metric green">
+                  <strong id="count-available-tables">0</strong>
+                  <small>Bàn trống</small>
                 </article>
-              </div>
-              <div class="col-12 col-sm-4">
-                <article class="card metric-card border-left-info shadow-sm h-100">
-                  <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between gap-3">
-                      <div>
-                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Bàn đang có khách</div>
-                        <div class="h5 mb-0 fw-bold text-gray-800" id="count-occupied-tables">0</div>
-                      </div>
-                      <span class="metric-icon" aria-hidden="true">03</span>
-                    </div>
-                  </div>
+                <article class="metric">
+                  <strong id="count-occupied-tables">0</strong>
+                  <small>Đang ngồi</small>
                 </article>
-              </div>
-            </section>
+              </section>
+            {{/if}}
           {{/if}}
 
           {{#if isBookingsSection}}
             {{#if canManageBookings}}
-            <div class="row g-4">
-              <section class="col-12 col-xl-6">
-                <div class="card border-0 shadow-sm h-100">
-                  <div class="admin-card-header card-header py-3">
-                    <h3 class="h6 fw-bold text-primary mb-0">Booking đang xử lý</h3>
-                  </div>
-                  <div class="card-body d-grid gap-3 align-content-start" id="open-booking-list"></div>
+            <div class="booking-board">
+              <section class="booking-section">
+                <div class="section-title">
+                  <span>Cần xử lý ngay</span>
+                  <span class="section-title-note">Trong ca</span>
                 </div>
+                <div class="booking-card-list" id="open-booking-list"></div>
               </section>
-              <section class="col-12 col-xl-6">
-                <div class="card border-0 shadow-sm h-100">
-                  <div class="admin-card-header card-header py-3">
-                    <h3 class="h6 fw-bold text-body-secondary mb-0">Booking hoàn tất / hủy</h3>
-                  </div>
-                  <div class="card-body d-grid gap-3 align-content-start" id="closed-booking-list"></div>
+              <section class="booking-section">
+                <div class="section-title">
+                  <span>Đã xong / đã hủy</span>
+                  <span class="section-title-note muted">Lưu vết</span>
                 </div>
+                <div class="booking-card-list" id="closed-booking-list"></div>
               </section>
             </div>
             {{/if}}
           {{/if}}
 
           {{#if isBranchesSection}}
-            <section class="card border-0 shadow-sm">
-              <div class="admin-card-header card-header py-3">
-                <h3 class="h6 fw-bold text-primary mb-0">Chi nhánh</h3>
+            <section class="admin-panel">
+              <div class="section-title mt-0">
+                <span>Chi nhánh</span>
+                <span class="section-title-note">Cấu hình</span>
               </div>
-              <div class="card-body p-3 p-md-4">
+              <div>
                 <p class="text-body-secondary small mb-3">Các địa điểm nhà hàng được sử dụng cho đặt bàn, bàn và tài khoản nhân viên.</p>
                 {{#if canManageBranches}}
                   <details class="mb-4">
@@ -239,11 +170,12 @@
           {{/if}}
 
           {{#if isUsersSection}}
-            <section class="card border-0 shadow-sm">
-              <div class="admin-card-header card-header py-3">
-                <h3 class="h6 fw-bold text-primary mb-0">Tài khoản người dùng</h3>
+            <section class="admin-panel">
+              <div class="section-title mt-0">
+                <span>Tài khoản người dùng</span>
+                <span class="section-title-note">Quản trị</span>
               </div>
-              <div class="card-body p-3 p-md-4">
+              <div>
                 <p class="text-body-secondary small mb-3">Quản trị viên có thể tạo, cập nhật và vô hiệu hóa mọi vai trò người dùng.</p>
                 <form id="create-user-form" class="row g-3 mb-4">
                   <div class="col-12 col-sm-6 col-xl">
@@ -290,11 +222,12 @@
           {{/if}}
 
           {{#if isApiSettingsSection}}
-            <section class="card border-0 shadow-sm">
-              <div class="admin-card-header card-header py-3">
-                <h3 class="h6 fw-bold text-primary mb-0">API Settings</h3>
+            <section class="admin-panel">
+              <div class="section-title mt-0">
+                <span>API Settings</span>
+                <span class="section-title-note">Tích hợp</span>
               </div>
-              <div class="card-body p-3 p-md-4">
+              <div>
                 <p class="text-body-secondary small mb-3">Quản trị viên cho phép domain bên ngoài đọc danh sách chi nhánh public và tạo booking bằng API key, không dùng cookie đăng nhập nội bộ.</p>
                 <form id="create-api-client-form" class="row g-3 mb-4">
                   <div class="col-12 col-md-4">
@@ -324,24 +257,66 @@
           {{/if}}
         </main>
 
-        <footer class="admin-footer bg-body">
-          <div class="container-fluid px-3 px-lg-4 py-4 text-center small text-body-secondary">
-            Restaurant Booking Dashboard - SB Admin 2 inspired layout
-          </div>
-        </footer>
-      </div>
+        <nav class="bottom-nav" aria-label="Điều hướng chính">
+          <a class="nav-item {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
+            <span class="bottom-nav-icon" aria-hidden="true">DB</span>
+            <span>Đặt bàn</span>
+          </a>
+          {{#if canManageBranches}}
+            <a class="nav-item {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
+              <span class="bottom-nav-icon" aria-hidden="true">CN</span>
+              <span>Chi nhánh</span>
+            </a>
+          {{else}}
+            <span class="nav-item disabled" aria-hidden="true">
+              <span class="bottom-nav-icon">CN</span>
+              <span>Chi nhánh</span>
+            </span>
+          {{/if}}
+          {{#if canCreateBooking}}
+            <button class="fab" type="button" data-open-booking-popup aria-label="Tạo đặt bàn">+</button>
+          {{else}}
+            <span class="fab disabled" aria-hidden="true">+</span>
+          {{/if}}
+          {{#if canManageUsers}}
+            <a class="nav-item {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
+              <span class="bottom-nav-icon" aria-hidden="true">ND</span>
+              <span>Người dùng</span>
+            </a>
+          {{else}}
+            <span class="nav-item disabled" aria-hidden="true">
+              <span class="bottom-nav-icon">ND</span>
+              <span>Người dùng</span>
+            </span>
+          {{/if}}
+          {{#if canManageApiSettings}}
+            <a class="nav-item {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
+              <span class="bottom-nav-icon" aria-hidden="true">API</span>
+              <span>API</span>
+            </a>
+          {{else}}
+            <form class="nav-item logout-nav-form" method="post" action="/logout">
+              <button class="logout-nav-button" type="submit">
+                <span class="bottom-nav-icon" aria-hidden="true">TK</span>
+                <span>Tài khoản</span>
+              </button>
+            </form>
+          {{/if}}
+        </nav>
+      </section>
     </div>
 
     {{#if canCreateBooking}}
-      <div class="booking-popup" id="booking-popup" data-booking-popup hidden aria-hidden="true">
+      <div class="booking-popup overlay-shell" id="booking-popup" data-booking-popup hidden aria-hidden="true">
         <div class="booking-popup-backdrop" data-close-booking-popup></div>
-        <section class="booking-popup-panel" role="dialog" aria-modal="true" aria-labelledby="booking-popup-title" tabindex="-1" data-booking-popup-panel>
+        <section class="booking-popup-panel bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="booking-popup-title" tabindex="-1" data-booking-popup-panel>
+          <div class="sheet-handle" aria-hidden="true"></div>
           <div class="booking-popup-header">
             <div>
               <p class="eyebrow mb-1">Phiếu đặt bàn</p>
-              <h3 class="h5 fw-bold text-primary mb-0" id="booking-popup-title">Tạo yêu cầu đặt bàn</h3>
+              <h3 class="screen-title fs-2 mb-0" id="booking-popup-title">Tạo đặt bàn</h3>
             </div>
-            <button class="btn btn-outline-secondary btn-sm" type="button" data-close-booking-popup aria-label="Đóng form đặt bàn">Đóng</button>
+            <button class="btn btn-soft rounded-circle booking-close-button" type="button" data-close-booking-popup aria-label="Đóng form đặt bàn">X</button>
           </div>
           <div class="booking-popup-body">
             <form id="create-booking-form" class="booking-public-form">

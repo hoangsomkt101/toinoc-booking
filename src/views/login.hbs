@@ -8,30 +8,39 @@
     <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/styles.css">
   </head>
-  <body>
-    <main class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
-      <section class="card auth-card border-0 shadow-sm w-100">
-        <div class="card-body p-4 p-sm-5">
-          <img class="auth-logo mb-4" src="/logo.webp" alt="Restaurant Booking">
-          <p class="eyebrow mb-1">Dành cho nhân viên</p>
-          <h1 class="display-5 fw-bold mb-2">Đăng nhập</h1>
-          <p class="text-body-secondary mb-4">Đăng nhập bằng tên đăng nhập và mật khẩu nhân viên.</p>
+  <body class="mobile-app-body">
+    <main class="prototype-stage">
+      <section class="mobile-shell login-shell">
+        <div class="browser-bar">
+          <div class="browser-pill">
+            <span aria-hidden="true">SSL</span>
+            <strong>admin.toinoc.com</strong>
+            <span aria-hidden="true">REF</span>
+          </div>
+        </div>
+        <div class="login-content">
+          <div class="text-center my-4">
+            <div class="avatar gold mx-auto mb-3" style="width:78px;height:78px;font-size:30px">TN</div>
+            <div class="eyebrow">Tới Nóc Admin</div>
+            <h1 class="screen-title mt-2">Đăng nhập quản trị</h1>
+            <p class="screen-subtitle">Dành cho nhân viên vận hành đặt bàn</p>
+          </div>
 
           {{#if error}}
             <div class="alert alert-danger" role="alert">{{error}}</div>
           {{/if}}
 
-          <form class="d-grid gap-3" method="post" action="/login">
+          <form class="login-panel" method="post" action="/login">
             <input type="hidden" name="next" value="{{next}}">
             <div>
-              <label class="form-label fw-semibold">Tên đăng nhập</label>
-              <input class="form-control form-control-lg" name="username" value="{{username}}" autocomplete="username" autocapitalize="none" required autofocus>
+              <label class="field-label mt-0">Tên đăng nhập</label>
+              <input class="form-control" name="username" value="{{username}}" autocomplete="username" autocapitalize="none" required autofocus>
             </div>
             <div>
-              <label class="form-label fw-semibold">Mật khẩu</label>
-              <input class="form-control form-control-lg" name="password" type="password" autocomplete="current-password" required>
+              <label class="field-label">Mật khẩu</label>
+              <input class="form-control" name="password" type="password" autocomplete="current-password" required>
             </div>
-            <button class="btn btn-warning btn-lg fw-bold mt-2" type="submit">Đăng nhập</button>
+            <button class="btn btn-gold w-100 mt-4" type="submit">Đăng nhập</button>
           </form>
         </div>
       </section>
