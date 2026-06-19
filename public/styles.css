@@ -2017,6 +2017,23 @@ a:hover {
   margin-top: 14px;
 }
 
+@media (max-width: 991.98px) {
+  .timeline-action-row {
+    align-items: stretch;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .timeline-action-row .booking-action-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 8px;
+    white-space: nowrap;
+    width: auto;
+  }
+}
+
 .booking-tables {
   background: #fbf7f0;
   border: 1px solid var(--line);
