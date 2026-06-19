@@ -84,8 +84,8 @@
           <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
         </header>
 
-        <header class="desktop-topbar" aria-label="Thanh thông tin quản trị">
-          <div>
+        <header class="desktop-topbar {{#if isBookingsSection}}{{#if showOperationsSummary}}desktop-topbar-with-scope{{/if}}{{/if}}" aria-label="Thanh thông tin quản trị">
+          <div class="desktop-topbar-heading">
             <p class="eyebrow mb-1">Tới Nóc Admin</p>
             {{#if isBookingsSection}}
               <h1 class="desktop-page-title">Tổng quan đặt bàn</h1>
@@ -100,6 +100,33 @@
               <h1 class="desktop-page-title">API Settings</h1>
             {{/if}}
           </div>
+
+          {{#if isBookingsSection}}
+            {{#if showOperationsSummary}}
+              <form id="branch-scope-form" class="scope-panel desktop-topbar-scope d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/dashboard/{{dashboardSection}}">
+                <div class="scope-field scope-branch-field">
+                  <label class="form-label fw-bold mb-0 text-nowrap" for="branch-scope-select">Chi nhánh</label>
+                  <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" data-branch-scope>
+                    {{#if canManageBranches}}
+                      <option value="">Tất cả chi nhánh</option>
+                    {{/if}}
+                    {{#each branches}}
+                      <option value="{{id}}">{{name}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                <div class="scope-field scope-date-field">
+                  <label class="form-label fw-bold mb-0 text-nowrap" for="booking-date-filter">Ngày đặt bàn</label>
+                  <div class="booking-date-row dashboard-date-row" data-dashboard-date-controls>
+                    <button class="booking-date-chip" type="button" data-dashboard-date-offset="0">Hôm nay</button>
+                    <button class="booking-date-chip" type="button" data-dashboard-date-offset="1">Ngày mai</button>
+                    <input class="booking-date-input dashboard-date-input" id="booking-date-filter" name="booking_date" type="date" value="{{selectedBookingDate}}" data-dashboard-date-filter>
+                  </div>
+                </div>
+              </form>
+            {{/if}}
+          {{/if}}
+
           <div class="desktop-topbar-actions">
             {{#if canCreateBooking}}
               <button class="btn btn-warning fw-bold" type="button" data-open-booking-popup>Tạo đặt bàn</button>
@@ -113,30 +140,6 @@
         <main class="page-main dashboard-page-main">
           {{#if isBookingsSection}}
             {{#if showOperationsSummary}}
-              <form id="branch-scope-form" class="scope-panel d-flex flex-column flex-md-row flex-md-nowrap align-items-md-end justify-content-start gap-3 mb-4" method="get" action="/dashboard/{{dashboardSection}}">
-              <div class="scope-field scope-branch-field">
-                <label class="form-label fw-bold mb-0 text-nowrap" for="branch-scope-select">Chi nhánh</label>
-                <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" data-branch-scope>
-                  {{#if canManageBranches}}
-                    <option value="">Tất cả chi nhánh</option>
-                  {{/if}}
-                  {{#each branches}}
-                    <option value="{{id}}">{{name}}</option>
-                  {{/each}}
-                </select>
-              </div>
-              {{#if isBookingsSection}}
-                <div class="scope-field scope-date-field">
-                  <label class="form-label fw-bold mb-0 text-nowrap" for="booking-date-filter">Ngày đặt bàn</label>
-                  <div class="booking-date-row dashboard-date-row" data-dashboard-date-controls>
-                    <button class="booking-date-chip" type="button" data-dashboard-date-offset="0">Hôm nay</button>
-                    <button class="booking-date-chip" type="button" data-dashboard-date-offset="1">Ngày mai</button>
-                    <input class="booking-date-input dashboard-date-input" id="booking-date-filter" name="booking_date" type="date" value="{{selectedBookingDate}}" data-dashboard-date-filter>
-                  </div>
-                </div>
-              {{/if}}
-              </form>
-
               <section class="metric-grid mb-4" aria-label="Tình hình theo ngày được chọn">
                 <article class="metric">
                   <strong id="count-today">0</strong>

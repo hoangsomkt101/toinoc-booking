@@ -2320,6 +2320,22 @@ a:hover {
   display: none;
 }
 
+.desktop-topbar.desktop-topbar-with-scope {
+  background: var(--cream);
+  display: block;
+  flex: 0 0 auto;
+  padding: 18px 22px 0;
+}
+
+.desktop-topbar .desktop-topbar-heading,
+.desktop-topbar .desktop-topbar-actions {
+  display: none;
+}
+
+.desktop-topbar-scope {
+  margin-bottom: 0 !important;
+}
+
 @media (min-width: 992px) {
   .dashboard-body {
     background: #f7f1e8;
@@ -2340,7 +2356,7 @@ a:hover {
     box-shadow: none;
     display: grid;
     grid-template-columns: 16.75rem minmax(0, 1fr);
-    grid-template-rows: 5.5rem minmax(0, 1fr);
+    grid-template-rows: 6.5rem minmax(0, 1fr);
     height: 100vh;
     min-height: 100vh;
     overflow: hidden;
@@ -2477,14 +2493,38 @@ a:hover {
     background: var(--paper);
     border-bottom: 1px solid rgba(231, 221, 206, 0.8);
     box-shadow: 0 0.15rem 1.1rem rgba(45, 30, 24, 0.08);
-    display: flex;
-    gap: 1.5rem;
+    display: grid;
+    gap: 1rem;
     grid-column: 2;
     grid-row: 1;
+    grid-template-columns: minmax(13rem, 0.7fr) minmax(0, 1.8fr) auto;
     justify-content: space-between;
     min-width: 0;
     padding: 1rem 1.75rem;
     z-index: 4;
+  }
+
+  .desktop-topbar.desktop-topbar-with-scope {
+    background: var(--paper);
+    display: grid;
+    padding: 1rem 1.75rem;
+  }
+
+  .desktop-topbar .desktop-topbar-heading,
+  .desktop-topbar .desktop-topbar-actions {
+    display: flex;
+  }
+
+  .desktop-topbar .desktop-topbar-heading {
+    display: block;
+  }
+
+  .desktop-topbar:not(.desktop-topbar-with-scope) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .desktop-topbar-heading {
+    min-width: 0;
   }
 
   .desktop-topbar .eyebrow {
@@ -2511,6 +2551,52 @@ a:hover {
     margin: 0;
   }
 
+  .desktop-topbar-scope {
+    align-items: flex-end !important;
+    box-shadow: none;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    margin: 0 !important;
+    min-width: 0;
+    padding: 0.75rem;
+    position: static;
+    width: 100%;
+  }
+
+  .desktop-topbar-scope .scope-branch-field {
+    flex: 0 1 17rem;
+    width: auto;
+  }
+
+  .desktop-topbar-scope .scope-date-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .desktop-topbar-scope .dashboard-date-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .desktop-topbar-scope .booking-date-chip,
+  .desktop-topbar-scope .booking-date-input,
+  .desktop-topbar-scope .form-select {
+    min-height: 2.75rem;
+  }
+
+  .desktop-topbar-scope .booking-date-chip {
+    padding-inline: 0.8rem;
+  }
+
+  .desktop-topbar-scope .dashboard-date-input {
+    flex: 0 0 11.75rem;
+    grid-column: auto;
+    width: 11.75rem;
+  }
+
   .dashboard-page-main {
     background: #f7f1e8;
     grid-column: 2;
@@ -2518,40 +2604,6 @@ a:hover {
     min-height: 0;
     overflow-y: auto;
     padding: 1.5rem 1.75rem 2rem;
-  }
-
-  .dashboard-page-main .scope-panel {
-    align-items: flex-end !important;
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 1rem !important;
-    margin-bottom: 1.25rem !important;
-    max-width: none;
-    position: sticky;
-    top: 0;
-    width: 100%;
-    z-index: 3;
-  }
-
-  .dashboard-page-main .scope-branch-field {
-    flex: 0 1 20rem;
-    width: auto;
-  }
-
-  .dashboard-page-main .scope-date-field {
-    flex: 1 1 auto;
-  }
-
-  .dashboard-page-main .dashboard-date-row {
-    align-items: center;
-    display: flex;
-    flex-wrap: nowrap;
-  }
-
-  .dashboard-page-main .dashboard-date-input {
-    flex: 0 0 12.5rem;
-    grid-column: auto;
-    width: 12.5rem;
   }
 
   .dashboard-page-main .metric-grid {
@@ -2707,6 +2759,10 @@ a:hover {
 @media (min-width: 1280px) {
   .dashboard-shell {
     grid-template-columns: 17.5rem minmax(0, 1fr);
+  }
+
+  .desktop-topbar {
+    grid-template-columns: minmax(14rem, 0.65fr) minmax(0, 2fr) auto;
   }
 
   .dashboard-page-main {
