@@ -1911,12 +1911,22 @@ a:hover {
 }
 
 .timeline-meta-row {
+  align-items: center;
   color: #6d645d;
-  display: grid;
+  display: flex;
+  flex-wrap: nowrap;
   font-size: 13px;
   font-weight: 800;
   gap: 8px;
   margin-top: 14px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.timeline-meta-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeline-meta-row i {
