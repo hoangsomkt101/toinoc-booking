@@ -281,7 +281,8 @@ body.booking-popup-open {
   overflow: hidden;
 }
 
-.booking-popup[hidden] {
+.booking-popup[hidden],
+.management-popup[hidden] {
   display: none;
 }
 
@@ -329,6 +330,29 @@ body.booking-popup-open {
 .booking-popup-body {
   overflow-y: auto;
   padding: 1rem;
+}
+
+.management-form {
+  margin: 0;
+}
+
+.management-form:not(.row) {
+  display: grid;
+  gap: 1rem;
+}
+
+.management-form-note {
+  background: #fff8e5;
+  border: 1px solid rgba(246, 194, 62, 0.35);
+  border-radius: 0.85rem;
+  color: #6a514c;
+  font-size: 0.88rem;
+  font-weight: 750;
+  padding: 0.8rem;
+}
+
+.management-popup-body .table-select {
+  min-height: 9rem;
 }
 
 .booking-form-intro {
@@ -789,20 +813,6 @@ body.booking-popup-open {
   padding: 0.32rem 0.65rem;
 }
 
-.booking-control[open] {
-  flex-basis: 100%;
-}
-
-.booking-panel-body {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.booking-panel-body .table-select {
-  min-height: 4.5rem;
-}
-
 .status-pill {
   border: 1px solid rgba(246, 194, 62, 0.45);
   flex: 0 0 auto;
@@ -918,15 +928,6 @@ body.booking-popup-open {
   font-size: 0.82rem;
 }
 
-.user-edit-row td {
-  background: var(--bs-tertiary-bg);
-  padding: 1rem !important;
-}
-
-.user-edit-form {
-  margin: 0;
-}
-
 .branch-card-grid {
   display: grid;
   gap: 1rem;
@@ -990,26 +991,6 @@ body.booking-popup-open {
   font-size: 0.88rem;
 }
 
-.area-edit-panel {
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
-.area-edit-panel[open] {
-  flex: 1 0 100%;
-}
-
-.area-edit-panel summary {
-  min-height: 32px;
-  padding: 0.25rem 0.55rem;
-}
-
-.area-edit-form {
-  display: grid;
-  gap: 0.5rem;
-  width: 100%;
-}
-
 .branch-card-actions {
   margin-top: 0.75rem;
 }
@@ -1036,10 +1017,6 @@ details > summary::-webkit-details-marker {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   }
 
-  .booking-panel-body {
-    align-items: start;
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
 }
 
 @media (min-width: 768px) {
@@ -1663,11 +1640,6 @@ a:hover {
   padding: 10px 12px;
 }
 
-.booking-control[open],
-.booking-edit-panel {
-  grid-column: 1 / -1;
-}
-
 .booking-action-btn {
   border-radius: 13px;
   font-size: 13px;
@@ -1675,16 +1647,6 @@ a:hover {
   min-height: 44px;
   padding: 8px 12px;
   width: 100%;
-}
-
-.booking-panel-body {
-  background: #fbf7f0;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 12px;
 }
 
 .status-pill,
@@ -2030,6 +1992,10 @@ a:hover {
   padding: 0 22px 28px;
 }
 
+.management-popup-body {
+  padding-top: 8px;
+}
+
 .booking-public-form {
   display: grid;
   gap: 0;
@@ -2263,10 +2229,6 @@ a:hover {
 
 @media (min-width: 768px) {
   .booking-board {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .booking-panel-body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -2748,12 +2710,6 @@ a:hover {
   .dashboard-page-main .booking-action-btn {
     min-height: 2.5rem;
     width: auto;
-  }
-
-  .dashboard-page-main .booking-control[open],
-  .dashboard-page-main .booking-edit-panel {
-    flex-basis: 100%;
-    grid-column: auto;
   }
 
   .dashboard-page-main .admin-panel {

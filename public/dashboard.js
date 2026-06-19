@@ -46,6 +46,11 @@
     bookingBranchGrid: document.getElementById('booking-branch-grid'),
     bookingPopup: document.querySelector('[data-booking-popup]'),
     bookingPopupPanel: document.querySelector('[data-booking-popup-panel]'),
+    managementPopup: document.querySelector('[data-management-popup]'),
+    managementPopupPanel: document.querySelector('[data-management-popup-panel]'),
+    managementPopupEyebrow: document.querySelector('[data-management-popup-eyebrow]'),
+    managementPopupTitle: document.querySelector('[data-management-popup-title]'),
+    managementPopupBody: document.querySelector('[data-management-popup-body]'),
     onlineUsers: document.getElementById('online-users-list'),
     onlineCount: document.getElementById('online-count'),
     branchScope: document.querySelector('[data-branch-scope]'),
@@ -53,7 +58,6 @@
     dashboardDateFilter: document.querySelector('[data-dashboard-date-filter]'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
-    branchAreaInputs: document.getElementById('branch-area-inputs'),
     apiClientList: document.getElementById('api-client-list'),
     apiClientFormMessage: document.getElementById('api-client-form-message'),
     sheetTargetList: document.getElementById('sheet-target-list'),
@@ -69,6 +73,21 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
+  }
+
+  function setFormStatus(form, fallbackElement, message) {
+    if (fallbackElement) {
+      fallbackElement.textContent = message;
+    }
+
+    const popupMessage = form?.querySelector('[data-management-message]');
+    if (popupMessage && popupMessage !== fallbackElement) {
+      popupMessage.textContent = message;
+    }
+  }
+
+  function isInsideManagementPopup(element) {
+    return Boolean(element?.closest('[data-management-popup]'));
   }
 
   function can(minimumRole) {
@@ -468,7 +487,48 @@
 
     selectors.bookingPopup.hidden = true;
     selectors.bookingPopup.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('booking-popup-open');
+    if (!selectors.managementPopup || selectors.managementPopup.hidden) {
+      document.body.classList.remove('booking-popup-open');
+    }
+  }
+
+  function openManagementPopup({ eyebrow = 'Quản trị', title = 'Thao tác', body = '', afterRender } = {}) {
+    if (!selectors.managementPopup || !selectors.managementPopupBody) {
+      return;
+    }
+
+    if (selectors.managementPopupEyebrow) {
+      selectors.managementPopupEyebrow.textContent = eyebrow;
+    }
+    if (selectors.managementPopupTitle) {
+      selectors.managementPopupTitle.textContent = title;
+    }
+    selectors.managementPopupBody.innerHTML = body;
+    selectors.managementPopup.hidden = false;
+    selectors.managementPopup.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('booking-popup-open');
+
+    if (typeof afterRender === 'function') {
+      afterRender(selectors.managementPopupBody);
+    }
+    syncSheetTargetTypeOptions(selectors.managementPopupBody);
+
+    window.requestAnimationFrame(() => selectors.managementPopupPanel?.focus());
+  }
+
+  function closeManagementPopup() {
+    if (!selectors.managementPopup) {
+      return;
+    }
+
+    selectors.managementPopup.hidden = true;
+    selectors.managementPopup.setAttribute('aria-hidden', 'true');
+    if (selectors.managementPopupBody) {
+      selectors.managementPopupBody.innerHTML = '';
+    }
+    if (!selectors.bookingPopup || selectors.bookingPopup.hidden) {
+      document.body.classList.remove('booking-popup-open');
+    }
   }
 
   function visibleBranches() {
@@ -504,6 +564,33 @@
     return allBookings().find((booking) => String(booking.id) === String(id));
   }
 
+  function findBranch(id) {
+    return state.branches.find((branch) => String(branch.id) === String(id));
+  }
+
+  function findArea(id) {
+    for (const branch of state.branches) {
+      const area = (branch.areas || []).find((item) => String(item.id) === String(id));
+      if (area) {
+        return { ...area, branch };
+      }
+    }
+
+    return undefined;
+  }
+
+  function findUser(id) {
+    return state.users.find((user) => String(user.id) === String(id));
+  }
+
+  function findApiClient(id) {
+    return state.apiClients.find((client) => String(client.id) === String(id));
+  }
+
+  function findSheetTarget(id) {
+    return state.sheetTargets.find((target) => String(target.id) === String(id));
+  }
+
   function tableOptions(booking) {
     const available = (state.dashboard.available_tables || []).filter(
       (table) => String(table.branch_id) === String(booking.branch_id)
@@ -524,18 +611,376 @@
       .join('');
   }
 
+  function managementMessage() {
+    return '<p class="form-message small text-body-secondary mb-0" data-management-message role="status"></p>';
+  }
+
+  function bookingAssignForm(booking) {
+    const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
+
+    return `
+      <form class="management-form" data-booking-assign="${escapeHtml(booking.id)}">
+        <div class="management-form-note">${escapeHtml(booking.customer_name)} · ${escapeHtml(booking.guest_count)} khách · Bàn hiện tại: ${escapeHtml(tables)}</div>
+        <div>
+          <label class="form-label fw-semibold">Chọn bàn</label>
+          <select class="form-select table-select" data-table-select="${escapeHtml(booking.id)}" multiple aria-label="Chọn bàn">${tableOptions(booking)}</select>
+          <div class="form-text">Có thể chọn một hoặc nhiều bàn.</div>
+        </div>
+        <button class="btn btn-warning fw-bold form-submit" type="submit">Lưu bàn</button>
+        ${managementMessage()}
+      </form>
+    `;
+  }
+
+  function bookingEditForm(booking) {
+    return `
+      <form class="management-form row g-3" data-booking-update="${escapeHtml(booking.id)}">
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Tên khách hàng</label>
+          <input class="form-control" name="customer_name" value="${escapeHtml(booking.customer_name)}" required>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Số điện thoại</label>
+          <input class="form-control" name="phone" value="${escapeHtml(booking.phone)}" required>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Thời gian đặt bàn</label>
+          <input class="form-control" name="booking_time" type="datetime-local" value="${escapeHtml(formatDateTimeLocal(booking.booking_time))}" required>
+        </div>
+        <div class="col-6 col-sm-3">
+          <label class="form-label fw-semibold small">Số khách</label>
+          <input class="form-control" name="guest_count" type="number" min="1" value="${escapeHtml(booking.guest_count)}" required>
+        </div>
+        <div class="col-6 col-sm-3">
+          <label class="form-label fw-semibold small">Chi nhánh</label>
+          <select class="form-select" name="branch_id" required>${branchOptions(booking.branch_id)}</select>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Ghi chú</label>
+          <textarea class="form-control" name="note" rows="3">${escapeHtml(booking.note || '')}</textarea>
+        </div>
+        <div class="col-12 d-grid gap-2 d-sm-flex">
+          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu thay đổi</button>
+          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}">Xóa đặt bàn</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function branchCreateForm() {
+    return `
+      <form id="create-branch-form" class="management-form row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Tên chi nhánh</label>
+          <input class="form-control" name="name" maxlength="120" required>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Địa chỉ</label>
+          <input class="form-control" name="address" maxlength="255">
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Số bàn của chi nhánh</label>
+          <input class="form-control" name="table_count" type="number" min="1" value="1" required>
+        </div>
+        <div class="col-12">
+          <div class="border rounded-4 p-3 bg-body">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-start justify-content-sm-between gap-2 mb-3">
+              <div>
+                <strong class="d-block">Khu vực</strong>
+                <span class="text-body-secondary small">Khu vực chỉ dùng để phân vùng hiển thị, không kiểm soát bàn.</span>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm flex-shrink-0" type="button" data-add-area-row>Thêm khu vực</button>
+            </div>
+            <div class="d-grid gap-3" id="branch-area-inputs">
+              <div class="area-input-row row g-2 align-items-end m-0 border rounded-3 p-2 bg-body" data-area-row>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">Tên khu vực</label>
+                  <input class="form-control" data-area-field="name" maxlength="120" value="VIP" required>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 d-grid">
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo chi nhánh</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function branchDeleteReason(branch) {
+    const reasons = [];
+    if (branch.has_bookings) {
+      reasons.push('có lịch sử đặt bàn');
+    }
+    if (branch.has_users || branch.has_staffs) {
+      reasons.push('đang có tài khoản hoặc nhân viên');
+    }
+
+    return reasons.length ? `Không thể xóa vì chi nhánh ${reasons.join(' và ')}.` : '';
+  }
+
+  function branchEditForm(branch) {
+    const deleteReason = branchDeleteReason(branch);
+
+    return `
+      <form class="management-form row g-3" data-branch-update="${escapeHtml(branch.id)}">
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Tên chi nhánh</label>
+          <input class="form-control" name="name" value="${escapeHtml(branch.name)}" maxlength="120" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Địa chỉ</label>
+          <input class="form-control" name="address" value="${escapeHtml(branch.address || '')}" maxlength="255">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Số bàn của chi nhánh</label>
+          <input class="form-control" name="table_count" type="number" min="1" value="${escapeHtml(branch.table_count || 1)}" required>
+        </div>
+        <div class="col-12 d-grid gap-2 d-sm-flex">
+          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu thay đổi</button>
+          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-branch="${escapeHtml(branch.id)}" data-branch-name="${escapeHtml(branch.name)}" ${deleteReason ? `disabled title="${escapeHtml(deleteReason)}"` : ''}>Xóa chi nhánh</button>
+        </div>
+        ${deleteReason ? `<p class="small text-body-secondary mb-0">${escapeHtml(deleteReason)}</p>` : ''}
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function areaCreateForm(branch) {
+    return `
+      <form class="management-form row g-3" data-area-create data-branch-id="${escapeHtml(branch.id)}">
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Chi nhánh</label>
+          <input class="form-control" value="${escapeHtml(branch.name)}" disabled>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Tên khu vực</label>
+          <input class="form-control" name="name" maxlength="120" required>
+        </div>
+        <div class="col-12 d-grid">
+          <button class="btn btn-warning fw-bold" type="submit">Tạo khu vực</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function areaEditForm(area) {
+    return `
+      <form class="management-form row g-3" data-area-update="${escapeHtml(area.id)}">
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Tên khu vực</label>
+          <input class="form-control" name="name" maxlength="120" value="${escapeHtml(area.name)}" required>
+        </div>
+        <div class="col-12 d-grid gap-2 d-sm-flex">
+          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu tên</button>
+          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-area="${escapeHtml(area.id)}" data-area-name="${escapeHtml(area.name)}">Xóa khu vực</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function userCreateForm() {
+    const branchField = state.user.branch_id
+      ? `<input name="branch_id" type="hidden" value="${escapeHtml(state.user.branch_id)}">`
+      : `
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-semibold">Chi nhánh</label>
+            <select class="form-select" name="branch_id">${branchOptions('', true)}</select>
+          </div>
+        `;
+
+    return `
+      <form id="create-user-form" class="management-form row g-3">
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold">Tên đăng nhập</label>
+          <input class="form-control" name="username" minlength="3" maxlength="50" pattern="[a-z0-9._-]+" autocapitalize="none" required>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold">Tên hiển thị</label>
+          <input class="form-control" name="display_name" maxlength="120" required>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold">Vai trò</label>
+          <select class="form-select" name="role" required>${roleOptions('')}</select>
+        </div>
+        ${branchField}
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold">Mật khẩu</label>
+          <input class="form-control" name="password" type="password" minlength="6" autocomplete="new-password" required>
+        </div>
+        <div class="col-12 d-grid">
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo tài khoản</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function userEditForm(user) {
+    const isSelf = String(user.id) === String(state.user.id);
+
+    return `
+      <form class="management-form row g-3" data-user-update="${escapeHtml(user.id)}">
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-semibold small">Tên đăng nhập</label>
+          <input class="form-control" name="username" value="${escapeHtml(user.username)}" minlength="3" maxlength="50" required>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-semibold small">Tên hiển thị</label>
+          <input class="form-control" name="display_name" value="${escapeHtml(user.display_name)}" maxlength="120" required>
+        </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Vai trò</label>
+          <select class="form-select" name="role">${roleOptions(user.role)}</select>
+        </div>
+        ${canManageUsers() ? `
+          <div class="col-12 col-sm-6">
+            <label class="form-label fw-semibold small">Chi nhánh</label>
+            <select class="form-select" name="branch_id">${branchOptions(user.branch_id, true)}</select>
+          </div>
+        ` : ''}
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Mật khẩu mới</label>
+          <input class="form-control" name="password" type="password" minlength="6" placeholder="Giữ nguyên nếu trống">
+        </div>
+        <div class="col-12">
+          <div class="form-check mb-0">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="popup-user-active-${escapeHtml(user.id)}" ${user.is_active ? 'checked' : ''} ${isSelf ? 'disabled' : ''}>
+            ${isSelf ? '<input name="is_active" type="hidden" value="true">' : ''}
+            <label class="form-check-label" for="popup-user-active-${escapeHtml(user.id)}">Tài khoản hoạt động</label>
+          </div>
+        </div>
+        <div class="col-12 d-grid gap-2 d-sm-flex">
+          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu thay đổi</button>
+          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-user="${escapeHtml(user.id)}" data-user-name="${escapeHtml(user.display_name)}" ${isSelf ? 'disabled' : ''}>Xóa tài khoản</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function apiClientCreateForm() {
+    return `
+      <form id="create-api-client-form" class="management-form row g-3">
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold">Tên cấu hình</label>
+          <input class="form-control" name="name" maxlength="120" placeholder="Website WordPress" required>
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="form-label fw-semibold">Domain được phép</label>
+          <input class="form-control" name="allowed_origin" placeholder="https://example.com" required>
+          <div class="form-text">Chỉ origin chính xác này được gọi public API.</div>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="api-client-active" checked>
+            <label class="form-check-label" for="api-client-active">Cho phép hoạt động ngay</label>
+          </div>
+        </div>
+        <div class="col-12 d-grid">
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo API key</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function apiClientEditForm(client) {
+    return `
+      <form class="management-form row g-3" data-api-client-update="${escapeHtml(client.id)}">
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold small">Tên cấu hình</label>
+          <input class="form-control" name="name" maxlength="120" value="${escapeHtml(client.name)}" required>
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="form-label fw-semibold small">Domain được phép</label>
+          <input class="form-control" name="allowed_origin" value="${escapeHtml(client.allowed_origin)}" required>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="popup-api-client-active-${escapeHtml(client.id)}" ${client.is_active ? 'checked' : ''}>
+            <label class="form-check-label" for="popup-api-client-active-${escapeHtml(client.id)}">Cho phép hoạt động</label>
+          </div>
+        </div>
+        <div class="col-12 d-grid gap-2 d-sm-flex">
+          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu thay đổi</button>
+          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-api-client="${escapeHtml(client.id)}" data-api-client-name="${escapeHtml(client.name)}">Xóa cấu hình</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function sheetTargetCreateForm() {
+    return `
+      <form id="create-sheet-target-form" class="management-form row g-3">
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold">Tên cấu hình</label>
+          <input class="form-control" name="name" maxlength="120" placeholder="Sheet tổng" required>
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="form-label fw-semibold">Loại Sheet</label>
+          <select class="form-select" name="target_type" data-sheet-target-type required>${sheetTargetTypeOptions('')}</select>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Link Apps Script</label>
+          <input class="form-control" name="webhook_url" placeholder="https://script.google.com/macros/s/.../exec" required>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="sheet-target-active" checked>
+            <label class="form-check-label" for="sheet-target-active">Cho phép đồng bộ ngay</label>
+          </div>
+        </div>
+        <div class="col-12 d-grid">
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Lưu cấu hình Sheet</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
+  function sheetTargetEditForm(target) {
+    return `
+      <form class="management-form row g-3" data-sheet-target-update="${escapeHtml(target.id)}">
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold small">Tên cấu hình</label>
+          <input class="form-control" name="name" maxlength="120" value="${escapeHtml(target.name)}" required>
+        </div>
+        <div class="col-12 col-md-7">
+          <label class="form-label fw-semibold small">Loại Sheet</label>
+          <select class="form-select" name="target_type" data-sheet-target-type data-current-sheet-target-type="${escapeHtml(target.target_type)}">${sheetTargetTypeOptions(target.target_type)}</select>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold small">Link Apps Script</label>
+          <input class="form-control" name="webhook_url" value="${escapeHtml(target.webhook_url)}" required>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="popup-sheet-target-active-${escapeHtml(target.id)}" ${target.is_active ? 'checked' : ''}>
+            <label class="form-check-label" for="popup-sheet-target-active-${escapeHtml(target.id)}">Cho phép đồng bộ</label>
+          </div>
+        </div>
+        <div class="col-12 d-grid gap-2 d-sm-flex">
+          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu thay đổi</button>
+          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-sheet-target="${escapeHtml(target.id)}" data-sheet-target-name="${escapeHtml(target.name)}">Xóa cấu hình</button>
+        </div>
+        <div class="col-12">${managementMessage()}</div>
+      </form>
+    `;
+  }
+
   function actionButtons(booking) {
     const buttons = [];
 
     if (['PENDING', 'CONFIRMED', 'CHECKED_IN'].includes(booking.status) && canManageBookings()) {
       buttons.push(`
-        <details class="booking-control booking-assign-panel">
-          <summary class="btn btn-outline-secondary btn-sm booking-action-btn">Xếp bàn</summary>
-          <div class="booking-panel-body">
-            <select class="form-select form-select-sm table-select" data-table-select="${escapeHtml(booking.id)}" multiple aria-label="Chọn bàn">${tableOptions(booking)}</select>
-            <button class="btn btn-warning btn-sm fw-bold booking-action-btn" data-action="assign">Lưu bàn</button>
-          </div>
-        </details>
+        <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}">Xếp bàn</button>
       `);
     }
 
@@ -566,41 +1011,7 @@
     }
 
     return `
-      <details class="booking-control booking-edit-panel">
-        <summary class="btn btn-outline-secondary btn-sm booking-action-btn">Chỉnh sửa</summary>
-        <form class="row g-2 mt-2 border rounded-3 p-3 bg-body-tertiary" data-booking-update="${escapeHtml(booking.id)}">
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-semibold small">Tên khách hàng</label>
-            <input class="form-control" name="customer_name" value="${escapeHtml(booking.customer_name)}" required>
-          </div>
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-semibold small">Số điện thoại</label>
-            <input class="form-control" name="phone" value="${escapeHtml(booking.phone)}" required>
-          </div>
-          <div class="col-12 col-sm-6">
-            <label class="form-label fw-semibold small">Thời gian đặt bàn</label>
-            <input class="form-control" name="booking_time" type="datetime-local" value="${escapeHtml(formatDateTimeLocal(booking.booking_time))}" required>
-          </div>
-          <div class="col-6 col-sm-3">
-            <label class="form-label fw-semibold small">Số khách</label>
-            <input class="form-control" name="guest_count" type="number" min="1" value="${escapeHtml(booking.guest_count)}" required>
-          </div>
-          <div class="col-6 col-sm-3">
-            <label class="form-label fw-semibold small">Chi nhánh</label>
-            <select class="form-select" name="branch_id" required>${branchOptions(booking.branch_id)}</select>
-          </div>
-          <div class="col-12">
-            <label class="form-label fw-semibold small">Ghi chú</label>
-            <textarea class="form-control" name="note" rows="2">${escapeHtml(booking.note || '')}</textarea>
-          </div>
-          <div class="col-6 d-grid">
-            <button class="btn btn-warning fw-bold" type="submit">Lưu thay đổi</button>
-          </div>
-          <div class="col-6 d-grid">
-            <button class="btn btn-outline-danger" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}">Xóa đặt bàn</button>
-          </div>
-        </form>
-      </details>
+      <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-edit" data-booking-id="${escapeHtml(booking.id)}">Chỉnh sửa</button>
     `;
   }
 
@@ -713,45 +1124,9 @@
             <td class="text-nowrap">${escapeHtml(formatDateTime(user.last_login_at))}</td>
             <td class="text-nowrap">
               <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm" type="button" data-toggle-user-edit="${userId}" aria-expanded="false" aria-controls="user-edit-${userId}">Chỉnh sửa</button>
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="user-edit" data-user-id="${userId}">Chỉnh sửa</button>
                 <button class="btn btn-outline-danger btn-sm" type="button" data-delete-user="${userId}" data-user-name="${escapeHtml(user.display_name)}" ${isSelf ? 'disabled' : ''}>Xóa</button>
               </div>
-            </td>
-          </tr>
-          <tr class="user-edit-row" id="user-edit-${userId}" data-user-edit-row="${userId}" hidden>
-            <td colspan="7">
-              <form class="row g-3 user-edit-form" data-user-update="${userId}">
-                <div class="col-12 col-md-6 col-xl-3">
-                  <label class="form-label fw-semibold small">Tên đăng nhập</label>
-                  <input class="form-control" name="username" value="${escapeHtml(user.username)}" minlength="3" maxlength="50" required>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                  <label class="form-label fw-semibold small">Tên hiển thị</label>
-                  <input class="form-control" name="display_name" value="${escapeHtml(user.display_name)}" maxlength="120" required>
-                </div>
-                <div class="col-6 col-md-4 col-xl-2">
-                  <label class="form-label fw-semibold small">Vai trò</label>
-                  <select class="form-select" name="role">${roleOptions(user.role)}</select>
-                </div>
-                ${canManageUsers() ? `
-                  <div class="col-6 col-md-4 col-xl-2">
-                    <label class="form-label fw-semibold small">Chi nhánh</label>
-                    <select class="form-select" name="branch_id">${branchOptions(user.branch_id, true)}</select>
-                  </div>
-                ` : ''}
-                <div class="col-12 col-md-4 col-xl-2">
-                  <label class="form-label fw-semibold small">Mật khẩu mới</label>
-                  <input class="form-control" name="password" type="password" minlength="6" placeholder="Giữ nguyên nếu trống">
-                </div>
-                <div class="col-12 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
-                  <div class="form-check mb-0">
-                    <input class="form-check-input" name="is_active" type="checkbox" value="true" id="user-active-${userId}" ${user.is_active ? 'checked' : ''} ${isSelf ? 'disabled' : ''}>
-                    ${isSelf ? '<input name="is_active" type="hidden" value="true">' : ''}
-                    <label class="form-check-label" for="user-active-${userId}">Tài khoản hoạt động</label>
-                  </div>
-                  <button class="btn btn-warning fw-bold" type="submit">Lưu thay đổi</button>
-                </div>
-              </form>
             </td>
           </tr>
         `;
@@ -805,32 +1180,11 @@
                 <div class="small text-body-secondary">Dùng gần nhất: ${escapeHtml(formatDateTime(client.last_used_at))}</div>
               </div>
               <div class="d-grid d-sm-flex gap-2 flex-shrink-0">
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="api-client-edit" data-api-client-id="${clientId}">Chỉnh sửa</button>
                 <button class="btn btn-outline-secondary btn-sm" type="button" data-rotate-api-client-key="${clientId}">Xoay key</button>
                 <button class="btn btn-outline-danger btn-sm" type="button" data-delete-api-client="${clientId}" data-api-client-name="${escapeHtml(client.name)}">Xóa</button>
               </div>
             </div>
-            <details class="mt-3">
-              <summary class="btn btn-outline-secondary btn-sm">Chỉnh sửa</summary>
-              <form class="row g-3 border rounded-3 p-3 mt-2 bg-body-tertiary" data-api-client-update="${clientId}">
-                <div class="col-12 col-md-4">
-                  <label class="form-label fw-semibold small">Tên cấu hình</label>
-                  <input class="form-control" name="name" maxlength="120" value="${escapeHtml(client.name)}" required>
-                </div>
-                <div class="col-12 col-md-5">
-                  <label class="form-label fw-semibold small">Domain được phép</label>
-                  <input class="form-control" name="allowed_origin" value="${escapeHtml(client.allowed_origin)}" required>
-                </div>
-                <div class="col-12 col-md-3 d-grid align-self-end">
-                  <button class="btn btn-warning fw-bold" type="submit">Lưu thay đổi</button>
-                </div>
-                <div class="col-12">
-                  <div class="form-check">
-                    <input class="form-check-input" name="is_active" type="checkbox" value="true" id="api-client-active-${clientId}" ${client.is_active ? 'checked' : ''}>
-                    <label class="form-check-label" for="api-client-active-${clientId}">Cho phép hoạt động</label>
-                  </div>
-                </div>
-              </form>
-            </details>
           </article>
         `;
       })
@@ -867,35 +1221,10 @@
                 ${target.last_error ? `<div class="small text-danger text-break">Lỗi gần nhất: ${escapeHtml(target.last_error)}</div>` : ''}
               </div>
               <div class="d-grid d-sm-flex gap-2 flex-shrink-0">
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="sheet-target-edit" data-sheet-target-id="${targetId}">Chỉnh sửa</button>
                 <button class="btn btn-outline-danger btn-sm" type="button" data-delete-sheet-target="${targetId}" data-sheet-target-name="${escapeHtml(target.name)}">Xóa</button>
               </div>
             </div>
-            <details class="mt-3">
-              <summary class="btn btn-outline-secondary btn-sm">Chỉnh sửa</summary>
-              <form class="row g-3 border rounded-3 p-3 mt-2 bg-body-tertiary" data-sheet-target-update="${targetId}">
-                <div class="col-12 col-md-4">
-                  <label class="form-label fw-semibold small">Tên cấu hình</label>
-                  <input class="form-control" name="name" maxlength="120" value="${escapeHtml(target.name)}" required>
-                </div>
-                <div class="col-12 col-md-3">
-                  <label class="form-label fw-semibold small">Loại Sheet</label>
-                  <select class="form-select" name="target_type" data-sheet-target-type data-current-sheet-target-type="${escapeHtml(target.target_type)}">
-                    ${sheetTargetTypeOptions(target.target_type)}
-                  </select>
-                </div>
-                <div class="col-12 col-md-5">
-                  <label class="form-label fw-semibold small">Link Apps Script</label>
-                  <input class="form-control" name="webhook_url" value="${escapeHtml(target.webhook_url)}" required>
-                </div>
-                <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3">
-                  <div class="form-check">
-                    <input class="form-check-input" name="is_active" type="checkbox" value="true" id="sheet-target-active-${targetId}" ${target.is_active ? 'checked' : ''}>
-                    <label class="form-check-label" for="sheet-target-active-${targetId}">Cho phép đồng bộ</label>
-                  </div>
-                  <button class="btn btn-warning fw-bold" type="submit">Lưu thay đổi</button>
-                </div>
-              </form>
-            </details>
           </article>
         `;
       })
@@ -908,18 +1237,6 @@
     }
 
     const branches = visibleBranches();
-
-    function branchDeleteReason(branch) {
-      const reasons = [];
-      if (branch.has_bookings) {
-        reasons.push('có lịch sử đặt bàn');
-      }
-      if (branch.has_users || branch.has_staffs) {
-        reasons.push('đang có tài khoản hoặc nhân viên');
-      }
-
-      return reasons.length ? `Không thể xóa vì chi nhánh ${reasons.join(' và ')}.` : '';
-    }
 
     selectors.branchList.innerHTML = branches.length
       ? branches
@@ -934,21 +1251,7 @@
                         <li class="area-list-item">
                           <div class="area-list-summary">
                             <strong>${escapeHtml(area.name)}</strong>
-                            <details class="area-edit-panel">
-                              <summary class="btn btn-outline-secondary btn-sm">Sửa</summary>
-                              <form class="area-edit-form border rounded-3 p-2 mt-2 bg-body-tertiary" data-area-update="${escapeHtml(area.id)}">
-                                <div>
-                                  <label class="form-label fw-semibold small">Tên khu vực</label>
-                                  <input class="form-control" name="name" maxlength="120" value="${escapeHtml(area.name)}" required>
-                                </div>
-                                <div class="d-grid">
-                                  <button class="btn btn-outline-secondary" type="submit">Lưu tên</button>
-                                </div>
-                                <div class="d-grid">
-                                  <button class="btn btn-outline-danger" type="button" data-delete-area="${escapeHtml(area.id)}" data-area-name="${escapeHtml(area.name)}">Xóa</button>
-                                </div>
-                              </form>
-                            </details>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="area-edit" data-area-id="${escapeHtml(area.id)}">Sửa</button>
                           </div>
                         </li>
                       `
@@ -957,18 +1260,7 @@
                 : '<li class="area-list-item text-body-secondary small">Chưa cấu hình khu vực.</li>';
               const createAreaForm = canManageBranches()
                 ? `
-                    <details class="mt-3">
-                      <summary class="btn btn-outline-secondary">Thêm khu vực</summary>
-                      <form class="row g-2 align-items-end border rounded-3 p-3 mt-2 bg-body-tertiary" data-area-create data-branch-id="${escapeHtml(branch.id)}">
-                        <div class="col-12 col-sm-6 col-xl">
-                          <label class="form-label fw-semibold small">Tên khu vực</label>
-                          <input class="form-control" name="name" maxlength="120" required>
-                        </div>
-                        <div class="col-12 col-sm-4 col-xl-auto d-grid">
-                          <button class="btn btn-warning fw-bold" type="submit">Tạo khu vực</button>
-                        </div>
-                      </form>
-                    </details>
+                    <button class="btn btn-outline-secondary" type="button" data-open-management-popup="area-create" data-branch-id="${escapeHtml(branch.id)}">Thêm khu vực</button>
                   `
                 : '';
               const areaContent = canManageBranches()
@@ -991,30 +1283,11 @@
                   `;
               const branchEditor = canManageBranches()
                 ? `
-                    <details class="mt-3">
-                      <summary class="btn btn-outline-secondary">Chỉnh sửa</summary>
-                      <form class="row g-2 border rounded-3 p-3 mt-2 bg-body-tertiary" data-branch-update="${escapeHtml(branch.id)}">
-                        <div class="col-12">
-                          <label class="form-label fw-semibold small">Tên chi nhánh</label>
-                          <input class="form-control" name="name" value="${escapeHtml(branch.name)}" maxlength="120" required>
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold small">Địa chỉ</label>
-                          <input class="form-control" name="address" value="${escapeHtml(branch.address || '')}" maxlength="255">
-                        </div>
-                        <div class="col-12">
-                          <label class="form-label fw-semibold small">Số bàn của chi nhánh</label>
-                          <input class="form-control" name="table_count" type="number" min="1" value="${escapeHtml(branch.table_count || 1)}" required>
-                        </div>
-                        <div class="col-12">
-                          <div class="d-grid gap-2 d-sm-flex">
-                            <button class="btn btn-outline-secondary flex-sm-fill" type="submit">Lưu</button>
-                            <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-branch="${escapeHtml(branch.id)}" data-branch-name="${escapeHtml(branch.name)}" ${deleteReason ? `disabled title="${escapeHtml(deleteReason)}"` : ''}>Xóa</button>
-                          </div>
-                          ${deleteReason ? `<p class="small text-body-secondary mt-2 mb-0">${escapeHtml(deleteReason)}</p>` : ''}
-                        </div>
-                      </form>
-                    </details>
+                    <div class="branch-card-actions d-grid d-sm-flex gap-2 mt-3">
+                      <button class="btn btn-outline-secondary flex-sm-fill" type="button" data-open-management-popup="branch-edit" data-branch-id="${escapeHtml(branch.id)}">Chỉnh sửa</button>
+                      <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-branch="${escapeHtml(branch.id)}" data-branch-name="${escapeHtml(branch.name)}" ${deleteReason ? `disabled title="${escapeHtml(deleteReason)}"` : ''}>Xóa</button>
+                    </div>
+                    ${deleteReason ? `<p class="small text-body-secondary mt-2 mb-0">${escapeHtml(deleteReason)}</p>` : ''}
                   `
                 : '';
 
@@ -1038,8 +1311,8 @@
       : '<div class="alert alert-light border mb-0">Không tìm thấy chi nhánh.</div>';
   }
 
-  function addAreaInputRow(values = {}) {
-    if (!selectors.branchAreaInputs) {
+  function addAreaInputRow(values = {}, container = document.getElementById('branch-area-inputs')) {
+    if (!container) {
       return;
     }
 
@@ -1055,15 +1328,17 @@
         <button class="btn btn-outline-danger" type="button" data-remove-area>Xóa</button>
       </div>
     `;
-    selectors.branchAreaInputs.appendChild(row);
+    container.appendChild(row);
   }
 
-  function branchAreaPayload() {
-    if (!selectors.branchAreaInputs) {
+  function branchAreaPayload(form = document) {
+    const container = form.querySelector('#branch-area-inputs') || document.getElementById('branch-area-inputs');
+
+    if (!container) {
       return [];
     }
 
-    return [...selectors.branchAreaInputs.querySelectorAll('[data-area-row]')].map((row) => {
+    return [...container.querySelectorAll('[data-area-row]')].map((row) => {
       const fields = {};
 
       for (const input of row.querySelectorAll('[data-area-field]')) {
@@ -1167,45 +1442,56 @@
   }
 
   async function handleCreateUser(event) {
-    event.preventDefault();
-    selectors.userFormMessage.textContent = 'Đang tạo tài khoản...';
+    const form = event.target.closest('#create-user-form');
+    if (!form) {
+      return;
+    }
 
-    const form = event.currentTarget;
+    event.preventDefault();
+    setFormStatus(form, selectors.userFormMessage, 'Đang tạo tài khoản...');
     const data = Object.fromEntries(new FormData(form).entries());
 
     try {
       await request('/api/users', { method: 'POST', body: data });
       state.users = await request('/api/users');
       form.reset();
-      selectors.userFormMessage.textContent = 'Đã tạo tài khoản.';
+      setFormStatus(form, selectors.userFormMessage, 'Đã tạo tài khoản.');
       renderUsers();
+      closeManagementPopup();
     } catch (error) {
-      selectors.userFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.userFormMessage, error.message);
     }
   }
 
   async function handleCreateBranch(event) {
-    event.preventDefault();
-    selectors.branchFormMessage.textContent = 'Đang tạo chi nhánh...';
+    const form = event.target.closest('#create-branch-form');
+    if (!form) {
+      return;
+    }
 
-    const form = event.currentTarget;
+    event.preventDefault();
+    setFormStatus(form, selectors.branchFormMessage, 'Đang tạo chi nhánh...');
     const data = {
       ...Object.fromEntries(new FormData(form).entries()),
-      areas: branchAreaPayload()
+      areas: branchAreaPayload(form)
     };
 
     try {
       await request('/api/branches', { method: 'POST', body: data });
       state.branches = await request('/api/branches');
       form.reset();
-      selectors.branchAreaInputs.innerHTML = '';
-      addAreaInputRow({ name: 'VIP' });
+      const branchAreaInputs = form.querySelector('#branch-area-inputs');
+      if (branchAreaInputs) {
+        branchAreaInputs.innerHTML = '';
+        addAreaInputRow({ name: 'VIP' }, branchAreaInputs);
+      }
       refreshBranchSelects();
       syncBranchControls();
-      selectors.branchFormMessage.textContent = 'Đã tạo chi nhánh.';
+      setFormStatus(form, selectors.branchFormMessage, 'Đã tạo chi nhánh.');
       renderBranches();
+      closeManagementPopup();
     } catch (error) {
-      selectors.branchFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.branchFormMessage, error.message);
     }
   }
 
@@ -1250,10 +1536,13 @@
   }
 
   async function handleCreateApiClient(event) {
-    event.preventDefault();
-    selectors.apiClientFormMessage.textContent = 'Đang tạo API key...';
+    const form = event.target.closest('#create-api-client-form');
+    if (!form) {
+      return;
+    }
 
-    const form = event.currentTarget;
+    event.preventDefault();
+    setFormStatus(form, selectors.apiClientFormMessage, 'Đang tạo API key...');
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
 
@@ -1265,20 +1554,23 @@
       if (activeInput) {
         activeInput.checked = true;
       }
-      selectors.apiClientFormMessage.textContent = apiKeyMessage(result, 'Đã tạo cấu hình API.');
+      setFormStatus(form, selectors.apiClientFormMessage, apiKeyMessage(result, 'Đã tạo cấu hình API.'));
       renderApiClients();
     } catch (error) {
-      selectors.apiClientFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.apiClientFormMessage, error.message);
     } finally {
       button.disabled = false;
     }
   }
 
   async function handleCreateSheetTarget(event) {
-    event.preventDefault();
-    selectors.sheetTargetFormMessage.textContent = 'Đang lưu cấu hình Sheet...';
+    const form = event.target.closest('#create-sheet-target-form');
+    if (!form) {
+      return;
+    }
 
-    const form = event.currentTarget;
+    event.preventDefault();
+    setFormStatus(form, selectors.sheetTargetFormMessage, 'Đang lưu cấu hình Sheet...');
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
 
@@ -1290,11 +1582,12 @@
       if (activeInput) {
         activeInput.checked = true;
       }
-      selectors.sheetTargetFormMessage.textContent = 'Đã lưu cấu hình Sheet.';
+      setFormStatus(form, selectors.sheetTargetFormMessage, 'Đã lưu cấu hình Sheet.');
       renderSheetTargets();
       syncSheetTargetTypeOptions(document);
+      closeManagementPopup();
     } catch (error) {
-      selectors.sheetTargetFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.sheetTargetFormMessage, error.message);
     } finally {
       button.disabled = false;
     }
@@ -1309,13 +1602,15 @@
     event.preventDefault();
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
+    setFormStatus(form, selectors.apiClientFormMessage, 'Đang cập nhật cấu hình API...');
 
     try {
       await request(`/api/api-clients/${form.dataset.apiClientUpdate}`, { method: 'PUT', body: apiClientFormPayload(form) });
-      selectors.apiClientFormMessage.textContent = 'Đã cập nhật cấu hình API.';
+      setFormStatus(form, selectors.apiClientFormMessage, 'Đã cập nhật cấu hình API.');
       await refreshApiClients();
+      closeManagementPopup();
     } catch (error) {
-      selectors.apiClientFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.apiClientFormMessage, error.message);
       button.disabled = false;
     }
   }
@@ -1329,13 +1624,15 @@
     event.preventDefault();
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
+    setFormStatus(form, selectors.sheetTargetFormMessage, 'Đang cập nhật cấu hình Sheet...');
 
     try {
       await request(`/api/sheet-settings/${form.dataset.sheetTargetUpdate}`, { method: 'PUT', body: sheetTargetFormPayload(form) });
-      selectors.sheetTargetFormMessage.textContent = 'Đã cập nhật cấu hình Sheet.';
+      setFormStatus(form, selectors.sheetTargetFormMessage, 'Đã cập nhật cấu hình Sheet.');
       await refreshSheetTargets();
+      closeManagementPopup();
     } catch (error) {
-      selectors.sheetTargetFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.sheetTargetFormMessage, error.message);
       button.disabled = false;
     }
   }
@@ -1356,6 +1653,9 @@
       await request(`/api/api-clients/${button.dataset.deleteApiClient}`, { method: 'DELETE' });
       selectors.apiClientFormMessage.textContent = 'Đã xóa cấu hình API.';
       await refreshApiClients();
+      if (isInsideManagementPopup(button)) {
+        closeManagementPopup();
+      }
     } catch (error) {
       selectors.apiClientFormMessage.textContent = error.message;
       button.disabled = false;
@@ -1378,6 +1678,9 @@
       await request(`/api/sheet-settings/${button.dataset.deleteSheetTarget}`, { method: 'DELETE' });
       selectors.sheetTargetFormMessage.textContent = 'Đã xóa cấu hình Sheet.';
       await refreshSheetTargets();
+      if (isInsideManagementPopup(button)) {
+        closeManagementPopup();
+      }
     } catch (error) {
       selectors.sheetTargetFormMessage.textContent = error.message;
       button.disabled = false;
@@ -1419,22 +1722,24 @@
     const form = createForm || updateForm;
     const submitButton = form.querySelector('[type="submit"]');
     submitButton.disabled = true;
+    setFormStatus(form, selectors.branchFormMessage, createForm ? 'Đang tạo khu vực...' : 'Đang cập nhật khu vực...');
 
     try {
       if (createForm) {
         const data = Object.fromEntries(new FormData(createForm).entries());
         data.branch_id = createForm.dataset.branchId;
         await request('/api/areas', { method: 'POST', body: data });
-        selectors.branchFormMessage.textContent = 'Đã tạo khu vực.';
+        setFormStatus(form, selectors.branchFormMessage, 'Đã tạo khu vực.');
       } else {
         const data = Object.fromEntries(new FormData(updateForm).entries());
         await request(`/api/areas/${updateForm.dataset.areaUpdate}`, { method: 'PUT', body: data });
-        selectors.branchFormMessage.textContent = 'Đã cập nhật khu vực.';
+        setFormStatus(form, selectors.branchFormMessage, 'Đã cập nhật khu vực.');
       }
 
       await refreshBranches();
+      closeManagementPopup();
     } catch (error) {
-      selectors.branchFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.branchFormMessage, error.message);
       submitButton.disabled = false;
     }
   }
@@ -1457,6 +1762,9 @@
       await request(`/api/areas/${button.dataset.deleteArea}`, { method: 'DELETE' });
       selectors.branchFormMessage.textContent = 'Đã xóa khu vực.';
       await refreshBranches();
+      if (isInsideManagementPopup(button)) {
+        closeManagementPopup();
+      }
     } catch (error) {
       selectors.branchFormMessage.textContent = error.message;
       button.disabled = false;
@@ -1472,14 +1780,41 @@
     event.preventDefault();
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
+    setFormStatus(form, selectors.formMessage, 'Đang cập nhật yêu cầu đặt bàn...');
 
     try {
       const data = Object.fromEntries(new FormData(form).entries());
       await request(`/api/bookings/${form.dataset.bookingUpdate}`, { method: 'PUT', body: data });
-      selectors.formMessage.textContent = 'Đã cập nhật yêu cầu đặt bàn.';
+      setFormStatus(form, selectors.formMessage, 'Đã cập nhật yêu cầu đặt bàn.');
       await refreshDashboard();
+      closeManagementPopup();
     } catch (error) {
-      selectors.formMessage.textContent = error.message;
+      setFormStatus(form, selectors.formMessage, error.message);
+      button.disabled = false;
+    }
+  }
+
+  async function handleBookingAssignSubmit(event) {
+    const form = event.target.closest('[data-booking-assign]');
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const bookingId = form.dataset.bookingAssign;
+    const button = form.querySelector('[type="submit"]');
+    const select = form.querySelector(`[data-table-select="${bookingId}"]`);
+    const tableIds = [...(select?.selectedOptions || [])].map((option) => option.value);
+    button.disabled = true;
+    setFormStatus(form, selectors.formMessage, 'Đang lưu bàn...');
+
+    try {
+      await request(`/api/bookings/${bookingId}/assign`, { method: 'POST', body: { table_ids: tableIds } });
+      setFormStatus(form, selectors.formMessage, 'Đã lưu bàn.');
+      await refreshDashboard();
+      closeManagementPopup();
+    } catch (error) {
+      setFormStatus(form, selectors.formMessage, error.message);
       button.disabled = false;
     }
   }
@@ -1499,6 +1834,9 @@
       await request(`/api/bookings/${button.dataset.deleteBooking}`, { method: 'DELETE' });
       selectors.formMessage.textContent = 'Đã xóa yêu cầu đặt bàn.';
       await refreshDashboard();
+      if (isInsideManagementPopup(button)) {
+        closeManagementPopup();
+      }
     } catch (error) {
       selectors.formMessage.textContent = error.message;
       button.disabled = false;
@@ -1514,14 +1852,16 @@
     event.preventDefault();
     const button = form.querySelector('[type="submit"]');
     button.disabled = true;
+    setFormStatus(form, selectors.branchFormMessage, 'Đang cập nhật chi nhánh...');
 
     try {
       const data = Object.fromEntries(new FormData(form).entries());
       await request(`/api/branches/${form.dataset.branchUpdate}`, { method: 'PUT', body: data });
-      selectors.branchFormMessage.textContent = 'Đã cập nhật chi nhánh.';
+      setFormStatus(form, selectors.branchFormMessage, 'Đã cập nhật chi nhánh.');
       await refreshBranches();
+      closeManagementPopup();
     } catch (error) {
-      selectors.branchFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.branchFormMessage, error.message);
       button.disabled = false;
     }
   }
@@ -1548,6 +1888,9 @@
       }
 
       await refreshBranches();
+      if (isInsideManagementPopup(button)) {
+        closeManagementPopup();
+      }
     } catch (error) {
       selectors.branchFormMessage.textContent = error.message;
       button.disabled = false;
@@ -1571,13 +1914,15 @@
     const activeCheckbox = form.querySelector('[name="is_active"][type="checkbox"]');
     data.is_active = activeCheckbox && (activeCheckbox.disabled || activeCheckbox.checked) ? 'true' : 'false';
     button.disabled = true;
+    setFormStatus(form, selectors.userFormMessage, 'Đang cập nhật tài khoản...');
 
     try {
       await request(`/api/users/${form.dataset.userUpdate}`, { method: 'PUT', body: data });
-      selectors.userFormMessage.textContent = 'Đã cập nhật tài khoản.';
+      setFormStatus(form, selectors.userFormMessage, 'Đã cập nhật tài khoản.');
       await refreshUsers();
+      closeManagementPopup();
     } catch (error) {
-      selectors.userFormMessage.textContent = error.message;
+      setFormStatus(form, selectors.userFormMessage, error.message);
       button.disabled = false;
     }
   }
@@ -1597,27 +1942,100 @@
       await request(`/api/users/${button.dataset.deleteUser}`, { method: 'DELETE' });
       selectors.userFormMessage.textContent = 'Đã xóa tài khoản.';
       await refreshUsers();
+      if (isInsideManagementPopup(button)) {
+        closeManagementPopup();
+      }
     } catch (error) {
       selectors.userFormMessage.textContent = error.message;
       button.disabled = false;
     }
   }
 
-  function handleUserEditToggle(event) {
-    const button = event.target.closest('[data-toggle-user-edit]');
-    if (!button) {
+  function openManagementFromButton(button) {
+    const type = button.dataset.openManagementPopup;
+
+    if (type === 'booking-assign') {
+      const booking = findBooking(button.dataset.bookingId);
+      if (booking) {
+        openManagementPopup({ eyebrow: 'Đặt bàn', title: 'Xếp bàn', body: bookingAssignForm(booking) });
+      }
       return;
     }
 
-    const row = selectors.userList.querySelector(`[data-user-edit-row="${button.dataset.toggleUserEdit}"]`);
-    if (!row) {
+    if (type === 'booking-edit') {
+      const booking = findBooking(button.dataset.bookingId);
+      if (booking) {
+        openManagementPopup({ eyebrow: 'Đặt bàn', title: 'Chỉnh sửa đặt bàn', body: bookingEditForm(booking) });
+      }
       return;
     }
 
-    const isOpening = row.hidden;
-    row.hidden = !isOpening;
-    button.setAttribute('aria-expanded', String(isOpening));
-    button.textContent = isOpening ? 'Đóng' : 'Chỉnh sửa';
+    if (type === 'branch-create') {
+      openManagementPopup({ eyebrow: 'Chi nhánh', title: 'Tạo chi nhánh', body: branchCreateForm() });
+      return;
+    }
+
+    if (type === 'branch-edit') {
+      const branch = findBranch(button.dataset.branchId);
+      if (branch) {
+        openManagementPopup({ eyebrow: 'Chi nhánh', title: 'Chỉnh sửa chi nhánh', body: branchEditForm(branch) });
+      }
+      return;
+    }
+
+    if (type === 'area-create') {
+      const branch = findBranch(button.dataset.branchId);
+      if (branch) {
+        openManagementPopup({ eyebrow: 'Khu vực', title: 'Thêm khu vực', body: areaCreateForm(branch) });
+      }
+      return;
+    }
+
+    if (type === 'area-edit') {
+      const area = findArea(button.dataset.areaId);
+      if (area) {
+        openManagementPopup({ eyebrow: 'Khu vực', title: 'Chỉnh sửa khu vực', body: areaEditForm(area) });
+      }
+      return;
+    }
+
+    if (type === 'user-create') {
+      openManagementPopup({ eyebrow: 'Người dùng', title: 'Tạo tài khoản', body: userCreateForm() });
+      return;
+    }
+
+    if (type === 'user-edit') {
+      const user = findUser(button.dataset.userId);
+      if (user) {
+        openManagementPopup({ eyebrow: 'Người dùng', title: 'Chỉnh sửa tài khoản', body: userEditForm(user) });
+      }
+      return;
+    }
+
+    if (type === 'api-client-create') {
+      openManagementPopup({ eyebrow: 'API', title: 'Tạo API key', body: apiClientCreateForm() });
+      return;
+    }
+
+    if (type === 'api-client-edit') {
+      const client = findApiClient(button.dataset.apiClientId);
+      if (client) {
+        openManagementPopup({ eyebrow: 'API', title: 'Chỉnh sửa API key', body: apiClientEditForm(client) });
+      }
+      return;
+    }
+
+    if (type === 'sheet-target-create') {
+      openManagementPopup({ eyebrow: 'Sheet', title: 'Tạo cấu hình Sheet', body: sheetTargetCreateForm() });
+      return;
+    }
+
+    if (type === 'sheet-target-edit') {
+      const target = findSheetTarget(button.dataset.sheetTargetId);
+      if (target) {
+        openManagementPopup({ eyebrow: 'Sheet', title: 'Chỉnh sửa cấu hình Sheet', body: sheetTargetEditForm(target) });
+      }
+    }
   }
 
   async function handleAction(event) {
@@ -1628,7 +2046,10 @@
     }
 
     const card = button.closest('[data-booking-id]');
-    const bookingId = card.dataset.bookingId;
+    const bookingId = card?.dataset.bookingId || button.dataset.bookingId;
+    if (!bookingId) {
+      return;
+    }
     const booking = findBooking(bookingId);
     const action = button.dataset.action;
 
@@ -1637,12 +2058,6 @@
     try {
       if (action === 'confirm') {
         await request(`/api/bookings/${bookingId}`, { method: 'PUT', body: { status: 'CONFIRMED' } });
-      }
-
-      if (action === 'assign') {
-        const select = card.querySelector(`[data-table-select="${bookingId}"]`);
-        const tableIds = [...select.selectedOptions].map((option) => option.value);
-        await request(`/api/bookings/${bookingId}/assign`, { method: 'POST', body: { table_ids: tableIds } });
       }
 
       if (action === 'check-in') {
@@ -1714,10 +2129,45 @@
       return;
     }
 
+    const managementOpenButton = event.target.closest('[data-open-management-popup]');
+    if (managementOpenButton) {
+      event.preventDefault();
+      openManagementFromButton(managementOpenButton);
+      return;
+    }
+
     const closeButton = event.target.closest('[data-close-booking-popup]');
     if (closeButton) {
       event.preventDefault();
       closeBookingPopup();
+      return;
+    }
+
+    const managementCloseButton = event.target.closest('[data-close-management-popup]');
+    if (managementCloseButton) {
+      event.preventDefault();
+      closeManagementPopup();
+      return;
+    }
+
+    const addAreaButton = event.target.closest('[data-add-area-row]');
+    if (addAreaButton) {
+      event.preventDefault();
+      addAreaInputRow({}, addAreaButton.closest('form')?.querySelector('#branch-area-inputs'));
+      return;
+    }
+
+    const removeAreaButton = event.target.closest('[data-remove-area]');
+    if (removeAreaButton) {
+      event.preventDefault();
+      const form = removeAreaButton.closest('form');
+      const rows = form?.querySelectorAll('[data-area-row]') || [];
+      if (rows.length <= 1) {
+        setFormStatus(form, selectors.branchFormMessage, 'Mỗi chi nhánh phải có ít nhất một khu vực.');
+        return;
+      }
+
+      removeAreaButton.closest('[data-area-row]')?.remove();
     }
   });
 
@@ -1725,28 +2175,29 @@
     if (event.key === 'Escape' && selectors.bookingPopup && !selectors.bookingPopup.hidden) {
       closeBookingPopup();
     }
+    if (event.key === 'Escape' && selectors.managementPopup && !selectors.managementPopup.hidden) {
+      closeManagementPopup();
+    }
   });
 
-  const createUserForm = document.getElementById('create-user-form');
-  if (createUserForm) {
-    createUserForm.addEventListener('submit', handleCreateUser);
-  }
-
-  const createBranchForm = document.getElementById('create-branch-form');
-  if (createBranchForm) {
-    createBranchForm.addEventListener('submit', handleCreateBranch);
-  }
-
-  const createApiClientForm = document.getElementById('create-api-client-form');
-  if (createApiClientForm) {
-    createApiClientForm.addEventListener('submit', handleCreateApiClient);
-  }
-
-  const createSheetTargetForm = document.getElementById('create-sheet-target-form');
-  if (createSheetTargetForm) {
-    createSheetTargetForm.addEventListener('submit', handleCreateSheetTarget);
-    syncSheetTargetTypeOptions(createSheetTargetForm);
-  }
+  document.addEventListener('submit', handleCreateUser);
+  document.addEventListener('submit', handleCreateBranch);
+  document.addEventListener('submit', handleCreateApiClient);
+  document.addEventListener('submit', handleCreateSheetTarget);
+  document.addEventListener('submit', handleBookingAssignSubmit);
+  document.addEventListener('submit', handleBookingSubmit);
+  document.addEventListener('submit', handleAreaSubmit);
+  document.addEventListener('submit', handleBranchSubmit);
+  document.addEventListener('submit', handleApiClientSubmit);
+  document.addEventListener('submit', handleSheetTargetSubmit);
+  document.addEventListener('submit', handleUserSubmit);
+  document.addEventListener('click', handleBookingDelete);
+  document.addEventListener('click', handleAreaDelete);
+  document.addEventListener('click', handleBranchDelete);
+  document.addEventListener('click', handleApiClientDelete);
+  document.addEventListener('click', handleApiClientKeyRotate);
+  document.addEventListener('click', handleSheetTargetDelete);
+  document.addEventListener('click', handleUserDelete);
 
   if (selectors.branchScope) {
     selectors.branchScope.addEventListener('change', (event) => {
@@ -1777,58 +2228,6 @@
     selectors.dashboardDateFilter.addEventListener('change', () => {
       applyDashboardDateFilter(selectors.dashboardDateFilter.value);
     });
-  }
-
-  const addAreaButton = document.getElementById('add-area-button');
-  if (addAreaButton) {
-    addAreaButton.addEventListener('click', () => addAreaInputRow());
-  }
-
-  if (selectors.branchAreaInputs) {
-    selectors.branchAreaInputs.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-remove-area]');
-
-      if (!button) {
-        return;
-      }
-
-      const rows = selectors.branchAreaInputs.querySelectorAll('[data-area-row]');
-      if (rows.length <= 1) {
-        selectors.branchFormMessage.textContent = 'Mỗi chi nhánh phải có ít nhất một khu vực.';
-        return;
-      }
-
-      button.closest('[data-area-row]').remove();
-    });
-  }
-
-  if (selectors.branchList) {
-    selectors.branchList.addEventListener('submit', handleAreaSubmit);
-    selectors.branchList.addEventListener('submit', handleBranchSubmit);
-    selectors.branchList.addEventListener('click', handleAreaDelete);
-    selectors.branchList.addEventListener('click', handleBranchDelete);
-  }
-
-  if (selectors.apiClientList) {
-    selectors.apiClientList.addEventListener('submit', handleApiClientSubmit);
-    selectors.apiClientList.addEventListener('click', handleApiClientDelete);
-    selectors.apiClientList.addEventListener('click', handleApiClientKeyRotate);
-  }
-
-  if (selectors.sheetTargetList) {
-    selectors.sheetTargetList.addEventListener('submit', handleSheetTargetSubmit);
-    selectors.sheetTargetList.addEventListener('click', handleSheetTargetDelete);
-  }
-
-  for (const bookingList of [selectors.openBookings, selectors.closedBookings].filter(Boolean)) {
-    bookingList.addEventListener('submit', handleBookingSubmit);
-    bookingList.addEventListener('click', handleBookingDelete);
-  }
-
-  if (selectors.userList) {
-    selectors.userList.addEventListener('submit', handleUserSubmit);
-    selectors.userList.addEventListener('click', handleUserEditToggle);
-    selectors.userList.addEventListener('click', handleUserDelete);
   }
 
   document.addEventListener('click', handleAction);

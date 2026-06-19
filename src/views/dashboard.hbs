@@ -47,45 +47,7 @@
     <div>
       <p class="text-body-secondary small mb-3">Các địa điểm nhà hàng được sử dụng cho đặt bàn, bàn và tài khoản nhân viên.</p>
       {{#if canManageBranches}}
-        <details class="mb-4">
-          <summary class="btn btn-outline-secondary">Tạo chi nhánh</summary>
-          <form id="create-branch-form" class="row g-3 mt-3 border rounded-3 p-3 bg-body-tertiary">
-            <div class="col-12 col-md-4">
-              <label class="form-label fw-semibold">Tên chi nhánh</label>
-              <input class="form-control" name="name" maxlength="120" required>
-            </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label fw-semibold">Địa chỉ</label>
-              <input class="form-control" name="address" maxlength="255">
-            </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label fw-semibold">Số bàn của chi nhánh</label>
-              <input class="form-control" name="table_count" type="number" min="1" value="1" required>
-            </div>
-            <div class="col-12">
-              <div class="border rounded-4 p-3 bg-body">
-                <div class="d-flex flex-column flex-sm-row align-items-sm-start justify-content-sm-between gap-2 mb-3">
-                  <div>
-                    <strong class="d-block">Khu vực</strong>
-                    <span class="text-body-secondary small">Khu vực chỉ dùng để phân vùng hiển thị, không kiểm soát bàn. Bàn được quản lý lưu động theo tổng số bàn của chi nhánh.</span>
-                  </div>
-                  <button class="btn btn-outline-secondary btn-sm flex-shrink-0" type="button" id="add-area-button">Thêm khu vực</button>
-                </div>
-                <div class="d-grid gap-3" id="branch-area-inputs">
-                  <div class="area-input-row row g-2 align-items-end m-0 border rounded-3 p-2 bg-body" data-area-row>
-                    <div class="col-12">
-                      <label class="form-label fw-semibold small">Tên khu vực</label>
-                      <input class="form-control" data-area-field="name" maxlength="120" value="VIP" required>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-12 col-md-4 d-grid">
-              <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo chi nhánh</button>
-            </div>
-          </form>
-        </details>
+        <button class="btn btn-outline-secondary mb-3" type="button" data-open-management-popup="branch-create">Tạo chi nhánh</button>
         <p class="form-message small text-body-secondary mb-3" id="branch-form-message" role="status"></p>
       {{else}}
         <div class="alert alert-warning mb-3" role="note">Chỉ quản trị viên có thể tạo hoặc chỉnh sửa chi nhánh.</div>
@@ -103,45 +65,8 @@
     </div>
     <div>
       <p class="text-body-secondary small mb-3">Quản trị viên có thể tạo, cập nhật và vô hiệu hóa mọi vai trò người dùng.</p>
-      <form id="create-user-form" class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl">
-          <label class="form-label fw-semibold">Tên đăng nhập</label>
-          <input class="form-control" name="username" minlength="3" maxlength="50" pattern="[a-z0-9._-]+" autocapitalize="none" required>
-        </div>
-        <div class="col-12 col-sm-6 col-xl">
-          <label class="form-label fw-semibold">Tên hiển thị</label>
-          <input class="form-control" name="display_name" maxlength="120" required>
-        </div>
-        <div class="col-6 col-xl">
-          <label class="form-label fw-semibold">Vai trò</label>
-          <select class="form-select" name="role" required>
-            {{#each creatableRoles}}
-              <option value="{{value}}">{{label}}</option>
-            {{/each}}
-          </select>
-        </div>
-        {{#if currentUser.branch_id}}
-          <input name="branch_id" type="hidden" value="{{currentUser.branch_id}}">
-        {{else}}
-          <div class="col-12 col-sm-6 col-xl">
-            <label class="form-label fw-semibold">Chi nhánh</label>
-            <select class="form-select" name="branch_id">
-              <option value="">Không thuộc chi nhánh</option>
-              {{#each branches}}
-                <option value="{{id}}">{{name}}</option>
-              {{/each}}
-            </select>
-          </div>
-        {{/if}}
-        <div class="col-12 col-sm-6 col-xl">
-          <label class="form-label fw-semibold">Mật khẩu</label>
-          <input class="form-control" name="password" type="password" minlength="6" autocomplete="new-password" required>
-        </div>
-        <div class="col-12 col-sm-6 col-xl d-grid align-self-end">
-          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo tài khoản</button>
-        </div>
-        <p class="form-message col-12 small text-body-secondary mb-0" id="user-form-message" role="status"></p>
-      </form>
+      <button class="btn btn-outline-secondary mb-3" type="button" data-open-management-popup="user-create">Tạo tài khoản</button>
+      <p class="form-message small text-body-secondary mb-3" id="user-form-message" role="status"></p>
       <div id="user-list"></div>
     </div>
   </section>
@@ -158,27 +83,8 @@
       {{#if canManageSheetSettings}}
         <a class="btn btn-outline-secondary mb-3" href="/sheet-settings">Mở Sheet Settings</a>
       {{/if}}
-      <form id="create-api-client-form" class="row g-3 mb-4">
-        <div class="col-12 col-md-4">
-          <label class="form-label fw-semibold">Tên cấu hình</label>
-          <input class="form-control" name="name" maxlength="120" placeholder="Website WordPress" required>
-        </div>
-        <div class="col-12 col-md-5">
-          <label class="form-label fw-semibold">Domain được phép</label>
-          <input class="form-control" name="allowed_origin" placeholder="https://example.com" required>
-          <div class="form-text">Chỉ origin chính xác này được gọi public API.</div>
-        </div>
-        <div class="col-12 col-md-3 d-grid align-self-end">
-          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo API key</button>
-        </div>
-        <div class="col-12">
-          <div class="form-check">
-            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="api-client-active" checked>
-            <label class="form-check-label" for="api-client-active">Cho phép hoạt động ngay</label>
-          </div>
-        </div>
-        <p class="form-message col-12 small text-body-secondary mb-0" id="api-client-form-message" role="status"></p>
-      </form>
+      <button class="btn btn-outline-secondary mb-3" type="button" data-open-management-popup="api-client-create">Tạo API key</button>
+      <p class="form-message small text-body-secondary mb-3" id="api-client-form-message" role="status"></p>
       <div class="alert alert-warning small" role="note">API key chỉ hiển thị một lần khi tạo hoặc xoay key. Hãy lưu trong WordPress server-side, không đưa vào HTML/JavaScript public.</div>
       <div id="api-client-list"></div>
     </div>
@@ -196,31 +102,8 @@
       {{#if canManageApiSettings}}
         <a class="btn btn-outline-secondary mb-3" href="/api-settings">Mở API Settings</a>
       {{/if}}
-      <form id="create-sheet-target-form" class="row g-3 mb-4">
-        <div class="col-12 col-md-4">
-          <label class="form-label fw-semibold">Tên cấu hình</label>
-          <input class="form-control" name="name" maxlength="120" placeholder="Sheet tổng" required>
-        </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label fw-semibold">Loại Sheet</label>
-          <select class="form-select" name="target_type" data-sheet-target-type required>
-            <option value="ALL">Sheet tổng</option>
-            <option value="BRANCH">Sheet chia chi nhánh</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-5">
-          <label class="form-label fw-semibold">Link Apps Script</label>
-          <input class="form-control" name="webhook_url" placeholder="https://script.google.com/macros/s/.../exec" required>
-        </div>
-        <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3">
-          <div class="form-check">
-            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="sheet-target-active" checked>
-            <label class="form-check-label" for="sheet-target-active">Cho phép đồng bộ ngay</label>
-          </div>
-          <button class="btn btn-primary fw-bold form-submit" type="submit">Lưu cấu hình Sheet</button>
-        </div>
-        <p class="form-message col-12 small text-body-secondary mb-0" id="sheet-target-form-message" role="status"></p>
-      </form>
+      <button class="btn btn-outline-secondary mb-3" type="button" data-open-management-popup="sheet-target-create">Tạo cấu hình Sheet</button>
+      <p class="form-message small text-body-secondary mb-3" id="sheet-target-form-message" role="status"></p>
       <div class="alert alert-warning small" role="note">Payload gửi đi gồm: date, time, people, address, name, tel, note. Trường address dùng địa chỉ chi nhánh để Apps Script chia tab CN_Quan1, CN_BinhThanh, CN_Q10, CN_GV hoặc BookingData.</div>
       <div id="sheet-target-list"></div>
     </div>
