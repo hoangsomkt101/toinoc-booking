@@ -46,3 +46,13 @@ test('sheet settings allows only one link per target type', async () => {
     /Mỗi loại Sheet chỉ được cấu hình một link/
   );
 });
+
+test('sheet settings treats Apps Script error payload as sync failure', () => {
+  assert.throws(
+    () => sheetSettingsService._private.assertSheetResponseSuccess({
+      status: 'error',
+      message: 'address is not defined'
+    }),
+    /Apps Script error: address is not defined/
+  );
+});

@@ -314,6 +314,25 @@ async function markSyncError(targetId, error) {
   );
 }
 
+async function parseSheetResponse(response) {
+  const body = await response.text();
+  if (!body) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch (error) {
+    return null;
+  }
+}
+
+function assertSheetResponseSuccess(payload) {
+  if (payload && String(payload.status || '').toLowerCase() === 'error') {
+    throw new Error(payload.message ? `Apps Script error: ${payload.message}` : 'Apps Script returned error');
+  }
+}
+
 async function postSheetTarget(target, payload) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
@@ -329,6 +348,8 @@ async function postSheetTarget(target, payload) {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
+
+    assertSheetResponseSuccess(await parseSheetResponse(response));
 
     await markSyncSuccess(target.id);
   } catch (error) {
@@ -373,5 +394,8 @@ module.exports = {
   deleteSheetTarget,
   listSheetTargets,
   syncBookingToSheets,
-  updateSheetTarget
+  updateSheetTarget,
+  _private: {
+    assertSheetResponseSuccess
+  }
 };
