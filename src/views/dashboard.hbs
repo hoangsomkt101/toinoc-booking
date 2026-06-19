@@ -11,6 +11,51 @@
   <body class="dashboard-body mobile-app-body" id="page-top">
     <div class="prototype-stage">
       <section class="mobile-shell dashboard-shell">
+        <aside class="desktop-sidebar" aria-label="Điều hướng quản trị desktop">
+          <a class="desktop-sidebar-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
+            <img class="desktop-sidebar-logo" src="/logo.webp" alt="Restaurant Booking">
+          </a>
+          <div class="desktop-sidebar-divider"></div>
+          <div class="desktop-sidebar-heading">Vận hành</div>
+          <nav class="desktop-sidebar-nav">
+            <a class="desktop-nav-link {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
+              <span class="desktop-nav-icon" aria-hidden="true">DB</span>
+              <span>Đặt bàn</span>
+            </a>
+            {{#if canCreateBooking}}
+              <button class="desktop-nav-link desktop-nav-action" type="button" data-open-booking-popup>
+                <span class="desktop-nav-icon" aria-hidden="true">+</span>
+                <span>Tạo đặt bàn</span>
+              </button>
+            {{/if}}
+            {{#if canManageBranches}}
+              <a class="desktop-nav-link {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
+                <span class="desktop-nav-icon" aria-hidden="true">CN</span>
+                <span>Chi nhánh</span>
+              </a>
+            {{/if}}
+            {{#if canManageUsers}}
+              <a class="desktop-nav-link {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
+                <span class="desktop-nav-icon" aria-hidden="true">ND</span>
+                <span>Người dùng</span>
+              </a>
+            {{/if}}
+            {{#if canManageApiSettings}}
+              <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
+                <span class="desktop-nav-icon" aria-hidden="true">API</span>
+                <span>API Settings</span>
+              </a>
+            {{/if}}
+          </nav>
+          <div class="desktop-sidebar-user">
+            <span class="avatar avatar-compact" aria-hidden="true">TK</span>
+            <div class="min-w-0">
+              <strong class="d-block text-truncate">{{currentUser.display_name}}</strong>
+              <span class="small d-block text-truncate">{{currentUser.role_label}}</span>
+            </div>
+          </div>
+        </aside>
+
         <header class="app-header dashboard-app-header">
           <div class="app-header-top">
             <a class="app-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
@@ -37,6 +82,32 @@
             <h1 class="screen-title">API Settings</h1>
           {{/if}}
           <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
+        </header>
+
+        <header class="desktop-topbar" aria-label="Thanh thông tin quản trị">
+          <div>
+            <p class="eyebrow mb-1">Tới Nóc Admin</p>
+            {{#if isBookingsSection}}
+              <h1 class="desktop-page-title">Tổng quan đặt bàn</h1>
+            {{/if}}
+            {{#if isBranchesSection}}
+              <h1 class="desktop-page-title">Chi nhánh & khu vực</h1>
+            {{/if}}
+            {{#if isUsersSection}}
+              <h1 class="desktop-page-title">Người dùng & vai trò</h1>
+            {{/if}}
+            {{#if isApiSettingsSection}}
+              <h1 class="desktop-page-title">API Settings</h1>
+            {{/if}}
+          </div>
+          <div class="desktop-topbar-actions">
+            {{#if canCreateBooking}}
+              <button class="btn btn-warning fw-bold" type="button" data-open-booking-popup>Tạo đặt bàn</button>
+            {{/if}}
+            <form method="post" action="/logout">
+              <button class="btn btn-outline-danger fw-bold" type="submit">Đăng xuất</button>
+            </form>
+          </div>
         </header>
 
         <main class="page-main dashboard-page-main">
