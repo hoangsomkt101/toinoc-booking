@@ -48,6 +48,7 @@
     { key: 'upcoming', label: 'Sắp tới' },
     { key: 'seated', label: 'Đang ngồi' },
     { key: 'cleaning', label: 'Đang dọn' },
+    { key: 'completed', label: 'Hoàn tất' },
     { key: 'late_cancelled', label: 'Trễ, huỷ' }
   ];
   let activeBookingTab = 'all';
@@ -1398,6 +1399,10 @@
   }
 
   function bookingMatchesTab(booking, tabKey, now = new Date()) {
+    if (tabKey === 'all') {
+      return booking.status !== 'COMPLETED';
+    }
+
     if (tabKey === 'confirmed') {
       return booking.status === 'CONFIRMED';
     }
@@ -1414,6 +1419,10 @@
       return booking.status === 'CHECKED_OUT';
     }
 
+    if (tabKey === 'completed') {
+      return booking.status === 'COMPLETED';
+    }
+
     if (tabKey === 'late_cancelled') {
       return isLateBooking(booking, now) || ['CANCELLED', 'NO_SHOW'].includes(booking.status);
     }
@@ -1423,9 +1432,7 @@
 
   function bookingTabCounts(bookings, now = new Date()) {
     return bookingTabDefinitions.reduce((counts, tab) => {
-      counts[tab.key] = tab.key === 'all'
-        ? bookings.length
-        : bookings.filter((booking) => bookingMatchesTab(booking, tab.key, now)).length;
+      counts[tab.key] = bookings.filter((booking) => bookingMatchesTab(booking, tab.key, now)).length;
 
       return counts;
     }, {});
