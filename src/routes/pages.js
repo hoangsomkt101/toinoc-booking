@@ -72,22 +72,26 @@ function selectedBranchScope(req, branches, canViewAllBranches) {
 }
 
 function safeNextPath(value) {
-  const nextPath = String(value || '/dashboard');
+  const nextPath = String(value || '/');
 
   if (!nextPath.startsWith('/') || nextPath.startsWith('//') || nextPath.startsWith('/login')) {
-    return '/dashboard';
+    return '/';
   }
 
   return nextPath;
 }
 
-router.get('/', (req, res) => {
-  res.redirect('/dashboard');
-});
+router.get(
+  '/',
+  requireAuthenticated,
+  asyncHandler(async (req, res) => {
+    await renderDashboard(req, res, 'bookings');
+  })
+);
 
 router.get('/login', (req, res) => {
   if (req.user) {
-    return res.redirect('/dashboard');
+    return res.redirect('/');
   }
 
   return res.render('login', {
@@ -184,7 +188,7 @@ async function renderDashboard(req, res, section) {
 }
 
 router.get(
-  '/dashboard',
+  '/bookings',
   requireAuthenticated,
   asyncHandler(async (req, res) => {
     await renderDashboard(req, res, 'bookings');
@@ -192,15 +196,7 @@ router.get(
 );
 
 router.get(
-  '/dashboard/bookings',
-  requireAuthenticated,
-  asyncHandler(async (req, res) => {
-    await renderDashboard(req, res, 'bookings');
-  })
-);
-
-router.get(
-  '/dashboard/branches',
+  '/branches',
   requireAuthenticated,
   requireRole('admin'),
   asyncHandler(async (req, res) => {
@@ -209,7 +205,7 @@ router.get(
 );
 
 router.get(
-  '/dashboard/users',
+  '/users',
   requireAuthenticated,
   requireRole('admin'),
   asyncHandler(async (req, res) => {
@@ -218,7 +214,7 @@ router.get(
 );
 
 router.get(
-  '/dashboard/api-settings',
+  '/api-settings',
   requireAuthenticated,
   requireRole('admin'),
   asyncHandler(async (req, res) => {
@@ -227,7 +223,7 @@ router.get(
 );
 
 router.get(
-  '/dashboard/sheet-settings',
+  '/sheet-settings',
   requireAuthenticated,
   requireRole('admin'),
   asyncHandler(async (req, res) => {

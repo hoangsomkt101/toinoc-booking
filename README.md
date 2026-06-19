@@ -17,7 +17,7 @@ Mobile-first internal booking system for restaurants, implemented from the conte
 5. Seed base branch, areas, tables, staff, and demo user accounts: `npm run seed`
 6. Start the app: `npm start`
 
-The dashboard is available at `http://localhost:3000/dashboard`.
+The dashboard is available at `http://localhost:3000/`.
 
 ## Deploy To Dokploy From Git
 - Repository: `https://github.com/hoangsomkt101/toinoc-booking.git`.
@@ -73,7 +73,7 @@ Default seeded login usernames are `admin`, `manager`, and `sale`; their passwor
 - Session state is stored in an `HttpOnly` signed cookie named `rb_session`.
 - Configure `SESSION_SECRET`, `ADMIN_PASSWORD`, `MANAGER_PASSWORD`, and `SALE_PASSWORD` in `.env`.
 - Seed creates local users `admin`, `manager`, and `sale` using the configured passwords. Local defaults are `admin123`, `manager123`, and `sale123`; production requires explicit environment values.
-- `/dashboard` and all `/api` routes require a valid session.
+- Dashboard pages and all `/api` routes require a valid session.
 - Role hierarchy is `admin` > `manager` > `sale`.
 - `sale` can read dashboard/bookings/tables, create bookings, check in, and check out.
 - `manager` can do everything `sale` can, plus update bookings, assign tables, cancel bookings, complete bookings through status updates, and create `sale` accounts in their branch.

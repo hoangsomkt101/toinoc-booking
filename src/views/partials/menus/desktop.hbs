@@ -1,5 +1,5 @@
 <nav class="desktop-sidebar-nav">
-  <a class="desktop-nav-link {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
+  <a class="desktop-nav-link {{#if isBookingsSection}}active{{/if}}" href="/bookings{{branchQueryString}}">
     <span class="desktop-nav-icon" aria-hidden="true">DB</span>
     <span>Đặt bàn</span>
   </a>
@@ -10,25 +10,25 @@
     </button>
   {{/if}}
   {{#if canManageBranches}}
-    <a class="desktop-nav-link {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
+    <a class="desktop-nav-link {{#if isBranchesSection}}active{{/if}}" href="/branches{{branchQueryString}}">
       <span class="desktop-nav-icon" aria-hidden="true">CN</span>
       <span>Chi nhánh</span>
     </a>
   {{/if}}
   {{#if canManageUsers}}
-    <a class="desktop-nav-link {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
+    <a class="desktop-nav-link {{#if isUsersSection}}active{{/if}}" href="/users{{branchQueryString}}">
       <span class="desktop-nav-icon" aria-hidden="true">ND</span>
       <span>Người dùng</span>
     </a>
   {{/if}}
   {{#if canManageApiSettings}}
-    <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
+    <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/api-settings">
       <span class="desktop-nav-icon" aria-hidden="true">API</span>
       <span>API Settings</span>
     </a>
   {{/if}}
   {{#if canManageSheetSettings}}
-    <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/dashboard/sheet-settings">
+    <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/sheet-settings">
       <span class="desktop-nav-icon" aria-hidden="true">SH</span>
       <span>Sheet Settings</span>
     </a>

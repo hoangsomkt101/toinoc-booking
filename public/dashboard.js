@@ -1566,7 +1566,7 @@
       selectors.branchFormMessage.textContent = 'Đã xóa chi nhánh.';
 
       if (String(selectedBranchId()) === String(branchId)) {
-        window.location.assign('/dashboard/branches');
+        window.location.assign('/branches');
         return;
       }
 

@@ -199,7 +199,7 @@ function requireAuthenticated(req, res, next) {
   }
 
   if (!req.path.startsWith('/api') && req.accepts('html')) {
-    const nextPath = encodeURIComponent(req.originalUrl || '/dashboard');
+    const nextPath = encodeURIComponent(req.originalUrl || '/');
     return res.redirect(`/login?next=${nextPath}`);
   }
 

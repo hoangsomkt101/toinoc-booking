@@ -1,7 +1,7 @@
 <header class="desktop-topbar {{#if isBookingsSection}}{{#if showOperationsSummary}}desktop-topbar-with-scope{{/if}}{{/if}}" aria-label="Thanh thông tin quản trị">
   {{#if isBookingsSection}}
     {{#if showOperationsSummary}}
-      <form id="branch-scope-form" class="desktop-topbar-scope d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/dashboard/{{dashboardSection}}">
+      <form id="branch-scope-form" class="desktop-topbar-scope d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/{{dashboardSection}}">
         <div class="scope-field scope-branch-field">
           <label class="form-label fw-bold mb-0 text-nowrap" for="branch-scope-select">Chi nhánh</label>
           <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" data-branch-scope>
