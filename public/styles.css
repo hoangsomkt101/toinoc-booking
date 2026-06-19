@@ -2324,7 +2324,9 @@ a:hover {
   background: var(--cream);
   display: block;
   flex: 0 0 auto;
-  padding: 18px 22px 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 12px 14px 0;
 }
 
 .desktop-topbar .desktop-topbar-heading,
@@ -2334,6 +2336,67 @@ a:hover {
 
 .desktop-topbar-scope {
   margin-bottom: 0 !important;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.desktop-topbar-scope .scope-field {
+  min-width: 0;
+}
+
+@media (max-width: 991.98px) {
+  .desktop-topbar-scope {
+    display: grid !important;
+    gap: 0.75rem !important;
+    padding: 0.65rem;
+    position: static;
+    top: auto;
+    z-index: auto;
+  }
+
+  .desktop-topbar-scope .scope-branch-field,
+  .desktop-topbar-scope .scope-date-field {
+    width: 100%;
+  }
+
+  .desktop-topbar-scope .form-label {
+    font-size: 0.78rem;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .desktop-topbar-scope .dashboard-date-row {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .desktop-topbar-scope .booking-date-chip,
+  .desktop-topbar-scope .booking-date-input,
+  .desktop-topbar-scope .form-select {
+    min-height: 42px;
+    min-width: 0;
+  }
+
+  .desktop-topbar-scope .booking-date-chip,
+  .desktop-topbar-scope .booking-date-input {
+    padding: 0.5rem 0.55rem;
+  }
+
+  .desktop-topbar-scope .dashboard-date-input {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 991.98px) {
+  .desktop-topbar-scope .dashboard-date-row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .desktop-topbar-scope .dashboard-date-input {
+    grid-column: auto;
+  }
 }
 
 @media (min-width: 992px) {
@@ -2356,7 +2419,7 @@ a:hover {
     box-shadow: none;
     display: grid;
     grid-template-columns: 16.75rem minmax(0, 1fr);
-    grid-template-rows: 6.5rem minmax(0, 1fr);
+    grid-template-rows: minmax(6.5rem, auto) minmax(0, 1fr);
     height: 100vh;
     min-height: 100vh;
     overflow: hidden;
@@ -2507,6 +2570,10 @@ a:hover {
   .desktop-topbar.desktop-topbar-with-scope {
     background: var(--paper);
     display: grid;
+    grid-template-areas:
+      "heading actions"
+      "scope scope";
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: 1rem 1.75rem;
   }
 
@@ -2517,6 +2584,19 @@ a:hover {
 
   .desktop-topbar .desktop-topbar-heading {
     display: block;
+  }
+
+  .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-heading {
+    grid-area: heading;
+  }
+
+  .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-scope {
+    grid-area: scope;
+  }
+
+  .desktop-topbar.desktop-topbar-with-scope .desktop-topbar-actions {
+    grid-area: actions;
+    justify-self: end;
   }
 
   .desktop-topbar:not(.desktop-topbar-with-scope) {
@@ -2556,6 +2636,7 @@ a:hover {
     box-shadow: none;
     display: flex !important;
     flex-direction: row !important;
+    flex-wrap: wrap !important;
     gap: 0.75rem !important;
     margin: 0 !important;
     min-width: 0;
@@ -2565,19 +2646,20 @@ a:hover {
   }
 
   .desktop-topbar-scope .scope-branch-field {
-    flex: 0 1 17rem;
+    flex: 1 1 13rem;
+    max-width: 18rem;
     width: auto;
   }
 
   .desktop-topbar-scope .scope-date-field {
-    flex: 1 1 auto;
+    flex: 999 1 18rem;
     min-width: 0;
   }
 
   .desktop-topbar-scope .dashboard-date-row {
     align-items: center;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
 
@@ -2592,9 +2674,10 @@ a:hover {
   }
 
   .desktop-topbar-scope .dashboard-date-input {
-    flex: 0 0 11.75rem;
+    flex: 1 1 11.75rem;
     grid-column: auto;
-    width: 11.75rem;
+    min-width: min(100%, 10rem);
+    width: auto;
   }
 
   .dashboard-page-main {
