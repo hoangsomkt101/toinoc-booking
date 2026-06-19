@@ -1947,7 +1947,7 @@ a:hover {
   border-top: 1px solid var(--line);
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   height: 92px;
   left: 0;
   padding: 10px 16px 16px;
@@ -1956,8 +1956,7 @@ a:hover {
   z-index: 20;
 }
 
-.nav-item,
-.logout-nav-button {
+.nav-item {
   align-items: center;
   background: transparent;
   border: 0;
@@ -2018,14 +2017,6 @@ a:hover {
 
 .fab.disabled {
   opacity: 0.45;
-}
-
-.logout-nav-form {
-  margin: 0;
-}
-
-.logout-nav-button {
-  width: 100%;
 }
 
 .booking-popup {
