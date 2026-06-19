@@ -308,6 +308,10 @@
     return branchIdFromUrl();
   }
 
+  function shouldShowBookingBranch() {
+    return isAdminUser() && !selectedBranchId();
+  }
+
   function selectedDashboardBookingDate() {
     if (selectors.dashboardDateFilter) {
       return selectors.dashboardDateFilter.value || dashboardBookingDateFromUrl();
@@ -1502,7 +1506,7 @@
       ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Gọi khách</a>`
       : '';
     const tableClass = hasAssignedTables(booking) ? '' : ' timeline-table-missing';
-    const branchLabel = booking.branch_name ? ` · ${booking.branch_name}` : '';
+    const branchLabel = shouldShowBookingBranch() && booking.branch_name ? ` · ${booking.branch_name}` : '';
     const notice = timelineState.notice
       ? `<div class="timeline-notice timeline-notice-${escapeHtml(timelineState.tone)}">${escapeHtml(timelineState.notice)}</div>`
       : '';
