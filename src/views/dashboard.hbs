@@ -59,6 +59,9 @@
               <strong class="d-block text-truncate">{{currentUser.display_name}}</strong>
               <span class="small d-block text-truncate">{{currentUser.role_label}}</span>
             </div>
+            <form class="desktop-sidebar-logout-form" method="post" action="/logout">
+              <button class="desktop-sidebar-logout-button" type="submit">Thoát</button>
+            </form>
           </div>
         </aside>
 
@@ -119,15 +122,6 @@
               </form>
             {{/if}}
           {{/if}}
-
-          <div class="desktop-topbar-actions">
-            {{#if canCreateBooking}}
-              <button class="btn btn-warning fw-bold" type="button" data-open-booking-popup>Tạo đặt bàn</button>
-            {{/if}}
-            <form method="post" action="/logout">
-              <button class="btn btn-outline-danger fw-bold" type="submit">Đăng xuất</button>
-            </form>
-          </div>
         </header>
 
         <main class="page-main dashboard-page-main">
