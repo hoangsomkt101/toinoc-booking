@@ -22,13 +22,13 @@
     </a>
   {{/if}}
   {{#if canManageApiSettings}}
-    <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/api-settings">
+    <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/api-settings{{branchQueryString}}">
       <span class="desktop-nav-icon" aria-hidden="true"><i class="fa-solid fa-code"></i></span>
       <span>API Settings</span>
     </a>
   {{/if}}
   {{#if canManageSheetSettings}}
-    <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/sheet-settings">
+    <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/sheet-settings{{branchQueryString}}">
       <span class="desktop-nav-icon" aria-hidden="true"><i class="fa-solid fa-table-list"></i></span>
       <span>Sheet Settings</span>
     </a>
