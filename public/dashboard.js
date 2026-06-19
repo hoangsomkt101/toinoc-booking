@@ -1177,14 +1177,14 @@
       return '';
     }
 
+    if (booking.status === 'PENDING') {
+      buttons.push('<button class="btn btn-outline-danger btn-sm booking-action-btn" data-action="cancel">Hủy</button>');
+    }
+
     if (booking.status === 'PENDING' || booking.status === 'CANCELLED' || (booking.status === 'CONFIRMED' && !hasAssignedTables(booking))) {
       buttons.push(`
         <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}">Xếp bàn</button>
       `);
-    }
-
-    if (booking.status === 'PENDING') {
-      buttons.push('<button class="btn btn-outline-danger btn-sm booking-action-btn" data-action="cancel">Hủy</button>');
     }
 
     if (booking.status === 'CONFIRMED' && hasAssignedTables(booking)) {
@@ -1530,7 +1530,7 @@
     const timelineState = bookingTimelineState(booking);
     const callHref = phoneCallHref(booking.phone);
     const callAction = callHref && arrivalPendingStatuses.includes(booking.status)
-      ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Gọi khách</a>`
+      ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
       : '';
     const tableClass = hasAssignedTables(booking) ? '' : ' timeline-table-missing';
     const branchLabel = shouldShowBookingBranch() && booking.branch_name ? ` · ${booking.branch_name}` : '';
