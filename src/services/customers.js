@@ -182,6 +182,34 @@ function appendSearchWhere(where, params, query) {
   where.push(`(c.customer_name ILIKE $${nameParam} OR c.phone LIKE $${phoneParam})`);
 }
 
+function appendBranchScope(where, params, branchId) {
+  if (!branchId) {
+    return '';
+  }
+
+  params.push(branchId);
+  const branchParam = params.length;
+  where.push(`EXISTS (
+    SELECT 1
+    FROM bookings b
+    WHERE (b.customer_id = c.id OR b.phone = c.phone)
+      AND b.branch_id = $${branchParam}
+  )`);
+
+  return `AND b.branch_id = $${branchParam}`;
+}
+
+function appendPhonePrefixWhere(where, params, phoneValue) {
+  const phone = normalizePhone(phoneValue);
+
+  if (phone.length < 2) {
+    throw badRequest('Nhập ít nhất 2 chữ số để gợi ý khách hàng');
+  }
+
+  params.push(`${phone}%`);
+  where.push(`c.phone LIKE $${params.length}`);
+}
+
 async function upsertCustomerByPhone(client, input) {
   const customerName = normalizeCustomerName(input.customer_name);
   const phone = normalizePhone(input.phone);
@@ -201,18 +229,7 @@ async function listCustomers(filters = {}, executor = pool) {
   const normalizedFilters = normalizeCustomerFilters(filters);
   const params = [];
   const where = [];
-  let branchSql = '';
-
-  if (normalizedFilters.branch_id) {
-    params.push(normalizedFilters.branch_id);
-    branchSql = `AND b.branch_id = $${params.length}`;
-    where.push(`EXISTS (
-      SELECT 1
-      FROM bookings b
-      WHERE (b.customer_id = c.id OR b.phone = c.phone)
-        AND b.branch_id = $${params.length}
-    )`);
-  }
+  const branchSql = appendBranchScope(where, params, normalizedFilters.branch_id);
 
   appendSearchWhere(where, params, normalizedFilters.q);
 
@@ -222,6 +239,25 @@ async function listCustomers(filters = {}, executor = pool) {
      ${whereSql}
      ORDER BY latest.last_booking_time DESC NULLS LAST, c.updated_at DESC, c.id DESC
      LIMIT 200`,
+    params
+  );
+
+  return result.rows.map(normalizeCustomerRow);
+}
+
+async function suggestCustomersByPhone(phoneValue, filters = {}, executor = pool) {
+  const normalizedFilters = normalizeCustomerFilters(filters);
+  const params = [];
+  const where = [];
+  const branchSql = appendBranchScope(where, params, normalizedFilters.branch_id);
+
+  appendPhonePrefixWhere(where, params, phoneValue);
+
+  const result = await executor.query(
+    `${customerStatsSelect(branchSql)}
+     WHERE ${where.join(' AND ')}
+     ORDER BY latest.last_booking_time DESC NULLS LAST, c.updated_at DESC, c.id DESC
+     LIMIT 8`,
     params
   );
 
@@ -366,6 +402,7 @@ module.exports = {
   listCustomerBookings,
   listCustomers,
   lookupCustomerByPhone,
+  suggestCustomersByPhone,
   updateCustomer,
   upsertCustomerByPhone
 };

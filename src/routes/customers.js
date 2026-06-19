@@ -38,6 +38,19 @@ router.get(
 );
 
 router.get(
+  '/suggest',
+  requireCustomerLookup,
+  asyncHandler(async (req, res) => {
+    if (!req.query.phone) {
+      throw badRequest('Số điện thoại là bắt buộc');
+    }
+
+    const customers = await customerService.suggestCustomersByPhone(req.query.phone, scopedCustomerQuery(req));
+    res.json({ data: customers });
+  })
+);
+
+router.get(
   '/',
   requireCustomerManage,
   asyncHandler(async (req, res) => {

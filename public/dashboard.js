@@ -1705,6 +1705,82 @@
     `;
   }
 
+  function renderCustomerSuggestions(customers = []) {
+    if (!selectors.customerQuickfill) {
+      return;
+    }
+
+    if (!customers.length) {
+      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Chưa có khách cũ khớp số này.</div>';
+      return;
+    }
+
+    const items = customers
+      .map((customer) => {
+        const lastBooking = customer.last_booking_time
+          ? `${formatDateTime(customer.last_booking_time)} · ${bookingStatusLabel(customer.last_booking_status)}`
+          : 'Chưa có booking gần đây';
+
+        return `
+          <button class="customer-suggestion-item" type="button" data-customer-suggestion data-customer-name="${escapeHtml(customer.customer_name)}" data-customer-phone="${escapeHtml(customer.phone)}">
+            <strong>${escapeHtml(customer.customer_name)}</strong>
+            <span>${escapeHtml(customer.phone)} · ${escapeHtml(customer.booking_count || 0)} booking</span>
+            <small>${escapeHtml(lastBooking)}</small>
+          </button>
+        `;
+      })
+      .join('');
+
+    selectors.customerQuickfill.innerHTML = `
+      <div class="customer-suggestion-list">
+        <div class="customer-suggestion-title">Khách cũ khớp số điện thoại</div>
+        ${items}
+      </div>
+    `;
+  }
+
+  async function suggestCustomersForBooking(phoneValue) {
+    const phone = normalizeClientPhone(phoneValue);
+
+    if (phone.length < 2) {
+      clearCustomerQuickfill();
+      return;
+    }
+
+    if (phone.length >= 10) {
+      await lookupCustomerForBooking(phoneValue);
+      return;
+    }
+
+    if (selectors.customerQuickfill) {
+      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Đang gợi ý khách cũ...</div>';
+    }
+
+    try {
+      const customers = await request(scopedPathWithParams('/api/customers/suggest', { phone }));
+      renderCustomerSuggestions(customers || []);
+    } catch (error) {
+      if (selectors.customerQuickfill) {
+        selectors.customerQuickfill.innerHTML = `<div class="customer-quickfill-note text-danger">${escapeHtml(error.message)}</div>`;
+      }
+    }
+  }
+
+  function selectCustomerSuggestion(button) {
+    const phoneInput = document.getElementById('booking-phone');
+    const nameInput = document.getElementById('booking-customer-name');
+
+    if (phoneInput) {
+      phoneInput.value = button.dataset.customerPhone || '';
+    }
+
+    if (nameInput) {
+      nameInput.value = button.dataset.customerName || '';
+    }
+
+    lookupCustomerForBooking(button.dataset.customerPhone || '');
+  }
+
   async function lookupCustomerForBooking(phoneValue) {
     const phone = normalizeClientPhone(phoneValue);
 
@@ -2363,6 +2439,20 @@
       if (guestButton) {
         const currentValue = Number(document.querySelector('[data-guest-count]')?.value || 2);
         setGuestCount(currentValue + Number(guestButton.dataset.guestStep));
+        return;
+      }
+
+      const customerSuggestion = event.target.closest('[data-customer-suggestion]');
+      if (customerSuggestion) {
+        selectCustomerSuggestion(customerSuggestion);
+      }
+    });
+
+    createBookingForm.addEventListener('pointerdown', (event) => {
+      const customerSuggestion = event.target.closest('[data-customer-suggestion]');
+      if (customerSuggestion) {
+        event.preventDefault();
+        selectCustomerSuggestion(customerSuggestion);
       }
     });
 
@@ -2503,9 +2593,9 @@
     let phoneLookupTimer;
     bookingPhoneInput.addEventListener('input', () => {
       window.clearTimeout(phoneLookupTimer);
-      phoneLookupTimer = window.setTimeout(() => lookupCustomerForBooking(bookingPhoneInput.value), 350);
+      phoneLookupTimer = window.setTimeout(() => suggestCustomersForBooking(bookingPhoneInput.value), 250);
     });
-    bookingPhoneInput.addEventListener('blur', () => lookupCustomerForBooking(bookingPhoneInput.value));
+    bookingPhoneInput.addEventListener('blur', () => suggestCustomersForBooking(bookingPhoneInput.value));
   }
 
   document.addEventListener('click', handleAction);

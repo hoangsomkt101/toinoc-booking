@@ -1856,6 +1856,52 @@ a:hover {
   padding: 0.75rem;
 }
 
+.customer-suggestion-list {
+  background: #fff;
+  border: 1px solid rgba(246, 194, 62, 0.35);
+  border-radius: 0.95rem;
+  box-shadow: 0 10px 20px rgba(83, 58, 35, 0.09);
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+}
+
+.customer-suggestion-title {
+  color: var(--app-primary-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 0 0.2rem;
+  text-transform: uppercase;
+}
+
+.customer-suggestion-item {
+  background: #fff8e5;
+  border: 1px solid rgba(246, 194, 62, 0.28);
+  border-radius: 0.75rem;
+  color: #6a514c;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.7rem;
+  text-align: left;
+}
+
+.customer-suggestion-item:hover,
+.customer-suggestion-item:focus {
+  background: var(--app-primary-soft);
+  border-color: rgba(246, 194, 62, 0.7);
+  outline: 0;
+}
+
+.customer-suggestion-item strong {
+  color: var(--app-dark);
+}
+
+.customer-suggestion-item span,
+.customer-suggestion-item small {
+  font-size: 0.8rem;
+}
+
 .customer-quickfill-card {
   display: grid;
   gap: 0.2rem;

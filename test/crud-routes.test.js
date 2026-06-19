@@ -55,6 +55,7 @@ test('user API exposes full CRUD routes', () => {
 test('customer API exposes lookup, management and history routes', () => {
   assert.deepEqual(routeMethods(customerRouter), [
     { path: '/lookup', methods: ['get'] },
+    { path: '/suggest', methods: ['get'] },
     { path: '/', methods: ['get'] },
     { path: '/:id', methods: ['get'] },
     { path: '/:id/bookings', methods: ['get'] },
