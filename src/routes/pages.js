@@ -139,7 +139,7 @@ async function renderDashboard(req, res, section) {
   const canManageSettings = canManageApiSettings || canManageSheetSettings;
   const branches = await branchService.listBranches();
   const realtime = req.app.locals.realtime;
-  const visibleBranches = canManageBranches ? branches : publicBranchOptions(branches);
+  const visibleBranches = canManageBookings ? branches : publicBranchOptions(branches);
   const selectedBranchId = selectedBranchScope(req, visibleBranches, canManageBranches);
   const scopedQuery = canManageBranches || !selectedBranchId
     ? req.query

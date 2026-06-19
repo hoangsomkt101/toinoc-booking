@@ -645,7 +645,7 @@
     return state.customers.find((customer) => String(customer.id) === String(id));
   }
 
-  function tableOptions(booking) {
+  function assignmentTables(booking) {
     const available = (state.dashboard.available_tables || []).filter(
       (table) => String(table.branch_id) === String(booking.branch_id)
     );
@@ -656,13 +656,109 @@
       byId.set(String(table.id), table);
     }
 
-    return [...byId.values()]
-      .map((table) => {
-        const selected = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id)) ? 'selected' : '';
-        const label = `Bàn ${table.table_code} (${table.capacity})`;
-        return `<option value="${escapeHtml(table.id)}" ${selected}>${escapeHtml(label)}</option>`;
-      })
-      .join('');
+    return [...byId.values()].sort((left, right) => {
+      const leftCode = String(left.table_code || '');
+      const rightCode = String(right.table_code || '');
+      const leftNumber = /^\d+$/.test(leftCode) ? Number(leftCode) : Number.MAX_SAFE_INTEGER;
+      const rightNumber = /^\d+$/.test(rightCode) ? Number(rightCode) : Number.MAX_SAFE_INTEGER;
+
+      if (leftNumber !== rightNumber) {
+        return leftNumber - rightNumber;
+      }
+
+      return leftCode.localeCompare(rightCode, 'vi', { numeric: true });
+    });
+  }
+
+  function tableAreaId(table, branch) {
+    const areas = branch?.areas || [];
+
+    if (!areas.length) {
+      return 'all';
+    }
+
+    if (table.area_id && areas.some((area) => String(area.id) === String(table.area_id))) {
+      return String(table.area_id);
+    }
+
+    if (table.area_name) {
+      const matchedArea = areas.find((area) => area.name.toLowerCase() === String(table.area_name).toLowerCase());
+      if (matchedArea) {
+        return String(matchedArea.id);
+      }
+    }
+
+    const tableNumber = /^\d+$/.test(String(table.table_code || '')) ? Number(table.table_code) : 0;
+    const tableCount = Number(branch?.table_count || 0);
+
+    if (tableNumber > 0 && tableCount > 0) {
+      const areaIndex = Math.min(areas.length - 1, Math.floor(((tableNumber - 1) * areas.length) / tableCount));
+      return String(areas[areaIndex].id);
+    }
+
+    return String(areas[0].id);
+  }
+
+  function areaNameById(branch, areaId) {
+    const area = (branch?.areas || []).find((item) => String(item.id) === String(areaId));
+
+    return area ? area.name : 'Chưa phân khu';
+  }
+
+  function assignmentAreaTabs(booking, tables) {
+    const branch = findBranch(booking.branch_id);
+    const areas = branch?.areas || [];
+
+    if (!areas.length) {
+      return '';
+    }
+
+    const areaCounts = tables.reduce((counts, table) => {
+      const areaId = tableAreaId(table, branch);
+      counts[areaId] = (counts[areaId] || 0) + 1;
+
+      return counts;
+    }, {});
+
+    const buttons = [
+      `<button class="assign-area-pill active" type="button" data-assign-area="all">Tất cả · ${escapeHtml(tables.length)}</button>`,
+      ...areas.map((area) => `
+        <button class="assign-area-pill" type="button" data-assign-area="${escapeHtml(area.id)}">
+          ${escapeHtml(area.name)} · ${escapeHtml(areaCounts[String(area.id)] || 0)}
+        </button>
+      `)
+    ];
+
+    return `<div class="assign-area-tabs" aria-label="Lọc bàn theo khu vực">${buttons.join('')}</div>`;
+  }
+
+  function tableGrid(booking) {
+    const tables = assignmentTables(booking);
+    const branch = findBranch(booking.branch_id);
+    const assigned = booking.assigned_tables || [];
+
+    if (!tables.length) {
+      return '<div class="alert alert-light border mb-0">Không còn bàn trống trong chi nhánh này.</div>';
+    }
+
+    const items = tables.map((table) => {
+      const selected = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id));
+      const areaId = tableAreaId(table, branch);
+      const areaName = areaNameById(branch, areaId);
+
+      return `
+        <label class="assign-table-card ${selected ? 'selected' : ''}" data-assign-table-card data-area-id="${escapeHtml(areaId)}">
+          <input class="assign-table-input" type="checkbox" name="table_ids" value="${escapeHtml(table.id)}" ${selected ? 'checked' : ''}>
+          <span class="assign-table-code">${escapeHtml(table.table_code)}</span>
+          <span class="assign-table-meta">${escapeHtml(table.capacity)} khách · ${escapeHtml(areaName)}</span>
+        </label>
+      `;
+    });
+
+    return `
+      ${assignmentAreaTabs(booking, tables)}
+      <div class="assign-table-grid">${items.join('')}</div>
+    `;
   }
 
   function managementMessage() {
@@ -671,16 +767,24 @@
 
   function bookingAssignForm(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
+    const shouldAutoConfirm = booking.status === 'PENDING';
+    const submitLabel = booking.status === 'PENDING' ? 'Lưu bàn & xác nhận' : 'Lưu bàn';
+    const selectedCount = (booking.assigned_tables || []).length;
+    const selectedMessage = selectedCount
+      ? shouldAutoConfirm
+        ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking đang chờ.`
+        : `Đã chọn ${selectedCount} bàn.`
+      : 'Chọn một hoặc nhiều bàn.';
 
     return `
-      <form class="management-form" data-booking-assign="${escapeHtml(booking.id)}">
+      <form class="management-form" data-booking-assign="${escapeHtml(booking.id)}" data-auto-confirm="${shouldAutoConfirm ? 'true' : 'false'}">
         <div class="management-form-note">${escapeHtml(booking.customer_name)} · ${escapeHtml(booking.guest_count)} khách · Bàn hiện tại: ${escapeHtml(tables)}</div>
         <div>
-          <label class="form-label fw-semibold">Chọn bàn</label>
-          <select class="form-select table-select" data-table-select="${escapeHtml(booking.id)}" multiple aria-label="Chọn bàn">${tableOptions(booking)}</select>
-          <div class="form-text">Có thể chọn một hoặc nhiều bàn.</div>
+          <label class="form-label fw-semibold">Chọn khu vực và bàn</label>
+          ${tableGrid(booking)}
+          <div class="form-text" data-assign-selected-count>${escapeHtml(selectedMessage)}</div>
         </div>
-        <button class="btn btn-warning fw-bold form-submit" type="submit">Lưu bàn</button>
+        <button class="btn btn-warning fw-bold form-submit" type="submit">${escapeHtml(submitLabel)}</button>
         ${managementMessage()}
       </form>
     `;
@@ -1082,27 +1186,25 @@
   function actionButtons(booking) {
     const buttons = [];
 
-    if (['PENDING', 'CONFIRMED', 'CHECKED_IN'].includes(booking.status) && canManageBookings()) {
+    if (!canManageBookings()) {
+      return '';
+    }
+
+    if (booking.status === 'PENDING' || (booking.status === 'CONFIRMED' && !hasAssignedTables(booking))) {
       buttons.push(`
         <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}">Xếp bàn</button>
       `);
     }
 
-    if (booking.status === 'PENDING' && canManageBookings()) {
-      buttons.push('<button class="btn btn-warning btn-sm fw-bold booking-action-btn" data-action="confirm">Xác nhận</button>');
-      buttons.push('<button class="btn btn-outline-danger btn-sm fw-bold booking-action-btn" data-action="cancel">Hủy</button>');
-    }
-
-    if (booking.status === 'CONFIRMED' && canManageBookings()) {
+    if (booking.status === 'CONFIRMED' && hasAssignedTables(booking)) {
       buttons.push('<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="check-in">Check-in</button>');
-      buttons.push('<button class="btn btn-outline-danger btn-sm fw-bold booking-action-btn" data-action="cancel">Hủy</button>');
     }
 
-    if (booking.status === 'CHECKED_IN' && canManageBookings()) {
+    if (booking.status === 'CHECKED_IN') {
       buttons.push('<button class="btn btn-warning btn-sm fw-bold booking-action-btn" data-action="check-out">Check-out</button>');
     }
 
-    if (booking.status === 'CHECKED_OUT' && canManageBookings()) {
+    if (booking.status === 'CHECKED_OUT') {
       buttons.push('<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="complete">Hoàn tất</button>');
     }
 
@@ -1379,12 +1481,51 @@
     renderBookingBoard();
   }
 
+  function updateAssignTableSelection(form) {
+    if (!form) {
+      return;
+    }
+
+    const selectedCount = form.querySelectorAll('[name="table_ids"]:checked').length;
+    const counter = form.querySelector('[data-assign-selected-count]');
+
+    for (const card of form.querySelectorAll('[data-assign-table-card]')) {
+      const input = card.querySelector('[name="table_ids"]');
+      card.classList.toggle('selected', Boolean(input?.checked));
+    }
+
+    if (counter) {
+      counter.textContent = selectedCount
+        ? form.dataset.autoConfirm === 'true'
+          ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking đang chờ.`
+          : `Đã chọn ${selectedCount} bàn.`
+        : 'Chọn một hoặc nhiều bàn.';
+    }
+  }
+
+  function setAssignAreaFilter(button) {
+    const form = button.closest('[data-booking-assign]');
+    const areaId = button.dataset.assignArea || 'all';
+
+    if (!form) {
+      return;
+    }
+
+    for (const areaButton of form.querySelectorAll('[data-assign-area]')) {
+      areaButton.classList.toggle('active', areaButton === button);
+    }
+
+    for (const card of form.querySelectorAll('[data-assign-table-card]')) {
+      card.hidden = areaId !== 'all' && String(card.dataset.areaId) !== String(areaId);
+    }
+  }
+
   function renderTimelineBooking(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
-    const controls = `${bookingManagement(booking)}${actionButtons(booking)}`;
+    const controls = actionButtons(booking);
     const timelineState = bookingTimelineState(booking);
     const callHref = phoneCallHref(booking.phone);
-    const callAction = callHref && !closedBookingStatuses.includes(booking.status)
+    const callAction = callHref && arrivalPendingStatuses.includes(booking.status)
       ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Gọi khách</a>`
       : '';
     const tableClass = hasAssignedTables(booking) ? '' : ' timeline-table-missing';
@@ -2383,14 +2524,14 @@
     event.preventDefault();
     const bookingId = form.dataset.bookingAssign;
     const button = form.querySelector('[type="submit"]');
-    const select = form.querySelector(`[data-table-select="${bookingId}"]`);
-    const tableIds = [...(select?.selectedOptions || [])].map((option) => option.value);
+    const tableIds = [...form.querySelectorAll('[name="table_ids"]:checked')].map((input) => input.value);
+    const autoConfirm = form.dataset.autoConfirm === 'true';
     button.disabled = true;
-    setFormStatus(form, selectors.formMessage, 'Đang lưu bàn...');
+    setFormStatus(form, selectors.formMessage, autoConfirm ? 'Đang lưu bàn và xác nhận booking...' : 'Đang lưu bàn...');
 
     try {
       await request(`/api/bookings/${bookingId}/assign`, { method: 'POST', body: { table_ids: tableIds } });
-      setFormStatus(form, selectors.formMessage, 'Đã lưu bàn.');
+      setFormStatus(form, selectors.formMessage, autoConfirm ? 'Đã lưu bàn và xác nhận booking.' : 'Đã lưu bàn.');
       await refreshDashboard();
       closeManagementPopup();
     } catch (error) {
@@ -2778,6 +2919,13 @@
       return;
     }
 
+    const assignAreaButton = event.target.closest('[data-assign-area]');
+    if (assignAreaButton) {
+      event.preventDefault();
+      setAssignAreaFilter(assignAreaButton);
+      return;
+    }
+
     const openButton = event.target.closest('[data-open-booking-popup]');
     if (openButton) {
       event.preventDefault();
@@ -2833,6 +2981,13 @@
     }
     if (event.key === 'Escape' && selectors.managementPopup && !selectors.managementPopup.hidden) {
       closeManagementPopup();
+    }
+  });
+
+  document.addEventListener('change', (event) => {
+    const tableInput = event.target.closest('[name="table_ids"]');
+    if (tableInput) {
+      updateAssignTableSelection(tableInput.closest('[data-booking-assign]'));
     }
   });
 
