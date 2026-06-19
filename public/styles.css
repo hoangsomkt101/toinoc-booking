@@ -1929,10 +1929,14 @@ a:hover {
 }
 
 .bottom-nav-icon {
+  align-items: center;
   color: inherit;
+  display: inline-flex;
   font-size: 17px;
-  font-weight: 950;
+  height: 20px;
+  justify-content: center;
   line-height: 1;
+  width: 20px;
 }
 
 .fab {
@@ -1942,15 +1946,19 @@ a:hover {
   box-shadow: 0 13px 24px rgba(237, 174, 50, 0.35);
   color: #241916;
   display: grid;
-  font-size: 36px;
-  font-weight: 650;
+  font-size: 26px;
+  font-weight: 900;
   height: 66px;
   line-height: 1;
   margin: -23px auto 0;
   min-height: 66px;
-  padding: 0 0 5px;
+  padding: 0;
   place-items: center;
   width: 66px;
+}
+
+.fab i {
+  line-height: 1;
 }
 
 .fab.disabled {
@@ -2504,6 +2512,10 @@ a:hover {
     height: 2.15rem;
     justify-content: center;
     width: 2.15rem;
+  }
+
+  .desktop-nav-icon i {
+    line-height: 1;
   }
 
   .desktop-nav-action .desktop-nav-icon {
