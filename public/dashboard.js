@@ -1115,16 +1115,23 @@
   }
 
   function customerEditForm(customer) {
-    return `
-      <form class="management-form row g-3" data-customer-update="${escapeHtml(customer.id)}">
-        <div class="col-12 col-sm-6">
-          <label class="form-label fw-semibold small">Tên khách hàng</label>
-          <input class="form-control" name="customer_name" value="${escapeHtml(customer.customer_name)}" required>
-        </div>
+    const nameColumn = isAdminUser() ? 'col-12 col-sm-6' : 'col-12';
+    const phoneField = isAdminUser()
+      ? `
         <div class="col-12 col-sm-6">
           <label class="form-label fw-semibold small">Số điện thoại</label>
           <input class="form-control" name="phone" value="${escapeHtml(customer.phone)}" inputmode="tel" required>
         </div>
+      `
+      : '';
+
+    return `
+      <form class="management-form row g-3" data-customer-update="${escapeHtml(customer.id)}">
+        <div class="${nameColumn}">
+          <label class="form-label fw-semibold small">Tên khách hàng</label>
+          <input class="form-control" name="customer_name" value="${escapeHtml(customer.customer_name)}" required>
+        </div>
+        ${phoneField}
         <div class="col-12 d-grid">
           <button class="btn btn-warning fw-bold" type="submit">Lưu khách hàng</button>
         </div>
@@ -1152,12 +1159,13 @@
     const history = bookings.length
       ? bookings.map(renderCustomerBookingItem).join('')
       : '<div class="alert alert-light border mb-0">Khách hàng chưa có lịch sử đặt bàn trong phạm vi này.</div>';
+    const phoneMeta = isAdminUser() && customer.phone ? `${escapeHtml(customer.phone)} · ` : '';
 
     return `
       <div class="customer-detail">
         <div class="management-form-note">
           <strong class="d-block">${escapeHtml(customer.customer_name)}</strong>
-          <span>${escapeHtml(customer.phone)} · ${escapeHtml(customer.booking_count || 0)} booking</span>
+          <span>${phoneMeta}${escapeHtml(customer.booking_count || 0)} booking</span>
         </div>
         <div class="customer-history-list mt-3">${history}</div>
       </div>
@@ -1685,9 +1693,15 @@
 
   function renderCustomer(customer) {
     const lastBooking = customer.last_booking_time
-      ? `${formatDateTime(customer.last_booking_time)} · ${bookingStatusLabel(customer.last_booking_status)}`
-      : 'Chưa có booking';
+      ? formatDateTime(customer.last_booking_time)
+      : 'Chưa có booking hoàn tất';
     const customerId = escapeHtml(customer.id);
+    const phoneLine = isAdminUser() && customer.phone
+      ? `<div class="small text-body-secondary">SĐT: <strong>${escapeHtml(customer.phone)}</strong></div>`
+      : '';
+    const branchLine = shouldShowBookingBranch() && customer.last_booking_branch_name
+      ? `<div class="small text-body-secondary">Chi nhánh: ${escapeHtml(customer.last_booking_branch_name)}</div>`
+      : '';
 
     return `
       <article class="customer-card border rounded-4 p-3 bg-body" data-customer-id="${customerId}">
@@ -1697,9 +1711,9 @@
               <strong class="text-gray-800">${escapeHtml(customer.customer_name)}</strong>
               <span class="badge text-bg-warning">${escapeHtml(customer.booking_count || 0)} booking</span>
             </div>
-            <div class="small text-body-secondary">SĐT: <strong>${escapeHtml(customer.phone)}</strong></div>
-            <div class="small text-body-secondary">Gần nhất: ${escapeHtml(lastBooking)}</div>
-            ${customer.last_booking_branch_name ? `<div class="small text-body-secondary">Chi nhánh: ${escapeHtml(customer.last_booking_branch_name)} · ${escapeHtml(customer.last_booking_guest_count || 0)} khách</div>` : ''}
+            ${phoneLine}
+            <div class="small text-body-secondary">Hoàn tất gần nhất: ${escapeHtml(lastBooking)}</div>
+            ${branchLine}
           </div>
           <div class="d-grid d-sm-flex gap-2 flex-shrink-0">
             <button class="btn btn-outline-secondary btn-sm" type="button" data-open-management-popup="customer-history" data-customer-id="${customerId}">Lịch sử</button>

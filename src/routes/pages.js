@@ -82,6 +82,17 @@ function safeNextPath(value) {
   return nextPath;
 }
 
+function hideCustomerPhone(customer) {
+  const visibleCustomer = { ...customer };
+  delete visibleCustomer.phone;
+
+  return visibleCustomer;
+}
+
+function visibleCustomersForUser(customers, user) {
+  return user.role === 'admin' ? customers : customers.map(hideCustomerPhone);
+}
+
 router.get(
   '/',
   requireAuthenticated,
@@ -134,6 +145,7 @@ async function renderDashboard(req, res, section) {
   const canManageCustomers = ROLE_LEVELS[req.user.role] >= ROLE_LEVELS.manager;
   const canManageUsers = req.user.role === 'admin';
   const canManageBranches = req.user.role === 'admin';
+  const canViewCustomerPhones = req.user.role === 'admin';
   const canManageApiSettings = req.user.role === 'admin';
   const canManageSheetSettings = req.user.role === 'admin';
   const canManageSettings = canManageApiSettings || canManageSheetSettings;
@@ -167,6 +179,7 @@ async function renderDashboard(req, res, section) {
     canManageBookings,
     canManageBranches,
     canManageCustomers,
+    canViewCustomerPhones,
     canManageSettings,
     canManageSheetSettings,
     canManageUsers,
@@ -185,7 +198,7 @@ async function renderDashboard(req, res, section) {
     isUsersSection: section === 'users',
     onlineUsers: canManageBranches && realtime ? realtime.getOnlineUsers() : [],
     bookings,
-    customers,
+    customers: visibleCustomersForUser(customers, req.user),
     apiClients,
     sheetTargets,
     users,

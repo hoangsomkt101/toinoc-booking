@@ -30,7 +30,6 @@ function normalizeCustomerRow(row) {
     last_booking_status: row.last_booking_status || null,
     last_booking_branch_id: row.last_booking_branch_id === null || row.last_booking_branch_id === undefined ? null : Number(row.last_booking_branch_id),
     last_booking_branch_name: row.last_booking_branch_name || null,
-    last_booking_guest_count: row.last_booking_guest_count === null || row.last_booking_guest_count === undefined ? null : Number(row.last_booking_guest_count),
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -71,7 +70,6 @@ function customerStatsSelect(branchSql = '') {
       latest.last_booking_status,
       latest.last_booking_branch_id,
       latest.last_booking_branch_name,
-      latest.last_booking_guest_count,
       c.created_at,
       c.updated_at
     FROM customers c
@@ -90,12 +88,12 @@ function customerStatsSelect(branchSql = '') {
         b.id AS last_booking_id,
         b.booking_time AS last_booking_time,
         b.status AS last_booking_status,
-        b.guest_count AS last_booking_guest_count,
         br.id AS last_booking_branch_id,
         br.name AS last_booking_branch_name
       FROM bookings b
       JOIN branches br ON br.id = b.branch_id
       WHERE (b.customer_id = c.id OR b.phone = c.phone)
+        AND b.status = 'COMPLETED'
       ${branchSql}
       ORDER BY b.booking_time DESC, b.id DESC
       LIMIT 1

@@ -24,6 +24,32 @@ function scopedCustomerQuery(req) {
   throw badRequest('Vui lòng chọn chi nhánh');
 }
 
+function hideCustomerPhone(customer) {
+  const visibleCustomer = { ...customer };
+  delete visibleCustomer.phone;
+
+  return visibleCustomer;
+}
+
+function hideBookingPhone(booking) {
+  const visibleBooking = { ...booking };
+  delete visibleBooking.phone;
+
+  return visibleBooking;
+}
+
+function visibleCustomerForUser(customer, user) {
+  return user.role === 'admin' ? customer : hideCustomerPhone(customer);
+}
+
+function visibleCustomersForUser(customers, user) {
+  return user.role === 'admin' ? customers : customers.map(hideCustomerPhone);
+}
+
+function visibleBookingsForUser(bookings, user) {
+  return user.role === 'admin' ? bookings : bookings.map(hideBookingPhone);
+}
+
 router.get(
   '/lookup',
   requireCustomerLookup,
@@ -55,7 +81,7 @@ router.get(
   requireCustomerManage,
   asyncHandler(async (req, res) => {
     const customers = await customerService.listCustomers(scopedCustomerQuery(req));
-    res.json({ data: customers });
+    res.json({ data: visibleCustomersForUser(customers, req.user) });
   })
 );
 
@@ -64,7 +90,7 @@ router.get(
   requireCustomerManage,
   asyncHandler(async (req, res) => {
     const customer = await customerService.getCustomerById(req.params.id, scopedCustomerQuery(req));
-    res.json({ data: customer });
+    res.json({ data: visibleCustomerForUser(customer, req.user) });
   })
 );
 
@@ -73,7 +99,7 @@ router.get(
   requireCustomerManage,
   asyncHandler(async (req, res) => {
     const bookings = await customerService.listCustomerBookings(req.params.id, scopedCustomerQuery(req));
-    res.json({ data: bookings });
+    res.json({ data: visibleBookingsForUser(bookings, req.user) });
   })
 );
 
@@ -82,7 +108,7 @@ router.put(
   requireCustomerManage,
   asyncHandler(async (req, res) => {
     const customer = await customerService.updateCustomer(req.params.id, req.body, scopedCustomerQuery(req));
-    res.json({ data: customer });
+    res.json({ data: visibleCustomerForUser(customer, req.user) });
   })
 );
 
