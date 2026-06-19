@@ -91,6 +91,7 @@ router.get('/login', (req, res) => {
   }
 
   return res.render('login', {
+    bodyClass: 'mobile-app-body',
     title: 'Đăng nhập',
     next: safeNextPath(req.query.next)
   });
@@ -104,6 +105,7 @@ router.post(
 
     if (!user) {
       return res.status(401).render('login', {
+        bodyClass: 'mobile-app-body',
         title: 'Đăng nhập',
         error: 'Tên đăng nhập hoặc mật khẩu không đúng.',
         next,
@@ -146,7 +148,10 @@ async function renderDashboard(req, res, section) {
   ]);
 
   res.render('dashboard', {
+    bodyClass: 'dashboard-body mobile-app-body',
+    bodyId: 'page-top',
     title: 'Tổng quan quản lý đặt bàn',
+    isDashboardLayout: true,
     branchQueryString: selectedBranchId ? `?branch_id=${encodeURIComponent(selectedBranchId)}` : '',
     canCreateBooking,
     canManageApiSettings,

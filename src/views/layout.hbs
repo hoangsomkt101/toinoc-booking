@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
+    <link rel="icon" type="image/webp" href="/fav.webp">
+    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body{{#if bodyClass}} class="{{bodyClass}}"{{/if}}{{#if bodyId}} id="{{bodyId}}"{{/if}}>
+    {{#if isDashboardLayout}}
+      <div class="prototype-stage">
+        <section class="mobile-shell dashboard-shell">
+          {{#> sidebar}}
+            {{> menus/desktop}}
+          {{/sidebar}}
+
+          <header class="app-header dashboard-app-header">
+            <div class="app-header-top">
+              <a class="app-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
+                <img class="app-brand-logo" src="/logo.webp" alt="Restaurant Booking">
+              </a>
+              <form class="header-logout-form" method="post" action="/logout">
+                <button class="header-user-button" type="submit" aria-label="Đăng xuất {{currentUser.display_name}}">
+                  <span class="avatar avatar-compact" aria-hidden="true">TK</span>
+                  <span class="header-user-name">Thoát</span>
+                </button>
+              </form>
+            </div>
+            <p class="eyebrow mb-2">Tới Nóc Admin</p>
+            {{#if isBookingsSection}}
+              <h1 class="screen-title">Tổng quan</h1>
+            {{/if}}
+            {{#if isBranchesSection}}
+              <h1 class="screen-title">Chi nhánh & khu vực</h1>
+            {{/if}}
+            {{#if isUsersSection}}
+              <h1 class="screen-title">Người dùng & vai trò</h1>
+            {{/if}}
+            {{#if isApiSettingsSection}}
+              <h1 class="screen-title">API Settings</h1>
+            {{/if}}
+            {{#if isSheetSettingsSection}}
+              <h1 class="screen-title">Sheet Settings</h1>
+            {{/if}}
+            <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
+          </header>
+
+          {{> menus/topbar_scope}}
+
+          <main class="page-main dashboard-page-main">
+            {{{body}}}
+          </main>
+
+          {{> menus/mobile}}
+        </section>
+      </div>
+
+      {{> dashboard_booking_popup}}
+
+      <script>
+        window.__DASHBOARD__ = {{{json dashboard}}};
+        window.__CURRENT_USER__ = {{{json currentUser}}};
+        window.__BOOKINGS__ = {{{json bookings}}};
+        window.__API_CLIENTS__ = {{{json apiClients}}};
+        window.__SHEET_TARGETS__ = {{{json sheetTargets}}};
+        window.__USERS__ = {{{json users}}};
+        window.__BRANCHES__ = {{{json branches}}};
+        window.__ONLINE_USERS__ = {{{json onlineUsers}}};
+        window.__DASHBOARD_SECTION__ = {{{json dashboardSection}}};
+        window.__SELECTED_BRANCH_ID__ = {{{json selectedBranchId}}};
+        window.__SELECTED_BOOKING_DATE__ = {{{json selectedBookingDate}}};
+      </script>
+      <script src="/socket.io/socket.io.js"></script>
+      <script src="/dashboard.js"></script>
+    {{else}}
+      {{{body}}}
+    {{/if}}
+  </body>
+</html>

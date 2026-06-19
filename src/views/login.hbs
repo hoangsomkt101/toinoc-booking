@@ -1,49 +1,36 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{title}}</title>
-    <link rel="icon" type="image/webp" href="/fav.webp">
-    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body class="mobile-app-body">
-    <main class="prototype-stage">
-      <section class="mobile-shell login-shell">
-        <div class="browser-bar">
-          <div class="browser-pill">
-            <span aria-hidden="true">SSL</span>
-            <strong>admin.toinoc.com</strong>
-            <span aria-hidden="true">REF</span>
-          </div>
-        </div>
-        <div class="login-content">
-          <div class="text-center my-4">
-            <div class="avatar gold mx-auto mb-3" style="width:78px;height:78px;font-size:30px">TN</div>
-            <div class="eyebrow">Tới Nóc Admin</div>
-            <h1 class="screen-title mt-2">Đăng nhập quản trị</h1>
-            <p class="screen-subtitle">Dành cho nhân viên vận hành đặt bàn</p>
-          </div>
+<main class="prototype-stage">
+  <section class="mobile-shell login-shell">
+    <div class="browser-bar">
+      <div class="browser-pill">
+        <span aria-hidden="true">SSL</span>
+        <strong>admin.toinoc.com</strong>
+        <span aria-hidden="true">REF</span>
+      </div>
+    </div>
+    <div class="login-content">
+      <div class="text-center my-4">
+        <div class="avatar gold mx-auto mb-3" style="width:78px;height:78px;font-size:30px">TN</div>
+        <div class="eyebrow">Tới Nóc Admin</div>
+        <h1 class="screen-title mt-2">Đăng nhập quản trị</h1>
+        <p class="screen-subtitle">Dành cho nhân viên vận hành đặt bàn</p>
+      </div>
 
-          {{#if error}}
-            <div class="alert alert-danger" role="alert">{{error}}</div>
-          {{/if}}
+      {{#if error}}
+        <div class="alert alert-danger" role="alert">{{error}}</div>
+      {{/if}}
 
-          <form class="login-panel" method="post" action="/login">
-            <input type="hidden" name="next" value="{{next}}">
-            <div>
-              <label class="field-label mt-0">Tên đăng nhập</label>
-              <input class="form-control" name="username" value="{{username}}" autocomplete="username" autocapitalize="none" required autofocus>
-            </div>
-            <div>
-              <label class="field-label">Mật khẩu</label>
-              <input class="form-control" name="password" type="password" autocomplete="current-password" required>
-            </div>
-            <button class="btn btn-gold w-100 mt-4" type="submit">Đăng nhập</button>
-          </form>
+      <form class="login-panel" method="post" action="/login">
+        <input type="hidden" name="next" value="{{next}}">
+        <div>
+          <label class="field-label mt-0">Tên đăng nhập</label>
+          <input class="form-control" name="username" value="{{username}}" autocomplete="username" autocapitalize="none" required autofocus>
         </div>
-      </section>
-    </main>
-  </body>
-</html>
+        <div>
+          <label class="field-label">Mật khẩu</label>
+          <input class="form-control" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-gold w-100 mt-4" type="submit">Đăng nhập</button>
+      </form>
+    </div>
+  </section>
+</main>

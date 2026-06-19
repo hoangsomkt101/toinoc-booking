@@ -1,0 +1,93 @@
+{{#if canCreateBooking}}
+  <div class="booking-popup overlay-shell" id="booking-popup" data-booking-popup hidden aria-hidden="true">
+    <div class="booking-popup-backdrop" data-close-booking-popup></div>
+    <section class="booking-popup-panel bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="booking-popup-title" tabindex="-1" data-booking-popup-panel>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="booking-popup-header">
+        <div>
+          <p class="eyebrow mb-1">Phiếu đặt bàn</p>
+          <h3 class="screen-title fs-2 mb-0" id="booking-popup-title">Tạo đặt bàn</h3>
+        </div>
+        <button class="btn btn-soft rounded-circle booking-close-button" type="button" data-close-booking-popup aria-label="Đóng form đặt bàn">X</button>
+      </div>
+      <div class="booking-popup-body">
+        <form id="create-booking-form" class="booking-public-form">
+          <section class="booking-step-block">
+            <div class="booking-step-label"><span class="booking-step-number">1</span> Ngày đặt bàn <span class="required-mark">*</span></div>
+            <div class="booking-date-row">
+              <button class="booking-date-chip" type="button" data-date-offset="0">Hôm nay</button>
+              <button class="booking-date-chip" type="button" data-date-offset="1">Ngày mai</button>
+              <input class="booking-date-input" id="booking-date" name="booking_date" type="date" required>
+            </div>
+          </section>
+
+          <section class="booking-step-block">
+            <div class="booking-step-label"><span class="booking-step-number">2</span> Chi nhánh <span class="required-mark">*</span></div>
+            <input id="booking-branch" name="branch_id" type="hidden" data-booking-branch>
+            <div class="booking-branch-grid" id="booking-branch-grid">
+              {{#each branches}}
+                <button class="booking-choice-card" type="button" data-branch-choice="{{id}}">
+                  <span class="booking-choice-name">{{name}}</span>
+                  <span class="booking-choice-sub">{{#if address}}{{address}}{{else}}Chưa có địa chỉ{{/if}}</span>
+                </button>
+              {{/each}}
+            </div>
+          </section>
+
+          <section class="booking-step-block">
+            <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
+            <input id="booking-time-slot" name="booking_time_slot" type="hidden">
+            <div class="booking-time-grid" id="booking-time-grid">
+              <button class="booking-time-choice" type="button" data-time-choice="17:00">17:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="17:30">17:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="18:00">18:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="18:30">18:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="19:00">19:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="19:30">19:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="20:00">20:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="20:30">20:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="21:00">21:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="21:30">21:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="22:00">22:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="22:30">22:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="23:00">23:00</button>
+              <button class="booking-time-choice" type="button" data-time-choice="23:30">23:30</button>
+              <button class="booking-time-choice" type="button" data-time-choice="24:00">24:00</button>
+            </div>
+            <div class="form-text small">Khung giờ cách nhau 30 phút. Chọn 24:00 sẽ được tính là 00:00 ngày kế tiếp.</div>
+          </section>
+
+          <div class="booking-two-column">
+            <section class="booking-step-block">
+              <label class="booking-field-label" for="booking-guest-count">Số khách <span class="required-mark">*</span></label>
+              <input id="booking-guest-count" name="guest_count" type="hidden" value="2" data-guest-count>
+              <div class="booking-stepper" aria-label="Chọn số khách">
+                <button class="booking-stepper-button" type="button" data-guest-step="-1" aria-label="Giảm số khách">-</button>
+                <span class="booking-stepper-value" id="booking-guest-display">2</span>
+                <button class="booking-stepper-button" type="button" data-guest-step="1" aria-label="Tăng số khách">+</button>
+              </div>
+            </section>
+
+            <section class="booking-step-block">
+              <label class="booking-field-label" for="booking-phone">Số điện thoại <span class="required-mark">*</span></label>
+              <input class="form-control form-control-lg" id="booking-phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="0901234567" required>
+            </section>
+          </div>
+
+          <section class="booking-step-block">
+            <label class="booking-field-label" for="booking-customer-name">Tên người đặt <span class="required-mark">*</span></label>
+            <input class="form-control form-control-lg" id="booking-customer-name" name="customer_name" autocomplete="name" placeholder="Ví dụ: Anh Phú" required>
+          </section>
+
+          <section class="booking-step-block">
+            <label class="booking-field-label" for="booking-note">Ghi chú <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
+            <textarea class="form-control" id="booking-note" name="note" rows="3" placeholder="Ví dụ: bàn gần cửa, có trẻ em, sinh nhật..."></textarea>
+          </section>
+
+          <button class="btn btn-warning btn-lg fw-bold form-submit booking-submit-button" type="submit">Xác nhận đặt bàn</button>
+          <p class="form-message small text-body-secondary mb-0" id="form-message" role="status"></p>
+        </form>
+      </div>
+    </section>
+  </div>
+{{/if}}

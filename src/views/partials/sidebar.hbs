@@ -1,0 +1,20 @@
+<aside class="desktop-sidebar" aria-label="Điều hướng quản trị desktop">
+  <a class="desktop-sidebar-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
+    <img class="desktop-sidebar-logo" src="/logo.webp" alt="Restaurant Booking">
+  </a>
+  <div class="desktop-sidebar-divider"></div>
+  <div class="desktop-sidebar-heading">Vận hành</div>
+
+  {{> @partial-block}}
+
+  <div class="desktop-sidebar-user">
+    <span class="avatar avatar-compact" aria-hidden="true">TK</span>
+    <div class="min-w-0">
+      <strong class="d-block text-truncate">{{currentUser.display_name}}</strong>
+      <span class="small d-block text-truncate">{{currentUser.role_label}}</span>
+    </div>
+    <form class="desktop-sidebar-logout-form" method="post" action="/logout">
+      <button class="desktop-sidebar-logout-button" type="submit">Thoát</button>
+    </form>
+  </div>
+</aside>

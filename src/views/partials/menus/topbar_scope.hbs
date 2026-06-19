@@ -1,0 +1,27 @@
+<header class="desktop-topbar {{#if isBookingsSection}}{{#if showOperationsSummary}}desktop-topbar-with-scope{{/if}}{{/if}}" aria-label="Thanh thông tin quản trị">
+  {{#if isBookingsSection}}
+    {{#if showOperationsSummary}}
+      <form id="branch-scope-form" class="desktop-topbar-scope d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/dashboard/{{dashboardSection}}">
+        <div class="scope-field scope-branch-field">
+          <label class="form-label fw-bold mb-0 text-nowrap" for="branch-scope-select">Chi nhánh</label>
+          <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" data-branch-scope>
+            {{#if canManageBranches}}
+              <option value="">Tất cả chi nhánh</option>
+            {{/if}}
+            {{#each branches}}
+              <option value="{{id}}">{{name}}</option>
+            {{/each}}
+          </select>
+        </div>
+        <div class="scope-field scope-date-field">
+          <label class="form-label fw-bold mb-0 text-nowrap" for="booking-date-filter">Ngày đặt bàn</label>
+          <div class="booking-date-row dashboard-date-row" data-dashboard-date-controls>
+            <button class="booking-date-chip" type="button" data-dashboard-date-offset="0">Hôm nay</button>
+            <button class="booking-date-chip" type="button" data-dashboard-date-offset="1">Ngày mai</button>
+            <input class="booking-date-input dashboard-date-input" id="booking-date-filter" name="booking_date" type="date" value="{{selectedBookingDate}}" data-dashboard-date-filter>
+          </div>
+        </div>
+      </form>
+    {{/if}}
+  {{/if}}
+</header>

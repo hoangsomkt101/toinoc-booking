@@ -16,6 +16,8 @@ const asyncHandler = require('./middleware/async-handler');
 const { errorHandler, notFoundHandler } = require('./middleware/error-handler');
 
 function registerHandlebarsHelpers() {
+  hbs.registerPartials(path.join(__dirname, 'views', 'partials'));
+
   hbs.registerHelper('json', (value) =>
     JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) => {
       const escapes = {

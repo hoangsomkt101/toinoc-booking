@@ -1,525 +1,236 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{title}}</title>
-    <link rel="icon" type="image/webp" href="/fav.webp">
-    <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body class="dashboard-body mobile-app-body" id="page-top">
-    <div class="prototype-stage">
-      <section class="mobile-shell dashboard-shell">
-        <aside class="desktop-sidebar" aria-label="Điều hướng quản trị desktop">
-          <a class="desktop-sidebar-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
-            <img class="desktop-sidebar-logo" src="/logo.webp" alt="Restaurant Booking">
-          </a>
-          <div class="desktop-sidebar-divider"></div>
-          <div class="desktop-sidebar-heading">Vận hành</div>
-          <nav class="desktop-sidebar-nav">
-            <a class="desktop-nav-link {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
-              <span class="desktop-nav-icon" aria-hidden="true">DB</span>
-              <span>Đặt bàn</span>
-            </a>
-            {{#if canCreateBooking}}
-              <button class="desktop-nav-link desktop-nav-action" type="button" data-open-booking-popup>
-                <span class="desktop-nav-icon" aria-hidden="true">+</span>
-                <span>Tạo đặt bàn</span>
-              </button>
-            {{/if}}
-            {{#if canManageBranches}}
-              <a class="desktop-nav-link {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
-                <span class="desktop-nav-icon" aria-hidden="true">CN</span>
-                <span>Chi nhánh</span>
-              </a>
-            {{/if}}
-            {{#if canManageUsers}}
-              <a class="desktop-nav-link {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
-                <span class="desktop-nav-icon" aria-hidden="true">ND</span>
-                <span>Người dùng</span>
-              </a>
-            {{/if}}
-            {{#if canManageApiSettings}}
-              <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
-                <span class="desktop-nav-icon" aria-hidden="true">API</span>
-                <span>API Settings</span>
-              </a>
-            {{/if}}
-            {{#if canManageSheetSettings}}
-              <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/dashboard/sheet-settings">
-                <span class="desktop-nav-icon" aria-hidden="true">SH</span>
-                <span>Sheet Settings</span>
-              </a>
-            {{/if}}
-          </nav>
-          <div class="desktop-sidebar-user">
-            <span class="avatar avatar-compact" aria-hidden="true">TK</span>
-            <div class="min-w-0">
-              <strong class="d-block text-truncate">{{currentUser.display_name}}</strong>
-              <span class="small d-block text-truncate">{{currentUser.role_label}}</span>
-            </div>
-            <form class="desktop-sidebar-logout-form" method="post" action="/logout">
-              <button class="desktop-sidebar-logout-button" type="submit">Thoát</button>
-            </form>
-          </div>
-        </aside>
+{{#if isBookingsSection}}
+  {{#if showOperationsSummary}}
+    <section class="metric-grid mb-4" aria-label="Tình hình theo ngày được chọn">
+      <article class="metric">
+        <strong id="count-today">0</strong>
+        <small>Đặt bàn</small>
+      </article>
+      <article class="metric green">
+        <strong id="count-available-tables">0</strong>
+        <small>Bàn trống</small>
+      </article>
+      <article class="metric">
+        <strong id="count-occupied-tables">0</strong>
+        <small>Đang ngồi</small>
+      </article>
+    </section>
+  {{/if}}
+{{/if}}
 
-        <header class="app-header dashboard-app-header">
-          <div class="app-header-top">
-            <a class="app-brand" href="/dashboard/bookings{{branchQueryString}}" aria-label="Tổng quan đặt bàn">
-              <img class="app-brand-logo" src="/logo.webp" alt="Restaurant Booking">
-            </a>
-            <form class="header-logout-form" method="post" action="/logout">
-              <button class="header-user-button" type="submit" aria-label="Đăng xuất {{currentUser.display_name}}">
-                <span class="avatar avatar-compact" aria-hidden="true">TK</span>
-                <span class="header-user-name">Thoát</span>
-              </button>
-            </form>
-          </div>
-          <p class="eyebrow mb-2">Tới Nóc Admin</p>
-          {{#if isBookingsSection}}
-            <h1 class="screen-title">Tổng quan</h1>
-          {{/if}}
-          {{#if isBranchesSection}}
-            <h1 class="screen-title">Chi nhánh & khu vực</h1>
-          {{/if}}
-          {{#if isUsersSection}}
-            <h1 class="screen-title">Người dùng & vai trò</h1>
-          {{/if}}
-          {{#if isApiSettingsSection}}
-            <h1 class="screen-title">API Settings</h1>
-          {{/if}}
-          {{#if isSheetSettingsSection}}
-            <h1 class="screen-title">Sheet Settings</h1>
-          {{/if}}
-          <div class="screen-subtitle">{{currentUser.display_name}} · {{currentUser.role_label}}</div>
-        </header>
-
-        <header class="desktop-topbar {{#if isBookingsSection}}{{#if showOperationsSummary}}desktop-topbar-with-scope{{/if}}{{/if}}" aria-label="Thanh thông tin quản trị">
-          {{#if isBookingsSection}}
-            {{#if showOperationsSummary}}
-              <form id="branch-scope-form" class="scope-panel desktop-topbar-scope d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/dashboard/{{dashboardSection}}">
-                <div class="scope-field scope-branch-field">
-                  <label class="form-label fw-bold mb-0 text-nowrap" for="branch-scope-select">Chi nhánh</label>
-                  <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" data-branch-scope>
-                    {{#if canManageBranches}}
-                      <option value="">Tất cả chi nhánh</option>
-                    {{/if}}
-                    {{#each branches}}
-                      <option value="{{id}}">{{name}}</option>
-                    {{/each}}
-                  </select>
-                </div>
-                <div class="scope-field scope-date-field">
-                  <label class="form-label fw-bold mb-0 text-nowrap" for="booking-date-filter">Ngày đặt bàn</label>
-                  <div class="booking-date-row dashboard-date-row" data-dashboard-date-controls>
-                    <button class="booking-date-chip" type="button" data-dashboard-date-offset="0">Hôm nay</button>
-                    <button class="booking-date-chip" type="button" data-dashboard-date-offset="1">Ngày mai</button>
-                    <input class="booking-date-input dashboard-date-input" id="booking-date-filter" name="booking_date" type="date" value="{{selectedBookingDate}}" data-dashboard-date-filter>
-                  </div>
-                </div>
-              </form>
-            {{/if}}
-          {{/if}}
-        </header>
-
-        <main class="page-main dashboard-page-main">
-          {{#if isBookingsSection}}
-            {{#if showOperationsSummary}}
-              <section class="metric-grid mb-4" aria-label="Tình hình theo ngày được chọn">
-                <article class="metric">
-                  <strong id="count-today">0</strong>
-                  <small>Đặt bàn</small>
-                </article>
-                <article class="metric green">
-                  <strong id="count-available-tables">0</strong>
-                  <small>Bàn trống</small>
-                </article>
-                <article class="metric">
-                  <strong id="count-occupied-tables">0</strong>
-                  <small>Đang ngồi</small>
-                </article>
-              </section>
-            {{/if}}
-          {{/if}}
-
-          {{#if isBookingsSection}}
-            {{#if canManageBookings}}
-            <div class="booking-board">
-              <section class="booking-section">
-                <div class="section-title">
-                  <span>Cần xử lý ngay</span>
-                  <span class="section-title-note">Trong ca</span>
-                </div>
-                <div class="booking-card-list" id="open-booking-list"></div>
-              </section>
-              <section class="booking-section">
-                <div class="section-title">
-                  <span>Đã xong / đã hủy</span>
-                  <span class="section-title-note muted">Lưu vết</span>
-                </div>
-                <div class="booking-card-list" id="closed-booking-list"></div>
-              </section>
-            </div>
-            {{/if}}
-          {{/if}}
-
-          {{#if isBranchesSection}}
-            <section class="admin-panel">
-              <div class="section-title mt-0">
-                <span>Chi nhánh</span>
-                <span class="section-title-note">Cấu hình</span>
-              </div>
-              <div>
-                <p class="text-body-secondary small mb-3">Các địa điểm nhà hàng được sử dụng cho đặt bàn, bàn và tài khoản nhân viên.</p>
-                {{#if canManageBranches}}
-                  <details class="mb-4">
-                    <summary class="btn btn-outline-secondary">Tạo chi nhánh</summary>
-                    <form id="create-branch-form" class="row g-3 mt-3 border rounded-3 p-3 bg-body-tertiary">
-                      <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold">Tên chi nhánh</label>
-                        <input class="form-control" name="name" maxlength="120" required>
-                      </div>
-                      <div class="col-12 col-md-8">
-                        <label class="form-label fw-semibold">Địa chỉ</label>
-                        <input class="form-control" name="address" maxlength="255">
-                      </div>
-                      <div class="col-12">
-                        <div class="border rounded-4 p-3 bg-body">
-                          <div class="d-flex flex-column flex-sm-row align-items-sm-start justify-content-sm-between gap-2 mb-3">
-                            <div>
-                              <strong class="d-block">Khu vực và bàn</strong>
-                              <span class="text-body-secondary small">Mỗi chi nhánh cần ít nhất một khu vực. Số bàn sẽ được tạo tự động theo cấu hình của từng khu vực.</span>
-                            </div>
-                            <button class="btn btn-outline-secondary btn-sm flex-shrink-0" type="button" id="add-area-button">Thêm khu vực</button>
-                          </div>
-                          <div class="d-grid gap-3" id="branch-area-inputs">
-                            <div class="area-input-row row g-2 align-items-end m-0 border rounded-3 p-2 bg-body" data-area-row>
-                              <div class="col-12 col-sm-6 col-xl">
-                                <label class="form-label fw-semibold small">Tên khu vực</label>
-                                <input class="form-control" data-area-field="name" maxlength="120" value="VIP" required>
-                              </div>
-                              <div class="col-6 col-sm-3 col-xl">
-                                <label class="form-label fw-semibold small">Số bàn</label>
-                                <input class="form-control" data-area-field="table_count" type="number" min="1" value="2" required>
-                              </div>
-                              <div class="col-6 col-sm-3 col-xl">
-                                <label class="form-label fw-semibold small">Sức chứa</label>
-                                <input class="form-control" data-area-field="capacity" type="number" min="1" value="4" required>
-                              </div>
-                              <div class="col-12 col-sm-8 col-xl">
-                                <label class="form-label fw-semibold small">Tiền tố mã bàn</label>
-                                <input class="form-control" data-area-field="table_prefix" maxlength="24" value="VIP">
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-12 col-md-4 d-grid">
-                        <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo chi nhánh</button>
-                      </div>
-                    </form>
-                  </details>
-                  <p class="form-message small text-body-secondary mb-3" id="branch-form-message" role="status"></p>
-                {{else}}
-                  <div class="alert alert-warning mb-3" role="note">Chỉ quản trị viên có thể tạo hoặc chỉnh sửa chi nhánh.</div>
-                {{/if}}
-                <div class="branch-card-grid" id="branch-list"></div>
-              </div>
-            </section>
-          {{/if}}
-
-          {{#if isUsersSection}}
-            <section class="admin-panel">
-              <div class="section-title mt-0">
-                <span>Tài khoản người dùng</span>
-                <span class="section-title-note">Quản trị</span>
-              </div>
-              <div>
-                <p class="text-body-secondary small mb-3">Quản trị viên có thể tạo, cập nhật và vô hiệu hóa mọi vai trò người dùng.</p>
-                <form id="create-user-form" class="row g-3 mb-4">
-                  <div class="col-12 col-sm-6 col-xl">
-                    <label class="form-label fw-semibold">Tên đăng nhập</label>
-                    <input class="form-control" name="username" minlength="3" maxlength="50" pattern="[a-z0-9._-]+" autocapitalize="none" required>
-                  </div>
-                  <div class="col-12 col-sm-6 col-xl">
-                    <label class="form-label fw-semibold">Tên hiển thị</label>
-                    <input class="form-control" name="display_name" maxlength="120" required>
-                  </div>
-                  <div class="col-6 col-xl">
-                    <label class="form-label fw-semibold">Vai trò</label>
-                    <select class="form-select" name="role" required>
-                      {{#each creatableRoles}}
-                        <option value="{{value}}">{{label}}</option>
-                      {{/each}}
-                    </select>
-                  </div>
-                  {{#if currentUser.branch_id}}
-                    <input name="branch_id" type="hidden" value="{{currentUser.branch_id}}">
-                  {{else}}
-                    <div class="col-12 col-sm-6 col-xl">
-                      <label class="form-label fw-semibold">Chi nhánh</label>
-                      <select class="form-select" name="branch_id">
-                        <option value="">Không thuộc chi nhánh</option>
-                        {{#each branches}}
-                          <option value="{{id}}">{{name}}</option>
-                        {{/each}}
-                      </select>
-                    </div>
-                  {{/if}}
-                  <div class="col-12 col-sm-6 col-xl">
-                    <label class="form-label fw-semibold">Mật khẩu</label>
-                    <input class="form-control" name="password" type="password" minlength="6" autocomplete="new-password" required>
-                  </div>
-                  <div class="col-12 col-sm-6 col-xl d-grid align-self-end">
-                    <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo tài khoản</button>
-                  </div>
-                  <p class="form-message col-12 small text-body-secondary mb-0" id="user-form-message" role="status"></p>
-                </form>
-                <div id="user-list"></div>
-              </div>
-            </section>
-          {{/if}}
-
-          {{#if isApiSettingsSection}}
-            <section class="admin-panel">
-              <div class="section-title mt-0">
-                <span>API Settings</span>
-                <span class="section-title-note">Tích hợp</span>
-              </div>
-              <div>
-                <p class="text-body-secondary small mb-3">Quản trị viên cho phép domain bên ngoài đọc danh sách chi nhánh public và tạo booking bằng API key, không dùng cookie đăng nhập nội bộ.</p>
-                {{#if canManageSheetSettings}}
-                  <a class="btn btn-outline-secondary mb-3" href="/dashboard/sheet-settings">Mở Sheet Settings</a>
-                {{/if}}
-                <form id="create-api-client-form" class="row g-3 mb-4">
-                  <div class="col-12 col-md-4">
-                    <label class="form-label fw-semibold">Tên cấu hình</label>
-                    <input class="form-control" name="name" maxlength="120" placeholder="Website WordPress" required>
-                  </div>
-                  <div class="col-12 col-md-5">
-                    <label class="form-label fw-semibold">Domain được phép</label>
-                    <input class="form-control" name="allowed_origin" placeholder="https://example.com" required>
-                    <div class="form-text">Chỉ origin chính xác này được gọi public API.</div>
-                  </div>
-                  <div class="col-12 col-md-3 d-grid align-self-end">
-                    <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo API key</button>
-                  </div>
-                  <div class="col-12">
-                    <div class="form-check">
-                      <input class="form-check-input" name="is_active" type="checkbox" value="true" id="api-client-active" checked>
-                      <label class="form-check-label" for="api-client-active">Cho phép hoạt động ngay</label>
-                    </div>
-                  </div>
-                  <p class="form-message col-12 small text-body-secondary mb-0" id="api-client-form-message" role="status"></p>
-                </form>
-                <div class="alert alert-warning small" role="note">API key chỉ hiển thị một lần khi tạo hoặc xoay key. Hãy lưu trong WordPress server-side, không đưa vào HTML/JavaScript public.</div>
-                <div id="api-client-list"></div>
-              </div>
-            </section>
-          {{/if}}
-
-          {{#if isSheetSettingsSection}}
-            <section class="admin-panel">
-              <div class="section-title mt-0">
-                <span>Sheet Settings</span>
-                <span class="section-title-note">Đồng bộ đơn</span>
-              </div>
-              <div>
-                <p class="text-body-secondary small mb-3">Cấu hình tối đa 2 link Google Apps Script: Sheet tổng và Sheet chia chi nhánh. Link chia chi nhánh tự chọn tab theo địa chỉ chi nhánh trong Apps Script.</p>
-                {{#if canManageApiSettings}}
-                  <a class="btn btn-outline-secondary mb-3" href="/dashboard/api-settings">Mở API Settings</a>
-                {{/if}}
-                <form id="create-sheet-target-form" class="row g-3 mb-4">
-                  <div class="col-12 col-md-4">
-                    <label class="form-label fw-semibold">Tên cấu hình</label>
-                    <input class="form-control" name="name" maxlength="120" placeholder="Sheet tổng" required>
-                  </div>
-                  <div class="col-12 col-md-3">
-                    <label class="form-label fw-semibold">Loại Sheet</label>
-                    <select class="form-select" name="target_type" data-sheet-target-type required>
-                      <option value="ALL">Sheet tổng</option>
-                      <option value="BRANCH">Sheet chia chi nhánh</option>
-                    </select>
-                  </div>
-                  <div class="col-12 col-md-5">
-                    <label class="form-label fw-semibold">Link Apps Script</label>
-                    <input class="form-control" name="webhook_url" placeholder="https://script.google.com/macros/s/.../exec" required>
-                  </div>
-                  <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3">
-                    <div class="form-check">
-                      <input class="form-check-input" name="is_active" type="checkbox" value="true" id="sheet-target-active" checked>
-                      <label class="form-check-label" for="sheet-target-active">Cho phép đồng bộ ngay</label>
-                    </div>
-                    <button class="btn btn-primary fw-bold form-submit" type="submit">Lưu cấu hình Sheet</button>
-                  </div>
-                  <p class="form-message col-12 small text-body-secondary mb-0" id="sheet-target-form-message" role="status"></p>
-                </form>
-                <div class="alert alert-warning small" role="note">Payload gửi đi gồm: date, time, people, address, name, tel, note. Trường address dùng địa chỉ chi nhánh để Apps Script chia tab CN_Quan1, CN_BinhThanh, CN_Q10, CN_GV hoặc BookingData.</div>
-                <div id="sheet-target-list"></div>
-              </div>
-            </section>
-          {{/if}}
-        </main>
-
-        <nav class="bottom-nav" aria-label="Điều hướng chính">
-          <a class="nav-item {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
-            <span class="bottom-nav-icon" aria-hidden="true">DB</span>
-            <span>Đặt bàn</span>
-          </a>
-          {{#if canManageBranches}}
-            <a class="nav-item {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
-              <span class="bottom-nav-icon" aria-hidden="true">CN</span>
-              <span>Chi nhánh</span>
-            </a>
-          {{else}}
-            <span class="nav-item disabled" aria-hidden="true">
-              <span class="bottom-nav-icon">CN</span>
-              <span>Chi nhánh</span>
-            </span>
-          {{/if}}
-          {{#if canCreateBooking}}
-            <button class="fab" type="button" data-open-booking-popup aria-label="Tạo đặt bàn">+</button>
-          {{else}}
-            <span class="fab disabled" aria-hidden="true">+</span>
-          {{/if}}
-          {{#if canManageUsers}}
-            <a class="nav-item {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
-              <span class="bottom-nav-icon" aria-hidden="true">ND</span>
-              <span>Người dùng</span>
-            </a>
-          {{else}}
-            <span class="nav-item disabled" aria-hidden="true">
-              <span class="bottom-nav-icon">ND</span>
-              <span>Người dùng</span>
-            </span>
-          {{/if}}
-          {{#if canManageApiSettings}}
-            <a class="nav-item {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
-              <span class="bottom-nav-icon" aria-hidden="true">API</span>
-              <span>API</span>
-            </a>
-          {{else}}
-            <form class="nav-item logout-nav-form" method="post" action="/logout">
-              <button class="logout-nav-button" type="submit">
-                <span class="bottom-nav-icon" aria-hidden="true">TK</span>
-                <span>Tài khoản</span>
-              </button>
-            </form>
-          {{/if}}
-        </nav>
+{{#if isBookingsSection}}
+  {{#if canManageBookings}}
+    <div class="booking-board">
+      <section class="booking-section">
+        <div class="section-title">
+          <span>Cần xử lý ngay</span>
+          <span class="section-title-note">Trong ca</span>
+        </div>
+        <div class="booking-card-list" id="open-booking-list"></div>
+      </section>
+      <section class="booking-section">
+        <div class="section-title">
+          <span>Đã xong / đã hủy</span>
+          <span class="section-title-note muted">Lưu vết</span>
+        </div>
+        <div class="booking-card-list" id="closed-booking-list"></div>
       </section>
     </div>
+  {{/if}}
+{{/if}}
 
-    {{#if canCreateBooking}}
-      <div class="booking-popup overlay-shell" id="booking-popup" data-booking-popup hidden aria-hidden="true">
-        <div class="booking-popup-backdrop" data-close-booking-popup></div>
-        <section class="booking-popup-panel bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="booking-popup-title" tabindex="-1" data-booking-popup-panel>
-          <div class="sheet-handle" aria-hidden="true"></div>
-          <div class="booking-popup-header">
-            <div>
-              <p class="eyebrow mb-1">Phiếu đặt bàn</p>
-              <h3 class="screen-title fs-2 mb-0" id="booking-popup-title">Tạo đặt bàn</h3>
+{{#if isBranchesSection}}
+  <section class="admin-panel">
+    <div class="section-title mt-0">
+      <span>Chi nhánh</span>
+      <span class="section-title-note">Cấu hình</span>
+    </div>
+    <div>
+      <p class="text-body-secondary small mb-3">Các địa điểm nhà hàng được sử dụng cho đặt bàn, bàn và tài khoản nhân viên.</p>
+      {{#if canManageBranches}}
+        <details class="mb-4">
+          <summary class="btn btn-outline-secondary">Tạo chi nhánh</summary>
+          <form id="create-branch-form" class="row g-3 mt-3 border rounded-3 p-3 bg-body-tertiary">
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold">Tên chi nhánh</label>
+              <input class="form-control" name="name" maxlength="120" required>
             </div>
-            <button class="btn btn-soft rounded-circle booking-close-button" type="button" data-close-booking-popup aria-label="Đóng form đặt bàn">X</button>
-          </div>
-          <div class="booking-popup-body">
-            <form id="create-booking-form" class="booking-public-form">
-              <section class="booking-step-block">
-                <div class="booking-step-label"><span class="booking-step-number">1</span> Ngày đặt bàn <span class="required-mark">*</span></div>
-                <div class="booking-date-row">
-                  <button class="booking-date-chip" type="button" data-date-offset="0">Hôm nay</button>
-                  <button class="booking-date-chip" type="button" data-date-offset="1">Ngày mai</button>
-                  <input class="booking-date-input" id="booking-date" name="booking_date" type="date" required>
-                </div>
-              </section>
-
-              <section class="booking-step-block">
-                <div class="booking-step-label"><span class="booking-step-number">2</span> Chi nhánh <span class="required-mark">*</span></div>
-                <input id="booking-branch" name="branch_id" type="hidden" data-booking-branch>
-                <div class="booking-branch-grid" id="booking-branch-grid">
-                  {{#each branches}}
-                    <button class="booking-choice-card" type="button" data-branch-choice="{{id}}">
-                      <span class="booking-choice-name">{{name}}</span>
-                      <span class="booking-choice-sub">{{#if address}}{{address}}{{else}}Chưa có địa chỉ{{/if}}</span>
-                    </button>
-                  {{/each}}
-                </div>
-              </section>
-
-              <section class="booking-step-block">
-                <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
-                <input id="booking-time-slot" name="booking_time_slot" type="hidden">
-                <div class="booking-time-grid" id="booking-time-grid">
-                  <button class="booking-time-choice" type="button" data-time-choice="17:00">17:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="17:30">17:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="18:00">18:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="18:30">18:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="19:00">19:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="19:30">19:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="20:00">20:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="20:30">20:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="21:00">21:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="21:30">21:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="22:00">22:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="22:30">22:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="23:00">23:00</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="23:30">23:30</button>
-                  <button class="booking-time-choice" type="button" data-time-choice="24:00">24:00</button>
-                </div>
-                <div class="form-text small">Khung giờ cách nhau 30 phút. Chọn 24:00 sẽ được tính là 00:00 ngày kế tiếp.</div>
-              </section>
-
-              <div class="booking-two-column">
-                <section class="booking-step-block">
-                  <label class="booking-field-label" for="booking-guest-count">Số khách <span class="required-mark">*</span></label>
-                  <input id="booking-guest-count" name="guest_count" type="hidden" value="2" data-guest-count>
-                  <div class="booking-stepper" aria-label="Chọn số khách">
-                    <button class="booking-stepper-button" type="button" data-guest-step="-1" aria-label="Giảm số khách">-</button>
-                    <span class="booking-stepper-value" id="booking-guest-display">2</span>
-                    <button class="booking-stepper-button" type="button" data-guest-step="1" aria-label="Tăng số khách">+</button>
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-semibold">Địa chỉ</label>
+              <input class="form-control" name="address" maxlength="255">
+            </div>
+            <div class="col-12">
+              <div class="border rounded-4 p-3 bg-body">
+                <div class="d-flex flex-column flex-sm-row align-items-sm-start justify-content-sm-between gap-2 mb-3">
+                  <div>
+                    <strong class="d-block">Khu vực và bàn</strong>
+                    <span class="text-body-secondary small">Mỗi chi nhánh cần ít nhất một khu vực. Số bàn sẽ được tạo tự động theo cấu hình của từng khu vực.</span>
                   </div>
-                </section>
-
-                <section class="booking-step-block">
-                  <label class="booking-field-label" for="booking-phone">Số điện thoại <span class="required-mark">*</span></label>
-                  <input class="form-control form-control-lg" id="booking-phone" name="phone" autocomplete="tel" inputmode="tel" placeholder="0901234567" required>
-                </section>
+                  <button class="btn btn-outline-secondary btn-sm flex-shrink-0" type="button" id="add-area-button">Thêm khu vực</button>
+                </div>
+                <div class="d-grid gap-3" id="branch-area-inputs">
+                  <div class="area-input-row row g-2 align-items-end m-0 border rounded-3 p-2 bg-body" data-area-row>
+                    <div class="col-12 col-sm-6 col-xl">
+                      <label class="form-label fw-semibold small">Tên khu vực</label>
+                      <input class="form-control" data-area-field="name" maxlength="120" value="VIP" required>
+                    </div>
+                    <div class="col-6 col-sm-3 col-xl">
+                      <label class="form-label fw-semibold small">Số bàn</label>
+                      <input class="form-control" data-area-field="table_count" type="number" min="1" value="2" required>
+                    </div>
+                    <div class="col-6 col-sm-3 col-xl">
+                      <label class="form-label fw-semibold small">Sức chứa</label>
+                      <input class="form-control" data-area-field="capacity" type="number" min="1" value="4" required>
+                    </div>
+                    <div class="col-12 col-sm-8 col-xl">
+                      <label class="form-label fw-semibold small">Tiền tố mã bàn</label>
+                      <input class="form-control" data-area-field="table_prefix" maxlength="24" value="VIP">
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+            <div class="col-12 col-md-4 d-grid">
+              <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo chi nhánh</button>
+            </div>
+          </form>
+        </details>
+        <p class="form-message small text-body-secondary mb-3" id="branch-form-message" role="status"></p>
+      {{else}}
+        <div class="alert alert-warning mb-3" role="note">Chỉ quản trị viên có thể tạo hoặc chỉnh sửa chi nhánh.</div>
+      {{/if}}
+      <div class="branch-card-grid" id="branch-list"></div>
+    </div>
+  </section>
+{{/if}}
 
-              <section class="booking-step-block">
-                <label class="booking-field-label" for="booking-customer-name">Tên người đặt <span class="required-mark">*</span></label>
-                <input class="form-control form-control-lg" id="booking-customer-name" name="customer_name" autocomplete="name" placeholder="Ví dụ: Anh Phú" required>
-              </section>
-
-              <section class="booking-step-block">
-                <label class="booking-field-label" for="booking-note">Ghi chú <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
-                <textarea class="form-control" id="booking-note" name="note" rows="3" placeholder="Ví dụ: bàn gần cửa, có trẻ em, sinh nhật..."></textarea>
-              </section>
-
-              <button class="btn btn-warning btn-lg fw-bold form-submit booking-submit-button" type="submit">Xác nhận đặt bàn</button>
-              <p class="form-message small text-body-secondary mb-0" id="form-message" role="status"></p>
-            </form>
+{{#if isUsersSection}}
+  <section class="admin-panel">
+    <div class="section-title mt-0">
+      <span>Tài khoản người dùng</span>
+      <span class="section-title-note">Quản trị</span>
+    </div>
+    <div>
+      <p class="text-body-secondary small mb-3">Quản trị viên có thể tạo, cập nhật và vô hiệu hóa mọi vai trò người dùng.</p>
+      <form id="create-user-form" class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl">
+          <label class="form-label fw-semibold">Tên đăng nhập</label>
+          <input class="form-control" name="username" minlength="3" maxlength="50" pattern="[a-z0-9._-]+" autocapitalize="none" required>
+        </div>
+        <div class="col-12 col-sm-6 col-xl">
+          <label class="form-label fw-semibold">Tên hiển thị</label>
+          <input class="form-control" name="display_name" maxlength="120" required>
+        </div>
+        <div class="col-6 col-xl">
+          <label class="form-label fw-semibold">Vai trò</label>
+          <select class="form-select" name="role" required>
+            {{#each creatableRoles}}
+              <option value="{{value}}">{{label}}</option>
+            {{/each}}
+          </select>
+        </div>
+        {{#if currentUser.branch_id}}
+          <input name="branch_id" type="hidden" value="{{currentUser.branch_id}}">
+        {{else}}
+          <div class="col-12 col-sm-6 col-xl">
+            <label class="form-label fw-semibold">Chi nhánh</label>
+            <select class="form-select" name="branch_id">
+              <option value="">Không thuộc chi nhánh</option>
+              {{#each branches}}
+                <option value="{{id}}">{{name}}</option>
+              {{/each}}
+            </select>
           </div>
-        </section>
-      </div>
-    {{/if}}
+        {{/if}}
+        <div class="col-12 col-sm-6 col-xl">
+          <label class="form-label fw-semibold">Mật khẩu</label>
+          <input class="form-control" name="password" type="password" minlength="6" autocomplete="new-password" required>
+        </div>
+        <div class="col-12 col-sm-6 col-xl d-grid align-self-end">
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo tài khoản</button>
+        </div>
+        <p class="form-message col-12 small text-body-secondary mb-0" id="user-form-message" role="status"></p>
+      </form>
+      <div id="user-list"></div>
+    </div>
+  </section>
+{{/if}}
 
-    <script>
-      window.__DASHBOARD__ = {{{json dashboard}}};
-      window.__CURRENT_USER__ = {{{json currentUser}}};
-      window.__BOOKINGS__ = {{{json bookings}}};
-      window.__API_CLIENTS__ = {{{json apiClients}}};
-      window.__SHEET_TARGETS__ = {{{json sheetTargets}}};
-      window.__USERS__ = {{{json users}}};
-      window.__BRANCHES__ = {{{json branches}}};
-      window.__ONLINE_USERS__ = {{{json onlineUsers}}};
-      window.__DASHBOARD_SECTION__ = {{{json dashboardSection}}};
-      window.__SELECTED_BRANCH_ID__ = {{{json selectedBranchId}}};
-      window.__SELECTED_BOOKING_DATE__ = {{{json selectedBookingDate}}};
-    </script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/dashboard.js"></script>
-  </body>
-</html>
+{{#if isApiSettingsSection}}
+  <section class="admin-panel">
+    <div class="section-title mt-0">
+      <span>API Settings</span>
+      <span class="section-title-note">Tích hợp</span>
+    </div>
+    <div>
+      <p class="text-body-secondary small mb-3">Quản trị viên cho phép domain bên ngoài đọc danh sách chi nhánh public và tạo booking bằng API key, không dùng cookie đăng nhập nội bộ.</p>
+      {{#if canManageSheetSettings}}
+        <a class="btn btn-outline-secondary mb-3" href="/dashboard/sheet-settings">Mở Sheet Settings</a>
+      {{/if}}
+      <form id="create-api-client-form" class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Tên cấu hình</label>
+          <input class="form-control" name="name" maxlength="120" placeholder="Website WordPress" required>
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold">Domain được phép</label>
+          <input class="form-control" name="allowed_origin" placeholder="https://example.com" required>
+          <div class="form-text">Chỉ origin chính xác này được gọi public API.</div>
+        </div>
+        <div class="col-12 col-md-3 d-grid align-self-end">
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Tạo API key</button>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="api-client-active" checked>
+            <label class="form-check-label" for="api-client-active">Cho phép hoạt động ngay</label>
+          </div>
+        </div>
+        <p class="form-message col-12 small text-body-secondary mb-0" id="api-client-form-message" role="status"></p>
+      </form>
+      <div class="alert alert-warning small" role="note">API key chỉ hiển thị một lần khi tạo hoặc xoay key. Hãy lưu trong WordPress server-side, không đưa vào HTML/JavaScript public.</div>
+      <div id="api-client-list"></div>
+    </div>
+  </section>
+{{/if}}
+
+{{#if isSheetSettingsSection}}
+  <section class="admin-panel">
+    <div class="section-title mt-0">
+      <span>Sheet Settings</span>
+      <span class="section-title-note">Đồng bộ đơn</span>
+    </div>
+    <div>
+      <p class="text-body-secondary small mb-3">Cấu hình tối đa 2 link Google Apps Script: Sheet tổng và Sheet chia chi nhánh. Link chia chi nhánh tự chọn tab theo địa chỉ chi nhánh trong Apps Script.</p>
+      {{#if canManageApiSettings}}
+        <a class="btn btn-outline-secondary mb-3" href="/dashboard/api-settings">Mở API Settings</a>
+      {{/if}}
+      <form id="create-sheet-target-form" class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold">Tên cấu hình</label>
+          <input class="form-control" name="name" maxlength="120" placeholder="Sheet tổng" required>
+        </div>
+        <div class="col-12 col-md-3">
+          <label class="form-label fw-semibold">Loại Sheet</label>
+          <select class="form-select" name="target_type" data-sheet-target-type required>
+            <option value="ALL">Sheet tổng</option>
+            <option value="BRANCH">Sheet chia chi nhánh</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label fw-semibold">Link Apps Script</label>
+          <input class="form-control" name="webhook_url" placeholder="https://script.google.com/macros/s/.../exec" required>
+        </div>
+        <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3">
+          <div class="form-check">
+            <input class="form-check-input" name="is_active" type="checkbox" value="true" id="sheet-target-active" checked>
+            <label class="form-check-label" for="sheet-target-active">Cho phép đồng bộ ngay</label>
+          </div>
+          <button class="btn btn-primary fw-bold form-submit" type="submit">Lưu cấu hình Sheet</button>
+        </div>
+        <p class="form-message col-12 small text-body-secondary mb-0" id="sheet-target-form-message" role="status"></p>
+      </form>
+      <div class="alert alert-warning small" role="note">Payload gửi đi gồm: date, time, people, address, name, tel, note. Trường address dùng địa chỉ chi nhánh để Apps Script chia tab CN_Quan1, CN_BinhThanh, CN_Q10, CN_GV hoặc BookingData.</div>
+      <div id="sheet-target-list"></div>
+    </div>
+  </section>
+{{/if}}

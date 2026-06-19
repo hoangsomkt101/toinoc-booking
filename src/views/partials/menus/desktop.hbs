@@ -1,0 +1,36 @@
+<nav class="desktop-sidebar-nav">
+  <a class="desktop-nav-link {{#if isBookingsSection}}active{{/if}}" href="/dashboard/bookings{{branchQueryString}}">
+    <span class="desktop-nav-icon" aria-hidden="true">DB</span>
+    <span>Đặt bàn</span>
+  </a>
+  {{#if canCreateBooking}}
+    <button class="desktop-nav-link desktop-nav-action" type="button" data-open-booking-popup>
+      <span class="desktop-nav-icon" aria-hidden="true">+</span>
+      <span>Tạo đặt bàn</span>
+    </button>
+  {{/if}}
+  {{#if canManageBranches}}
+    <a class="desktop-nav-link {{#if isBranchesSection}}active{{/if}}" href="/dashboard/branches{{branchQueryString}}">
+      <span class="desktop-nav-icon" aria-hidden="true">CN</span>
+      <span>Chi nhánh</span>
+    </a>
+  {{/if}}
+  {{#if canManageUsers}}
+    <a class="desktop-nav-link {{#if isUsersSection}}active{{/if}}" href="/user{{branchQueryString}}">
+      <span class="desktop-nav-icon" aria-hidden="true">ND</span>
+      <span>Người dùng</span>
+    </a>
+  {{/if}}
+  {{#if canManageApiSettings}}
+    <a class="desktop-nav-link {{#if isApiSettingsSection}}active{{/if}}" href="/dashboard/api-settings">
+      <span class="desktop-nav-icon" aria-hidden="true">API</span>
+      <span>API Settings</span>
+    </a>
+  {{/if}}
+  {{#if canManageSheetSettings}}
+    <a class="desktop-nav-link {{#if isSheetSettingsSection}}active{{/if}}" href="/dashboard/sheet-settings">
+      <span class="desktop-nav-icon" aria-hidden="true">SH</span>
+      <span>Sheet Settings</span>
+    </a>
+  {{/if}}
+</nav>

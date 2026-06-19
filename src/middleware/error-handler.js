@@ -22,6 +22,7 @@ function errorHandler(error, req, res, next) {
 
   if (!req.path.startsWith('/api') && req.accepts('html')) {
     return res.status(statusCode).render('error', {
+      bodyClass: '',
       title: 'Lỗi',
       statusCode,
       message: response.error.message
