@@ -670,42 +670,7 @@
     });
   }
 
-  function tableAreaId(table, branch) {
-    const areas = branch?.areas || [];
-
-    if (!areas.length) {
-      return 'all';
-    }
-
-    if (table.area_id && areas.some((area) => String(area.id) === String(table.area_id))) {
-      return String(table.area_id);
-    }
-
-    if (table.area_name) {
-      const matchedArea = areas.find((area) => area.name.toLowerCase() === String(table.area_name).toLowerCase());
-      if (matchedArea) {
-        return String(matchedArea.id);
-      }
-    }
-
-    const tableNumber = /^\d+$/.test(String(table.table_code || '')) ? Number(table.table_code) : 0;
-    const tableCount = Number(branch?.table_count || 0);
-
-    if (tableNumber > 0 && tableCount > 0) {
-      const areaIndex = Math.min(areas.length - 1, Math.floor(((tableNumber - 1) * areas.length) / tableCount));
-      return String(areas[areaIndex].id);
-    }
-
-    return String(areas[0].id);
-  }
-
-  function areaNameById(branch, areaId) {
-    const area = (branch?.areas || []).find((item) => String(item.id) === String(areaId));
-
-    return area ? area.name : 'Chưa phân khu';
-  }
-
-  function assignmentAreaTabs(booking, tables) {
+  function assignmentAreaGrid(booking) {
     const branch = findBranch(booking.branch_id);
     const areas = branch?.areas || [];
 
@@ -713,28 +678,22 @@
       return '';
     }
 
-    const areaCounts = tables.reduce((counts, table) => {
-      const areaId = tableAreaId(table, branch);
-      counts[areaId] = (counts[areaId] || 0) + 1;
+    const buttons = areas.map((area, index) => `
+      <button class="assign-area-card ${index === 0 ? 'selected' : ''}" type="button" data-assign-area="${escapeHtml(area.id)}" aria-pressed="${index === 0 ? 'true' : 'false'}">
+        ${escapeHtml(area.name)}
+      </button>
+    `);
 
-      return counts;
-    }, {});
-
-    const buttons = [
-      `<button class="assign-area-pill active" type="button" data-assign-area="all">Tất cả · ${escapeHtml(tables.length)}</button>`,
-      ...areas.map((area) => `
-        <button class="assign-area-pill" type="button" data-assign-area="${escapeHtml(area.id)}">
-          ${escapeHtml(area.name)} · ${escapeHtml(areaCounts[String(area.id)] || 0)}
-        </button>
-      `)
-    ];
-
-    return `<div class="assign-area-tabs" aria-label="Lọc bàn theo khu vực">${buttons.join('')}</div>`;
+    return `
+      <div class="assign-area-block">
+        <div class="assign-block-title">Khu vực</div>
+        <div class="assign-area-grid" aria-label="Chọn khu vực">${buttons.join('')}</div>
+      </div>
+    `;
   }
 
   function tableGrid(booking) {
     const tables = assignmentTables(booking);
-    const branch = findBranch(booking.branch_id);
     const assigned = booking.assigned_tables || [];
 
     if (!tables.length) {
@@ -743,21 +702,21 @@
 
     const items = tables.map((table) => {
       const selected = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id));
-      const areaId = tableAreaId(table, branch);
-      const areaName = areaNameById(branch, areaId);
 
       return `
-        <label class="assign-table-card ${selected ? 'selected' : ''}" data-assign-table-card data-area-id="${escapeHtml(areaId)}">
+        <label class="assign-table-card ${selected ? 'selected' : ''}" data-assign-table-card>
           <input class="assign-table-input" type="checkbox" name="table_ids" value="${escapeHtml(table.id)}" ${selected ? 'checked' : ''}>
           <span class="assign-table-code">${escapeHtml(table.table_code)}</span>
-          <span class="assign-table-meta">${escapeHtml(table.capacity)} khách · ${escapeHtml(areaName)}</span>
+          <span class="assign-table-meta">${escapeHtml(table.capacity)} khách</span>
         </label>
       `;
     });
 
     return `
-      ${assignmentAreaTabs(booking, tables)}
-      <div class="assign-table-grid">${items.join('')}</div>
+      <div class="assign-table-block">
+        <div class="assign-block-title">Bàn</div>
+        <div class="assign-table-grid">${items.join('')}</div>
+      </div>
     `;
   }
 
@@ -781,6 +740,7 @@
         <div class="management-form-note">${escapeHtml(booking.customer_name)} · ${escapeHtml(booking.guest_count)} khách · Bàn hiện tại: ${escapeHtml(tables)}</div>
         <div>
           <label class="form-label fw-semibold">Chọn khu vực và bàn</label>
+          ${assignmentAreaGrid(booking)}
           ${tableGrid(booking)}
           <div class="form-text" data-assign-selected-count>${escapeHtml(selectedMessage)}</div>
         </div>
@@ -1505,18 +1465,15 @@
 
   function setAssignAreaFilter(button) {
     const form = button.closest('[data-booking-assign]');
-    const areaId = button.dataset.assignArea || 'all';
 
     if (!form) {
       return;
     }
 
     for (const areaButton of form.querySelectorAll('[data-assign-area]')) {
-      areaButton.classList.toggle('active', areaButton === button);
-    }
-
-    for (const card of form.querySelectorAll('[data-assign-table-card]')) {
-      card.hidden = areaId !== 'all' && String(card.dataset.areaId) !== String(areaId);
+      const isSelected = areaButton === button;
+      areaButton.classList.toggle('selected', isSelected);
+      areaButton.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     }
   }
 

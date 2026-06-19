@@ -351,32 +351,43 @@ body.booking-popup-open {
   padding: 0.8rem;
 }
 
-.assign-area-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  overflow-x: auto;
-  padding-bottom: 0.15rem;
-  scrollbar-width: none;
+.assign-area-block,
+.assign-table-block {
+  display: grid;
+  gap: 0.55rem;
 }
 
-.assign-area-tabs::-webkit-scrollbar {
-  display: none;
+.assign-area-block {
+  margin-bottom: 0.9rem;
 }
 
-.assign-area-pill {
-  background: #fffaf1;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+.assign-block-title {
   color: #5b5148;
-  flex: 0 0 auto;
   font-size: 0.78rem;
-  font-weight: 900;
-  min-height: 2.25rem;
-  padding: 0.45rem 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.assign-area-pill.active {
+.assign-area-grid {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+}
+
+.assign-area-card {
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  color: #5b5148;
+  font-size: 0.86rem;
+  font-weight: 900;
+  min-height: 3.25rem;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.assign-area-card.selected {
   background: var(--wine);
   border-color: var(--wine);
   color: #fff;
