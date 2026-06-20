@@ -53,6 +53,11 @@
   ];
   let activeBookingTab = 'all';
   let bookingPhoneSearchValue = '';
+  let notificationSoundUnlocked = false;
+  const notificationSound = typeof window.Audio === 'function' ? new window.Audio('/notification.mp3') : null;
+  if (notificationSound) {
+    notificationSound.preload = 'auto';
+  }
   const selectors = {
     openBookings: document.getElementById('open-booking-list'),
     bookingTabs: document.getElementById('booking-tabs'),
@@ -109,6 +114,55 @@
 
   function isInsideManagementPopup(element) {
     return Boolean(element?.closest('[data-management-popup]'));
+  }
+
+  function removeNotificationUnlockListeners() {
+    document.removeEventListener('pointerdown', unlockNotificationSound);
+    document.removeEventListener('keydown', unlockNotificationSound);
+  }
+
+  function unlockNotificationSound() {
+    if (!notificationSound || notificationSoundUnlocked) {
+      return;
+    }
+
+    notificationSoundUnlocked = true;
+    notificationSound.muted = true;
+    const playResult = notificationSound.play();
+
+    if (playResult && typeof playResult.then === 'function') {
+      playResult
+        .then(() => {
+          notificationSound.pause();
+          notificationSound.currentTime = 0;
+          notificationSound.muted = false;
+          removeNotificationUnlockListeners();
+        })
+        .catch(() => {
+          notificationSound.muted = false;
+          notificationSoundUnlocked = false;
+        });
+      return;
+    }
+
+    notificationSound.pause();
+    notificationSound.currentTime = 0;
+    notificationSound.muted = false;
+    removeNotificationUnlockListeners();
+  }
+
+  function playNotificationSound() {
+    if (!notificationSound) {
+      return;
+    }
+
+    notificationSound.muted = false;
+    notificationSound.currentTime = 0;
+    const playResult = notificationSound.play();
+
+    if (playResult && typeof playResult.catch === 'function') {
+      playResult.catch(() => {});
+    }
   }
 
   function can(minimumRole) {
@@ -3104,6 +3158,11 @@
     });
   }
 
+  if (notificationSound) {
+    document.addEventListener('pointerdown', unlockNotificationSound, { passive: true });
+    document.addEventListener('keydown', unlockNotificationSound);
+  }
+
   if (selectors.customerSearch) {
     let customerSearchTimer;
     selectors.customerSearch.addEventListener('input', () => {
@@ -3134,7 +3193,11 @@
 
   if (window.io) {
     const socket = window.io();
-    for (const eventName of events) {
+    socket.on('booking_created', () => {
+      playNotificationSound();
+      refreshDashboard();
+    });
+    for (const eventName of events.filter((eventName) => eventName !== 'booking_created')) {
       socket.on(eventName, refreshDashboard);
     }
     for (const eventName of ['staff_online', 'staff_offline']) {
