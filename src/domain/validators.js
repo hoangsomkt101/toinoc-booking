@@ -9,6 +9,7 @@ const FIELD_LABELS = Object.freeze({
   order_staff_name: 'Tên nhân viên lên đơn',
   note: 'Ghi chú',
   branch_id: 'Mã chi nhánh',
+  area_id: 'Mã khu vực',
   table_ids: 'Danh sách bàn',
   table_count: 'Số bàn',
   capacity: 'Sức chứa',
@@ -177,6 +178,10 @@ function validateBookingPayload(input, options = {}) {
 
   if (hasOwn(payload, 'branch_id')) {
     data.branch_id = parsePositiveInteger(payload.branch_id, 'branch_id');
+  }
+
+  if (hasOwn(payload, 'area_id')) {
+    data.area_id = parseOptionalPositiveInteger(payload.area_id, 'area_id') || null;
   }
 
   return data;

@@ -49,6 +49,7 @@ function normalizeCustomerBookingRow(row) {
     id: Number(row.id),
     customer_id: row.customer_id === null ? null : Number(row.customer_id),
     branch_id: Number(row.branch_id),
+    area_id: row.area_id === null || row.area_id === undefined ? null : Number(row.area_id),
     guest_count: Number(row.guest_count),
     actual_guest_count: row.actual_guest_count === null ? null : Number(row.actual_guest_count),
     assigned_tables: Array.isArray(row.assigned_tables) ? row.assigned_tables.map(normalizeBookingTableRow) : []
@@ -106,8 +107,10 @@ function customerBookingSelect() {
       b.id,
       b.customer_id,
       b.branch_id,
+      b.area_id,
       br.name AS branch_name,
       br.address AS branch_address,
+      ar.name AS area_name,
       b.customer_name,
       b.phone,
       b.booking_time,
@@ -123,6 +126,7 @@ function customerBookingSelect() {
       COALESCE(assigned_tables.assigned_tables, '[]'::JSON) AS assigned_tables
     FROM bookings b
     JOIN branches br ON br.id = b.branch_id
+    LEFT JOIN areas ar ON ar.id = b.area_id
     LEFT JOIN LATERAL (
       SELECT JSON_AGG(
         JSON_BUILD_OBJECT(

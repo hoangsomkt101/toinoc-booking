@@ -35,8 +35,10 @@ function bookingSelect(includeLogs = false) {
       b.id,
       b.customer_id,
       b.branch_id,
+      b.area_id,
       br.name AS branch_name,
       br.address AS branch_address,
+      ar.name AS area_name,
       b.customer_name,
       b.phone,
       b.booking_time,
@@ -53,6 +55,7 @@ function bookingSelect(includeLogs = false) {
       ${includeLogs ? ", COALESCE(status_logs.status_logs, '[]'::JSON) AS status_logs" : ''}
     FROM bookings b
     JOIN branches br ON br.id = b.branch_id
+    LEFT JOIN areas ar ON ar.id = b.area_id
     LEFT JOIN LATERAL (
       SELECT JSON_AGG(
         JSON_BUILD_OBJECT(
@@ -103,6 +106,7 @@ function normalizeBookingRow(row) {
     id: Number(row.id),
     customer_id: row.customer_id === null ? null : Number(row.customer_id),
     branch_id: Number(row.branch_id),
+    area_id: row.area_id === null ? null : Number(row.area_id),
     guest_count: Number(row.guest_count),
     actual_guest_count: row.actual_guest_count === null ? null : Number(row.actual_guest_count),
     assigned_tables: Array.isArray(row.assigned_tables) ? row.assigned_tables.map(normalizeTableRow) : [],
@@ -141,6 +145,18 @@ async function ensureBranch(client, branchId) {
 
   if (result.rowCount === 0) {
     throw badRequest('Chi nhánh không tồn tại');
+  }
+}
+
+async function ensureAreaForBranch(client, areaId, branchId) {
+  if (!areaId) {
+    return;
+  }
+
+  const result = await client.query('SELECT id FROM areas WHERE id = $1 AND branch_id = $2', [areaId, branchId]);
+
+  if (result.rowCount === 0) {
+    throw badRequest('Khu vực không thuộc chi nhánh của yêu cầu đặt bàn');
   }
 }
 
@@ -288,14 +304,16 @@ async function createBooking(input) {
 
   const booking = await withTransaction(async (client) => {
     await ensureBranch(client, data.branch_id);
+    await ensureAreaForBranch(client, data.area_id, data.branch_id);
     const customerId = await upsertCustomerByPhone(client, data);
     const bookingResult = await client.query(
-      `INSERT INTO bookings (customer_id, branch_id, customer_name, phone, booking_time, guest_count, order_staff_name, note, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING')
+      `INSERT INTO bookings (customer_id, branch_id, area_id, customer_name, phone, booking_time, guest_count, order_staff_name, note, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
        RETURNING id`,
       [
         customerId,
         data.branch_id,
+        data.area_id || null,
         data.customer_name,
         data.phone,
         data.booking_time,
@@ -326,14 +344,25 @@ async function updateBooking(id, input = {}) {
 
   return withTransaction(async (client) => {
     const booking = await lockBooking(client, id);
+    const hasArea = Object.prototype.hasOwnProperty.call(data, 'area_id');
+    const branchChanged = data.branch_id && Number(data.branch_id) !== Number(booking.branch_id);
+    const nextBranchId = data.branch_id || booking.branch_id;
 
     if (data.branch_id) {
       await ensureBranch(client, data.branch_id);
 
-      if (Number(data.branch_id) !== Number(booking.branch_id)) {
+      if (branchChanged) {
         await releaseAssignedTables(client, booking.id);
         await client.query('DELETE FROM booking_tables WHERE booking_id = $1', [booking.id]);
       }
+    }
+
+    if (branchChanged && !hasArea) {
+      data.area_id = null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(data, 'area_id')) {
+      await ensureAreaForBranch(client, data.area_id, nextBranchId);
     }
 
     let customerId = booking.customer_id;
@@ -359,7 +388,7 @@ async function updateBooking(id, input = {}) {
       setColumn('customer_id', customerId);
     }
 
-    for (const column of ['branch_id', 'customer_name', 'phone', 'booking_time', 'guest_count', 'order_staff_name', 'note']) {
+    for (const column of ['branch_id', 'area_id', 'customer_name', 'phone', 'booking_time', 'guest_count', 'order_staff_name', 'note']) {
       if (Object.prototype.hasOwnProperty.call(data, column)) {
         setColumn(column, data[column]);
       }
@@ -398,6 +427,7 @@ async function releaseAssignedTables(client, bookingId) {
 
 async function assignTables(id, input) {
   const tableIds = normalizeTableIds(input);
+  const areaId = parseOptionalPositiveInteger(input.area_id, 'area_id');
 
   return withTransaction(async (client) => {
     const booking = await lockBooking(client, id);
@@ -422,6 +452,8 @@ async function assignTables(id, input) {
     if (invalidBranchTables.length) {
       throw badRequest('Tất cả bàn phải thuộc chi nhánh của yêu cầu đặt bàn');
     }
+
+    await ensureAreaForBranch(client, areaId, booking.branch_id);
 
     const blockedTables = tablesResult.rows.filter((table) => table.status === 'BLOCKED');
     if (blockedTables.length) {
@@ -463,6 +495,8 @@ async function assignTables(id, input) {
 
     const tableStatus = booking.status === 'CHECKED_IN' ? 'OCCUPIED' : 'RESERVED';
     await client.query('UPDATE tables SET status = $1 WHERE id = ANY($2::BIGINT[])', [tableStatus, tableIds]);
+
+    await client.query('UPDATE bookings SET area_id = $1 WHERE id = $2', [areaId || null, booking.id]);
 
     if (['PENDING', 'CANCELLED'].includes(booking.status)) {
       await client.query("UPDATE bookings SET status = 'CONFIRMED' WHERE id = $1", [booking.id]);

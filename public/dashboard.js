@@ -838,8 +838,9 @@
       return '';
     }
 
+    const selectedAreaId = booking.area_id || areas[0]?.id || '';
     const buttons = areas.map((area, index) => `
-      <button class="assign-area-card ${index === 0 ? 'selected' : ''}" type="button" data-assign-area="${escapeHtml(area.id)}" aria-pressed="${index === 0 ? 'true' : 'false'}">
+      <button class="assign-area-card ${String(area.id) === String(selectedAreaId) ? 'selected' : ''}" type="button" data-assign-area="${escapeHtml(area.id)}" aria-pressed="${String(area.id) === String(selectedAreaId) ? 'true' : 'false'}">
         ${escapeHtml(area.name)}
       </button>
     `);
@@ -884,6 +885,7 @@
 
   function bookingAssignForm(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
+    const areaLabel = booking.area_name ? ` · Khu vực: ${booking.area_name}` : '';
     const shouldAutoConfirm = booking.status === 'PENDING' || booking.status === 'CANCELLED';
     const submitLabel = shouldAutoConfirm ? 'Lưu bàn & xác nhận' : 'Lưu bàn';
     const selectedCount = (booking.assigned_tables || []).length;
@@ -895,7 +897,7 @@
 
     return `
       <form class="management-form" data-booking-assign="${escapeHtml(booking.id)}" data-auto-confirm="${shouldAutoConfirm ? 'true' : 'false'}">
-        <div class="management-form-note">${escapeHtml(booking.customer_name)} · ${escapeHtml(booking.guest_count)} khách · Bàn hiện tại: ${escapeHtml(tables)}</div>
+        <div class="management-form-note">${escapeHtml(booking.customer_name)} · ${escapeHtml(booking.guest_count)} khách${escapeHtml(areaLabel)} · Bàn hiện tại: ${escapeHtml(tables)}</div>
         <div>
           <label class="form-label fw-semibold">Chọn khu vực và bàn</label>
           ${assignmentAreaGrid(booking)}
@@ -1673,6 +1675,7 @@
 
   function renderTimelineBooking(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
+    const areaLabel = booking.area_name || 'Chưa chọn khu vực';
     const controls = actionButtons(booking);
     const timelineState = bookingTimelineState(booking);
     const callHref = phoneCallHref(booking.phone);
@@ -1709,6 +1712,7 @@
           </div>
           <div class="timeline-meta-row">
             <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)} khách${escapeHtml(branchLabel)}</span>
+            <span class="timeline-area" title="Khu vực ${escapeHtml(areaLabel)}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(areaLabel)}</span>
             <span class="timeline-table${tableClass}" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>
           </div>
           ${notice}
@@ -2692,12 +2696,13 @@
     const bookingId = form.dataset.bookingAssign;
     const button = form.querySelector('[type="submit"]');
     const tableIds = [...form.querySelectorAll('[data-assign-table-card].selected')].map((card) => card.dataset.tableId);
+    const selectedArea = form.querySelector('[data-assign-area].selected');
     const autoConfirm = form.dataset.autoConfirm === 'true';
     button.disabled = true;
     setFormStatus(form, selectors.formMessage, autoConfirm ? 'Đang lưu bàn và xác nhận booking...' : 'Đang lưu bàn...');
 
     try {
-      await request(`/api/bookings/${bookingId}/assign`, { method: 'POST', body: { table_ids: tableIds } });
+      await request(`/api/bookings/${bookingId}/assign`, { method: 'POST', body: { area_id: selectedArea?.dataset.assignArea, table_ids: tableIds } });
       setFormStatus(form, selectors.formMessage, autoConfirm ? 'Đã lưu bàn và xác nhận booking.' : 'Đã lưu bàn.');
       await refreshDashboard();
       closeManagementPopup();
