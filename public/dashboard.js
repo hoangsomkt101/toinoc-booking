@@ -67,6 +67,7 @@
     bookingBranchGrid: document.getElementById('booking-branch-grid'),
     bookingPopup: document.querySelector('[data-booking-popup]'),
     bookingPopupPanel: document.querySelector('[data-booking-popup-panel]'),
+    bookingSummary: document.querySelector('[data-booking-summary]'),
     managementPopup: document.querySelector('[data-management-popup]'),
     managementPopupPanel: document.querySelector('[data-management-popup-panel]'),
     managementPopupEyebrow: document.querySelector('[data-management-popup-eyebrow]'),
@@ -307,6 +308,64 @@
     }
 
     return `${dateValue}T${timeSlot}`;
+  }
+
+  function bookingSummaryRow(label, value) {
+    return `
+      <div class="booking-created-summary-row">
+        <dt>${escapeHtml(label)}</dt>
+        <dd>${escapeHtml(value || '-')}</dd>
+      </div>
+    `;
+  }
+
+  function clearBookingSummary() {
+    if (!selectors.bookingSummary) {
+      return;
+    }
+
+    selectors.bookingSummary.hidden = true;
+    selectors.bookingSummary.innerHTML = '';
+  }
+
+  function renderCreatedBookingSummary(booking) {
+    if (!selectors.bookingSummary || !booking) {
+      return;
+    }
+
+    const createdAt = booking.created_at ? formatDateTime(booking.created_at) : '';
+    const rows = [
+      bookingSummaryRow('Mã phiếu', booking.id ? `#${booking.id}` : ''),
+      bookingSummaryRow('Khách hàng', booking.customer_name),
+      bookingSummaryRow('Số điện thoại', booking.phone),
+      bookingSummaryRow('Thời gian đặt', formatDateTime(booking.booking_time)),
+      bookingSummaryRow('Chi nhánh', booking.branch_name),
+      bookingSummaryRow('Địa chỉ', booking.branch_address),
+      bookingSummaryRow('Số khách', booking.guest_count ? `${booking.guest_count} khách` : ''),
+      bookingSummaryRow('Trạng thái', bookingStatusLabel(booking.status)),
+      bookingSummaryRow('Nhân viên lên đơn', booking.order_staff_name),
+      bookingSummaryRow('Ghi chú', booking.note || 'Không có')
+    ];
+
+    if (createdAt) {
+      rows.push(bookingSummaryRow('Tạo lúc', createdAt));
+    }
+
+    selectors.bookingSummary.innerHTML = `
+      <div class="booking-created-summary-header">
+        <div>
+          <p class="booking-created-summary-eyebrow">Đã tạo đặt bàn</p>
+          <h4>Nội dung phiếu đặt bàn</h4>
+        </div>
+        <span class="booking-created-summary-code">${escapeHtml(booking.id ? `#${booking.id}` : 'Mới')}</span>
+      </div>
+      <dl class="booking-created-summary-list">
+        ${rows.join('')}
+      </dl>
+      <div class="booking-created-summary-hint">Có thể chụp màn hình thẻ này để gửi báo cáo.</div>
+    `;
+    selectors.bookingSummary.hidden = false;
+    window.requestAnimationFrame(() => selectors.bookingSummary.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
   }
 
   function branchOptions(selectedId, includeEmpty = false) {
@@ -625,6 +684,7 @@
     if (selectors.formMessage) {
       selectors.formMessage.textContent = '';
     }
+    clearBookingSummary();
     syncBookingDateControls();
     setBranchSelectValue(selectors.bookingBranch, selectedBranchId());
     window.requestAnimationFrame(() => selectors.bookingPopupPanel?.focus());
@@ -2088,6 +2148,7 @@
     }
 
     selectors.formMessage.textContent = 'Đang tạo yêu cầu đặt bàn...';
+    clearBookingSummary();
 
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
@@ -2106,7 +2167,7 @@
     }
 
     try {
-      await request('/api/bookings', {
+      const booking = await request('/api/bookings', {
         method: 'POST',
         body: data
       });
@@ -2116,7 +2177,8 @@
       setBookingTimeSlot('');
       setGuestCount(2);
       clearCustomerQuickfill();
-      selectors.formMessage.textContent = 'Đã tạo yêu cầu đặt bàn.';
+      selectors.formMessage.textContent = 'Đã tạo yêu cầu đặt bàn. Nội dung phiếu hiển thị bên dưới.';
+      renderCreatedBookingSummary(booking);
       if (canManageBookings()) {
         await refreshDashboard();
       }
