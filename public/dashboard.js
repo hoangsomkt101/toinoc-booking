@@ -52,9 +52,11 @@
     { key: 'late_cancelled', label: 'Trễ, huỷ' }
   ];
   let activeBookingTab = 'all';
+  let bookingPhoneSearchValue = '';
   const selectors = {
     openBookings: document.getElementById('open-booking-list'),
     bookingTabs: document.getElementById('booking-tabs'),
+    bookingPhoneSearch: document.querySelector('[data-booking-phone-search]'),
     formMessage: document.getElementById('form-message'),
     bookingBranch: document.querySelector('[data-booking-branch]'),
     bookingBranchGrid: document.getElementById('booking-branch-grid'),
@@ -381,6 +383,20 @@
     }
 
     return digits;
+  }
+
+  function bookingPhoneSearchTerm() {
+    return normalizeClientPhone(bookingPhoneSearchValue);
+  }
+
+  function bookingMatchesPhoneSearch(booking) {
+    const term = bookingPhoneSearchTerm();
+
+    if (!term) {
+      return true;
+    }
+
+    return normalizeClientPhone(booking.phone).includes(term);
   }
 
   function setBranchSelectValue(select, value) {
@@ -1605,15 +1621,19 @@
 
     element.classList.toggle('booking-timeline-list', bookings.length > 0);
 
+    const emptyMessage = bookingPhoneSearchTerm()
+      ? 'Không tìm thấy đặt bàn khớp số điện thoại này.'
+      : 'Không có yêu cầu đặt bàn trong mục này.';
+
     element.innerHTML = bookings.length
       ? bookings.map(renderBooking).join('')
-      : '<div class="alert alert-light border mb-0">Không có yêu cầu đặt bàn trong mục này.</div>';
+      : `<div class="alert alert-light border mb-0">${escapeHtml(emptyMessage)}</div>`;
   }
 
   function renderBookingBoard() {
     const bookings = allDashboardBookings();
     const now = new Date();
-    const filteredBookings = bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now));
+    const filteredBookings = bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now) && bookingMatchesPhoneSearch(booking));
 
     renderBookingAlerts(bookings);
     renderBookingTabs(bookings);
@@ -3074,6 +3094,13 @@
   if (selectors.dashboardDateFilter) {
     selectors.dashboardDateFilter.addEventListener('change', () => {
       applyDashboardDateFilter(selectors.dashboardDateFilter.value);
+    });
+  }
+
+  if (selectors.bookingPhoneSearch) {
+    selectors.bookingPhoneSearch.addEventListener('input', () => {
+      bookingPhoneSearchValue = selectors.bookingPhoneSearch.value;
+      renderBookingBoard();
     });
   }
 
