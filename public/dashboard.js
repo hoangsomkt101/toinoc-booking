@@ -52,7 +52,7 @@
     { key: 'late_cancelled', label: 'Trễ, huỷ' }
   ];
   let activeBookingTab = 'all';
-  let bookingPhoneSearchValue = '';
+  let bookingQuickSearchValue = '';
   let notificationSoundUnlocked = false;
   const notificationSound = typeof window.Audio === 'function' ? new window.Audio('/notification.mp3') : null;
   if (notificationSound) {
@@ -61,7 +61,7 @@
   const selectors = {
     openBookings: document.getElementById('open-booking-list'),
     bookingTabs: document.getElementById('booking-tabs'),
-    bookingPhoneSearch: document.querySelector('[data-booking-phone-search]'),
+    bookingQuickSearch: document.querySelector('[data-booking-quick-search]'),
     formMessage: document.getElementById('form-message'),
     bookingBranch: document.querySelector('[data-booking-branch]'),
     bookingBranchGrid: document.getElementById('booking-branch-grid'),
@@ -512,18 +512,31 @@
     return digits;
   }
 
-  function bookingPhoneSearchTerm() {
-    return normalizeClientPhone(bookingPhoneSearchValue);
+  function normalizeClientSearchText(value) {
+    return String(value || '')
+      .trim()
+      .toLocaleLowerCase('vi-VN')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/\s+/g, ' ');
   }
 
-  function bookingMatchesPhoneSearch(booking) {
-    const term = bookingPhoneSearchTerm();
+  function bookingQuickSearchTerm() {
+    return normalizeClientSearchText(bookingQuickSearchValue);
+  }
+
+  function bookingMatchesQuickSearch(booking) {
+    const term = bookingQuickSearchTerm();
 
     if (!term) {
       return true;
     }
 
-    return normalizeClientPhone(booking.phone).includes(term);
+    const phoneTerm = normalizeClientPhone(bookingQuickSearchValue);
+
+    return normalizeClientSearchText(booking.customer_name).includes(term)
+      || (phoneTerm && normalizeClientPhone(booking.phone).includes(phoneTerm));
   }
 
   function setBranchSelectValue(select, value) {
@@ -1771,8 +1784,8 @@
 
     element.classList.toggle('booking-timeline-list', bookings.length > 0);
 
-    const emptyMessage = bookingPhoneSearchTerm()
-      ? 'Không tìm thấy đặt bàn khớp số điện thoại này.'
+    const emptyMessage = bookingQuickSearchTerm()
+      ? 'Không tìm thấy đặt bàn khớp tên khách hoặc số điện thoại này.'
       : 'Không có yêu cầu đặt bàn trong mục này.';
 
     element.innerHTML = bookings.length
@@ -1783,7 +1796,7 @@
   function renderBookingBoard() {
     const bookings = allDashboardBookings();
     const now = new Date();
-    const filteredBookings = bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now) && bookingMatchesPhoneSearch(booking));
+    const filteredBookings = bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now) && bookingMatchesQuickSearch(booking));
 
     renderBookingAlerts(bookings);
     renderBookingTabs(bookings);
@@ -3261,9 +3274,9 @@
     });
   }
 
-  if (selectors.bookingPhoneSearch) {
-    selectors.bookingPhoneSearch.addEventListener('input', () => {
-      bookingPhoneSearchValue = selectors.bookingPhoneSearch.value;
+  if (selectors.bookingQuickSearch) {
+    selectors.bookingQuickSearch.addEventListener('input', () => {
+      bookingQuickSearchValue = selectors.bookingQuickSearch.value;
       renderBookingBoard();
     });
   }
