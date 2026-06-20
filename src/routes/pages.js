@@ -9,6 +9,7 @@ const { ROLE_LEVELS, clearSession, requireAuthenticated, requireRole, setSession
 const asyncHandler = require('../middleware/async-handler');
 
 const router = express.Router();
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ROLE_LABELS = Object.freeze({
   admin: 'Quản trị viên',
   manager: 'Quản lý',
@@ -21,7 +22,23 @@ function localDateValue(date = new Date()) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
-function selectedBookingDate() {
+function isValidDateValue(value) {
+  if (!DATE_ONLY_PATTERN.test(String(value || ''))) {
+    return false;
+  }
+
+  const parsed = new Date(`${value}T00:00:00Z`);
+
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function selectedBookingDate(req) {
+  const requestedDate = String(req.query.booking_date || '').trim();
+
+  if (isValidDateValue(requestedDate)) {
+    return requestedDate;
+  }
+
   return localDateValue();
 }
 
@@ -138,7 +155,7 @@ async function renderDashboard(req, res, section) {
   const scopedQuery = canManageBranches || !selectedBranchId
     ? req.query
     : { ...req.query, branch_id: selectedBranchId };
-  const bookingDate = section === 'bookings' ? selectedBookingDate() : '';
+  const bookingDate = section === 'bookings' ? selectedBookingDate(req) : '';
   const dashboardQuery = bookingDate ? { ...scopedQuery, booking_date: bookingDate } : scopedQuery;
   const isSettingsSection = section === 'setting';
   const [dashboard, bookings, customers, users, apiClients, sheetTargets] = await Promise.all([
@@ -174,6 +191,7 @@ async function renderDashboard(req, res, section) {
     dashboard,
     dashboardSection: section,
     showOperationsSummary: section === 'bookings' && canManageBookings,
+    showBookingDateFilter: section === 'bookings' && canViewBookings,
     isBookingsSection: section === 'bookings',
     isBranchesSection: section === 'branches',
     isCustomersSection: section === 'customers',

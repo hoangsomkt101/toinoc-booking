@@ -241,14 +241,24 @@
     return isDateValue(dateValue) ? dateValue : todayDateValue();
   }
 
-  function removeDashboardDateFromUrl() {
-    if (window.__DASHBOARD_SECTION__ !== 'bookings' || !new URLSearchParams(window.location.search).has('booking_date')) {
+  function setDashboardUrlParam(name, value) {
+    const url = new URL(window.location.href);
+
+    if (value) {
+      url.searchParams.set(name, value);
+    } else {
+      url.searchParams.delete(name);
+    }
+
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function setDashboardDateUrl(dateValue) {
+    if (window.__DASHBOARD_SECTION__ !== 'bookings') {
       return;
     }
 
-    const url = new URL(window.location.href);
-    url.searchParams.delete('booking_date');
-    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    setDashboardUrlParam('booking_date', dateValue);
   }
 
   function roleLabel(role) {
@@ -613,6 +623,7 @@
     const dateValue = isDateValue(value) ? value : todayDateValue();
     selectors.dashboardDateFilter.value = dateValue;
     updateDashboardDateChips(dateValue);
+    setDashboardDateUrl(dateValue);
     refreshDashboard();
   }
 
@@ -1549,7 +1560,11 @@
     const bookings = [];
     const seenIds = new Set();
 
-    for (const booking of [...(state.dashboard.open_bookings || []), ...(state.dashboard.closed_bookings || [])]) {
+    for (const booking of [
+      ...(state.bookings || []),
+      ...(state.dashboard.open_bookings || []),
+      ...(state.dashboard.closed_bookings || [])
+    ]) {
       const key = String(booking.id);
       if (!seenIds.has(key)) {
         seenIds.add(key);
@@ -3218,6 +3233,13 @@
         url.searchParams.delete('branch_id');
       }
 
+      if (window.__DASHBOARD_SECTION__ === 'bookings') {
+        const bookingDate = selectedDashboardBookingDate();
+        if (bookingDate) {
+          url.searchParams.set('booking_date', bookingDate);
+        }
+      }
+
       window.location.assign(`${url.pathname}${url.search}${url.hash}`);
     });
   }
@@ -3297,7 +3319,6 @@
   }
 
   syncBranchControls();
-  removeDashboardDateFromUrl();
   syncDashboardDateControls();
   syncBookingDateControls();
   render();
