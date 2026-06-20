@@ -806,7 +806,7 @@
   }
 
   function assignmentTables(booking) {
-    const available = (state.dashboard.available_tables || []).filter(
+    const available = (state.dashboard.assignable_tables || state.dashboard.available_tables || []).filter(
       (table) => String(table.branch_id) === String(booking.branch_id)
     );
     const assigned = booking.assigned_tables || [];

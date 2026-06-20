@@ -14,6 +14,7 @@ const {
 } = require('../domain/validators');
 
 const INACTIVE_RELEASE_STATUSES = ['CANCELLED', 'NO_SHOW', 'CHECKED_OUT', 'COMPLETED'];
+const TABLE_HOLD_HOURS = 4;
 const BOOKING_STATUS_LABELS = Object.freeze({
   PENDING: 'chờ xác nhận',
   CONFIRMED: 'đã xác nhận',
@@ -27,6 +28,10 @@ const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function bookingStatusLabel(status) {
   return BOOKING_STATUS_LABELS[status] || status;
+}
+
+function tableHoldIntervalSql() {
+  return `INTERVAL '${TABLE_HOLD_HOURS} hours'`;
 }
 
 function bookingSelect(includeLogs = false) {
@@ -416,12 +421,50 @@ async function updateBooking(id, input = {}) {
 }
 
 async function releaseAssignedTables(client, bookingId) {
+  const assignedResult = await client.query('SELECT table_id FROM booking_tables WHERE booking_id = $1', [bookingId]);
+  const tableIds = assignedResult.rows.map((row) => Number(row.table_id));
+
+  await syncTableStatuses(client, tableIds, bookingId);
+}
+
+async function syncTableStatuses(client, tableIds, excludeBookingId) {
+  const ids = [...new Set((tableIds || []).map(Number).filter(Boolean))];
+
+  if (!ids.length) {
+    return;
+  }
+
+  const params = [ids];
+  const excludeSql = excludeBookingId ? 'AND b.id <> $2' : '';
+
+  if (excludeBookingId) {
+    params.push(excludeBookingId);
+  }
+
   await client.query(
-    `UPDATE tables
-     SET status = 'AVAILABLE'
-     WHERE id IN (SELECT table_id FROM booking_tables WHERE booking_id = $1)
-       AND status IN ('RESERVED', 'OCCUPIED')`,
-    [bookingId]
+    `UPDATE tables t
+     SET status = CASE
+       WHEN EXISTS (
+         SELECT 1
+         FROM booking_tables bt
+         JOIN bookings b ON b.id = bt.booking_id
+         WHERE bt.table_id = t.id
+           ${excludeSql}
+           AND b.status = 'CHECKED_IN'
+       ) THEN 'OCCUPIED'
+       WHEN EXISTS (
+         SELECT 1
+         FROM booking_tables bt
+         JOIN bookings b ON b.id = bt.booking_id
+         WHERE bt.table_id = t.id
+           ${excludeSql}
+           AND b.status = ANY($${params.length + 1}::TEXT[])
+       ) THEN 'RESERVED'
+       ELSE 'AVAILABLE'
+     END
+     WHERE t.id = ANY($1::BIGINT[])
+       AND t.status <> 'BLOCKED'`,
+    [...params, ACTIVE_ASSIGNMENT_STATUSES]
   );
 }
 
@@ -461,14 +504,16 @@ async function assignTables(id, input) {
     }
 
     const conflicts = await client.query(
-      `SELECT t.id, t.table_code, b.id AS booking_id, b.status
+      `SELECT t.id, t.table_code, b.id AS booking_id, b.customer_name, b.booking_time, b.status
        FROM booking_tables bt
        JOIN bookings b ON b.id = bt.booking_id
        JOIN tables t ON t.id = bt.table_id
        WHERE bt.table_id = ANY($1::BIGINT[])
          AND b.id <> $2
-         AND b.status = ANY($3::TEXT[])`,
-      [tableIds, booking.id, ACTIVE_ASSIGNMENT_STATUSES]
+         AND b.status = ANY($3::TEXT[])
+         AND b.booking_time < $4::TIMESTAMPTZ + ${tableHoldIntervalSql()}
+         AND b.booking_time + ${tableHoldIntervalSql()} > $4::TIMESTAMPTZ`,
+      [tableIds, booking.id, ACTIVE_ASSIGNMENT_STATUSES, booking.booking_time]
     );
 
     if (conflicts.rowCount > 0) {
@@ -479,22 +524,11 @@ async function assignTables(id, input) {
     const existingIds = existingResult.rows.map((row) => Number(row.table_id));
     const removedIds = existingIds.filter((existingId) => !tableIds.includes(existingId));
 
-    if (removedIds.length) {
-      await client.query(
-        `UPDATE tables SET status = 'AVAILABLE'
-         WHERE id = ANY($1::BIGINT[]) AND status IN ('RESERVED', 'OCCUPIED')`,
-        [removedIds]
-      );
-    }
-
     await client.query('DELETE FROM booking_tables WHERE booking_id = $1', [booking.id]);
 
     for (const tableId of tableIds) {
       await client.query('INSERT INTO booking_tables (booking_id, table_id) VALUES ($1, $2)', [booking.id, tableId]);
     }
-
-    const tableStatus = booking.status === 'CHECKED_IN' ? 'OCCUPIED' : 'RESERVED';
-    await client.query('UPDATE tables SET status = $1 WHERE id = ANY($2::BIGINT[])', [tableStatus, tableIds]);
 
     await client.query('UPDATE bookings SET area_id = $1 WHERE id = $2', [areaId || null, booking.id]);
 
@@ -502,6 +536,8 @@ async function assignTables(id, input) {
       await client.query("UPDATE bookings SET status = 'CONFIRMED' WHERE id = $1", [booking.id]);
       await logStatusChange(client, booking.id, booking.status, 'CONFIRMED', 'Đã xếp bàn cho khách');
     }
+
+    await syncTableStatuses(client, [...removedIds, ...tableIds]);
 
     return getBookingById(booking.id, client);
   });
@@ -530,7 +566,7 @@ async function checkInBooking(id, input = {}) {
        WHERE id = $3`,
       [checkInAt, actualGuestCount || booking.guest_count, booking.id]
     );
-    await client.query("UPDATE tables SET status = 'OCCUPIED' WHERE id = ANY($1::BIGINT[])", [tableIds]);
+    await syncTableStatuses(client, tableIds);
     await logStatusChange(client, booking.id, booking.status, 'CHECKED_IN', 'Khách đã nhận bàn');
 
     return getBookingById(booking.id, client);
@@ -601,14 +637,15 @@ async function getDashboardData(query = {}) {
   const branchFilter = filters.branch_id ? { branch_id: filters.branch_id } : {};
   const dateFilter = filters.booking_date ? { booking_date: filters.booking_date } : {};
 
-  const [todayBookings, openBookings, closedBookings, activeTables, availableTables] = await Promise.all([
+  const [todayBookings, openBookings, closedBookings, activeTables, availableTables, assignableTables] = await Promise.all([
     filters.booking_date
       ? listBookings({ ...branchFilter, ...dateFilter })
       : listBookings({ ...branchFilter, period: 'today' }),
     listBookings({ ...branchFilter, ...dateFilter, period: 'open' }),
     listBookings({ ...branchFilter, ...dateFilter, period: 'closed' }),
     listTables({ ...branchFilter, status: 'RESERVED,OCCUPIED' }),
-    listTables({ ...branchFilter, status: 'AVAILABLE' })
+    listTables({ ...branchFilter, status: 'AVAILABLE' }),
+    listTables(branchFilter)
   ]);
 
   return {
@@ -616,6 +653,7 @@ async function getDashboardData(query = {}) {
     closed_bookings: closedBookings,
     active_tables: activeTables,
     available_tables: availableTables,
+    assignable_tables: assignableTables.filter((table) => table.status !== 'BLOCKED'),
     counts: {
       today_bookings: todayBookings.length,
       active_tables: activeTables.length,
