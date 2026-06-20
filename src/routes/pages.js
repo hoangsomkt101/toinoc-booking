@@ -123,6 +123,7 @@ router.post('/logout', (req, res) => {
 async function renderDashboard(req, res, section) {
   const canCreateBooking = ROLE_LEVELS[req.user.role] >= ROLE_LEVELS.sale;
   const canManageBookings = ROLE_LEVELS[req.user.role] >= ROLE_LEVELS.manager;
+  const canViewBookings = canCreateBooking;
   const canManageCustomers = ROLE_LEVELS[req.user.role] >= ROLE_LEVELS.manager;
   const canManageUsers = req.user.role === 'admin';
   const canManageBranches = req.user.role === 'admin';
@@ -142,7 +143,7 @@ async function renderDashboard(req, res, section) {
   const isSettingsSection = section === 'setting';
   const [dashboard, bookings, customers, users, apiClients, sheetTargets] = await Promise.all([
     canManageBookings ? bookingService.getDashboardData(dashboardQuery) : {},
-    section === 'bookings' && canManageBookings ? bookingService.listBookings(dashboardQuery) : [],
+    section === 'bookings' && canViewBookings ? bookingService.listBookings(dashboardQuery) : [],
     section === 'customers' && canManageCustomers ? customerService.listCustomers(scopedQuery) : [],
     section === 'users' && canManageUsers ? userService.listUsers(req.user) : [],
     isSettingsSection && canManageApiSettings ? apiClientService.listApiClients() : [],
@@ -158,6 +159,7 @@ async function renderDashboard(req, res, section) {
     canCreateBooking,
     canManageApiSettings,
     canManageBookings,
+    canViewBookings,
     canManageBranches,
     canManageCustomers,
     canViewCustomerPhones,

@@ -174,6 +174,10 @@
     return can('sale');
   }
 
+  function canViewBookings() {
+    return canCreateBooking();
+  }
+
   function canManageBookings() {
     return can('manager');
   }
@@ -1684,11 +1688,19 @@
   function renderTimelineBooking(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
     const areaLabel = booking.area_name || 'Chưa chọn khu vực';
-    const controls = actionButtons(booking);
+    const controls = canManageBookings() ? actionButtons(booking) : '';
     const timelineState = bookingTimelineState(booking);
     const callHref = phoneCallHref(booking.phone);
-    const callAction = callHref && arrivalPendingStatuses.includes(booking.status)
+    const callAction = canManageBookings() && callHref && arrivalPendingStatuses.includes(booking.status)
       ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
+      : '';
+    const actionRow = callAction || controls
+      ? `
+          <div class="action-row timeline-action-row">
+            ${callAction}
+            ${controls}
+          </div>
+        `
       : '';
     const tableClass = hasAssignedTables(booking) ? '' : ' timeline-table-missing';
     const branchLabel = shouldShowBookingBranch() && booking.branch_name ? ` · ${booking.branch_name}` : '';
@@ -1726,10 +1738,7 @@
           ${notice}
           ${orderStaff}
           ${note}
-          <div class="action-row timeline-action-row">
-            ${callAction}
-            ${controls}
-          </div>
+          ${actionRow}
         </div>
         </article>
       </div>
@@ -2142,13 +2151,17 @@
   }
 
   async function refreshDashboard() {
-    if (!canManageBookings()) {
+    if (!canViewBookings()) {
       return;
     }
 
-    const dashboard = await request(scopedPath('/api/dashboard'));
-    state.dashboard = dashboard || state.dashboard;
-    state.bookings = [];
+    if (canManageBookings()) {
+      const dashboard = await request(scopedPath('/api/dashboard'));
+      state.dashboard = dashboard || state.dashboard;
+      state.bookings = [];
+    } else {
+      state.bookings = await request(scopedPath('/api/bookings'));
+    }
     render();
   }
 
@@ -2191,7 +2204,7 @@
       clearCustomerQuickfill();
       selectors.formMessage.textContent = 'Đã tạo yêu cầu đặt bàn. Nội dung phiếu hiển thị bên dưới.';
       renderCreatedBookingSummary(booking);
-      if (canManageBookings()) {
+      if (canViewBookings()) {
         await refreshDashboard();
       }
     } catch (error) {

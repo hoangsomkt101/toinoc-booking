@@ -36,11 +36,11 @@ function assertDenied(guard, role, statusCode = 403) {
   assert.equal(error && error.statusCode, statusCode);
 }
 
-test('sale can only create bookings through booking routes', () => {
+test('sale can create and list bookings without management actions', () => {
   assertAllowed(routeGuard(bookingRouter, '/', 'post'), 'sale');
+  assertAllowed(routeGuard(bookingRouter, '/', 'get'), 'sale');
 
   for (const [path, method] of [
-    ['/', 'get'],
     ['/:id', 'get'],
     ['/:id', 'put'],
     ['/:id', 'delete'],

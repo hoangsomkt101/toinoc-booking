@@ -53,7 +53,7 @@ router.post(
 
 router.get(
   '/',
-  requireBookingManage,
+  requireBookingCreate,
   asyncHandler(async (req, res) => {
     const bookings = await bookingService.listBookings(scopedBookingQuery(req));
     res.json({ data: bookings });
