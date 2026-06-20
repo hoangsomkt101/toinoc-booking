@@ -6,6 +6,7 @@ const FIELD_LABELS = Object.freeze({
   phone: 'Số điện thoại',
   booking_time: 'Thời gian đặt bàn',
   guest_count: 'Số khách',
+  order_staff_name: 'Tên nhân viên lên đơn',
   note: 'Ghi chú',
   branch_id: 'Mã chi nhánh',
   table_ids: 'Danh sách bàn',
@@ -164,6 +165,10 @@ function validateBookingPayload(input, options = {}) {
 
   if (hasOwn(payload, 'guest_count')) {
     data.guest_count = parsePositiveInteger(payload.guest_count, 'guest_count');
+  }
+
+  if (hasOwn(payload, 'order_staff_name')) {
+    data.order_staff_name = optionalString(payload.order_staff_name, 'order_staff_name');
   }
 
   if (hasOwn(payload, 'note')) {

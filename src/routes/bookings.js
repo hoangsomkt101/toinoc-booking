@@ -31,11 +31,21 @@ function broadcast(req, eventName, payload) {
   }
 }
 
+function createBookingPayload(req) {
+  const payload = { ...req.body };
+
+  if (req.user.role === 'admin' || req.user.role === 'manager') {
+    payload.order_staff_name = req.user.display_name || req.user.username;
+  }
+
+  return payload;
+}
+
 router.post(
   '/',
   requireBookingCreate,
   asyncHandler(async (req, res) => {
-    const booking = await bookingService.createBooking(req.body);
+    const booking = await bookingService.createBooking(createBookingPayload(req));
     broadcast(req, SOCKET_EVENTS.booking_created, booking);
     res.status(201).json({ data: booking });
   })

@@ -81,7 +81,6 @@ function customerStatsSelect(branchSql = '') {
         COUNT(*) FILTER (WHERE b.status = 'NO_SHOW')::INTEGER AS no_show_booking_count
       FROM bookings b
       WHERE (b.customer_id = c.id OR b.phone = c.phone)
-      ${branchSql}
     ) stats ON TRUE
     LEFT JOIN LATERAL (
       SELECT
@@ -113,6 +112,7 @@ function customerBookingSelect() {
       b.phone,
       b.booking_time,
       b.guest_count,
+      b.order_staff_name,
       b.note,
       b.status,
       b.actual_guest_count,

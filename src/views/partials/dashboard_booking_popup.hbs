@@ -80,6 +80,19 @@
             <input class="form-control form-control-lg" id="booking-customer-name" name="customer_name" autocomplete="name" placeholder="Ví dụ: Anh Phú" required>
           </section>
 
+          {{#if canManageBookings}}
+            <section class="booking-step-block">
+              <label class="booking-field-label" for="booking-order-staff-name">Tên nhân viên lên đơn</label>
+              <input class="form-control form-control-lg" id="booking-order-staff-name" name="order_staff_name" value="{{currentUser.display_name}}" readonly>
+              <div class="form-text small">Tự lấy theo tên tài khoản đang đăng nhập.</div>
+            </section>
+          {{else}}
+            <section class="booking-step-block">
+              <label class="booking-field-label" for="booking-order-staff-name">Tên nhân viên lên đơn <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
+              <input class="form-control form-control-lg" id="booking-order-staff-name" name="order_staff_name" autocomplete="off" placeholder="Ví dụ: Bạn Hoa">
+            </section>
+          {{/if}}
+
           <section class="booking-step-block">
             <label class="booking-field-label" for="booking-note">Ghi chú <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
             <textarea class="form-control" id="booking-note" name="note" rows="3" placeholder="Ví dụ: bàn gần cửa, có trẻ em, sinh nhật..."></textarea>

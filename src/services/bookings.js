@@ -41,6 +41,7 @@ function bookingSelect(includeLogs = false) {
       b.phone,
       b.booking_time,
       b.guest_count,
+      b.order_staff_name,
       b.note,
       b.status,
       b.actual_guest_count,
@@ -289,10 +290,19 @@ async function createBooking(input) {
     await ensureBranch(client, data.branch_id);
     const customerId = await upsertCustomerByPhone(client, data);
     const bookingResult = await client.query(
-      `INSERT INTO bookings (customer_id, branch_id, customer_name, phone, booking_time, guest_count, note, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
+      `INSERT INTO bookings (customer_id, branch_id, customer_name, phone, booking_time, guest_count, order_staff_name, note, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING')
        RETURNING id`,
-      [customerId, data.branch_id, data.customer_name, data.phone, data.booking_time, data.guest_count, data.note || null]
+      [
+        customerId,
+        data.branch_id,
+        data.customer_name,
+        data.phone,
+        data.booking_time,
+        data.guest_count,
+        data.order_staff_name || null,
+        data.note || null
+      ]
     );
 
     await logStatusChange(client, bookingResult.rows[0].id, null, 'PENDING', 'Đã tạo yêu cầu đặt bàn');
@@ -349,7 +359,7 @@ async function updateBooking(id, input = {}) {
       setColumn('customer_id', customerId);
     }
 
-    for (const column of ['branch_id', 'customer_name', 'phone', 'booking_time', 'guest_count', 'note']) {
+    for (const column of ['branch_id', 'customer_name', 'phone', 'booking_time', 'guest_count', 'order_staff_name', 'note']) {
       if (Object.prototype.hasOwnProperty.call(data, column)) {
         setColumn(column, data[column]);
       }

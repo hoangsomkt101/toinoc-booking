@@ -292,6 +292,7 @@ function bookingPayload(booking) {
     address: sheetAddress(booking),
     name: booking.customer_name,
     tel: booking.phone,
+    order_staff_name: booking.order_staff_name || '',
     note: booking.note || ''
   };
 }

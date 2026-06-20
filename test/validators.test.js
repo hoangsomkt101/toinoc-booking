@@ -37,6 +37,7 @@ test('validateBookingPayload normalizes create input', () => {
     phone: ' 0909000000 ',
     booking_time: '2027-01-01T18:30:00+07:00',
     guest_count: '4',
+    order_staff_name: '  Bạn Hoa  ',
     note: ' Birthday ',
     branch_id: '1'
   });
@@ -44,6 +45,7 @@ test('validateBookingPayload normalizes create input', () => {
   assert.equal(payload.customer_name, 'Linh Nguyen');
   assert.equal(payload.phone, '0909000000');
   assert.equal(payload.guest_count, 4);
+  assert.equal(payload.order_staff_name, 'Bạn Hoa');
   assert.equal(payload.note, 'Birthday');
   assert.equal(payload.branch_id, 1);
   assert.ok(payload.booking_time instanceof Date);

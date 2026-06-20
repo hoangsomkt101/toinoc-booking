@@ -801,6 +801,10 @@
           <label class="form-label fw-semibold small">Chi nhánh</label>
           <select class="form-select" name="branch_id" required>${branchOptions(booking.branch_id)}</select>
         </div>
+        <div class="col-12 col-sm-6">
+          <label class="form-label fw-semibold small">Tên nhân viên lên đơn</label>
+          <input class="form-control" name="order_staff_name" value="${escapeHtml(booking.order_staff_name || '')}">
+        </div>
         <div class="col-12">
           <label class="form-label fw-semibold small">Ghi chú</label>
           <textarea class="form-control" name="note" rows="3">${escapeHtml(booking.note || '')}</textarea>
@@ -1553,6 +1557,9 @@
     const note = booking.note
       ? `<div class="timeline-note">Ghi chú: ${escapeHtml(booking.note)}</div>`
       : '';
+    const orderStaff = booking.order_staff_name
+      ? `<div class="timeline-note">Nhân viên lên đơn: ${escapeHtml(booking.order_staff_name)}</div>`
+      : '';
     const customerMeta = bookingCustomerMeta(booking);
 
     return `
@@ -1575,6 +1582,7 @@
             <span class="timeline-table${tableClass}" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>
           </div>
           ${notice}
+          ${orderStaff}
           ${note}
           <div class="action-row timeline-action-row">
             ${callAction}
