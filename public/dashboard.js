@@ -1322,17 +1322,25 @@
       return '';
     }
 
+    const assigned = hasAssignedTables(booking);
+
     if (booking.status === 'PENDING') {
       buttons.push('<button class="btn btn-outline-danger btn-sm booking-action-btn" data-action="cancel">Hủy</button>');
     }
 
-    if (booking.status === 'PENDING' || booking.status === 'CANCELLED' || (booking.status === 'CONFIRMED' && !hasAssignedTables(booking))) {
+    if (!assigned && (booking.status === 'PENDING' || booking.status === 'CANCELLED' || booking.status === 'CONFIRMED')) {
       buttons.push(`
         <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}">Xếp bàn</button>
       `);
     }
 
-    if (booking.status === 'CONFIRMED' && hasAssignedTables(booking)) {
+    if (assigned && ['PENDING', 'CANCELLED', 'CONFIRMED', 'CHECKED_IN'].includes(booking.status)) {
+      buttons.push(`
+        <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}" data-booking-assign-title="Đổi bàn">Đổi bàn</button>
+      `);
+    }
+
+    if (booking.status === 'CONFIRMED' && assigned) {
       buttons.push('<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="check-in">Check-in</button>');
     }
 
@@ -2873,7 +2881,7 @@
     if (type === 'booking-assign') {
       const booking = findBooking(button.dataset.bookingId);
       if (booking) {
-        openManagementPopup({ eyebrow: 'Đặt bàn', title: 'Xếp bàn', body: bookingAssignForm(booking) });
+        openManagementPopup({ eyebrow: 'Đặt bàn', title: button.dataset.bookingAssignTitle || 'Xếp bàn', body: bookingAssignForm(booking) });
       }
       return;
     }
