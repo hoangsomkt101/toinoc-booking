@@ -410,56 +410,25 @@
       .join('');
   }
 
-  function timeSlotMinutes(timeValue) {
-    if (timeValue === '24:00') {
-      return 24 * 60;
-    }
-
-    const [hours, minutes] = String(timeValue || '').split(':').map(Number);
-    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-      return Number.MAX_SAFE_INTEGER;
-    }
-
-    return hours * 60 + minutes;
-  }
-
   function formatTimeSlot(minutes) {
-    if (minutes >= 24 * 60) {
-      return '24:00';
-    }
-
     const hours = Math.floor(minutes / 60);
     const minutePart = minutes % 60;
 
     return `${String(hours).padStart(2, '0')}:${String(minutePart).padStart(2, '0')}`;
   }
 
-  function nextEditableTimeSlotMinutes(now = new Date()) {
-    const currentMinutes = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() || now.getMilliseconds() ? 1 : 0);
-
-    return Math.min(24 * 60, Math.ceil(currentMinutes / 30) * 30);
+  function currentTimeInputValue(now = new Date()) {
+    return formatTimeSlot(now.getHours() * 60 + now.getMinutes());
   }
 
-  function bookingEditTimeChoices(selectedDate = todayDateValue(), selectedTime = '') {
-    const today = todayDateValue();
-    const startMinutes = selectedDate === today ? nextEditableTimeSlotMinutes() : 0;
-    const slots = [];
+  function bookingEditMinTime(selectedDate = todayDateValue(), now = new Date()) {
+    const floor = '17:00';
 
-    for (let minutes = startMinutes; minutes <= 24 * 60; minutes += 30) {
-      slots.push(formatTimeSlot(minutes));
+    if (selectedDate !== todayDateValue()) {
+      return floor;
     }
 
-    if (selectedTime && !slots.includes(selectedTime)) {
-      slots.push(selectedTime);
-    }
-
-    return [...new Set(slots)].sort((left, right) => timeSlotMinutes(left) - timeSlotMinutes(right));
-  }
-
-  function bookingEditTimeOptions(selectedTime = '', selectedDate = todayDateValue()) {
-    return bookingEditTimeChoices(selectedDate, selectedTime)
-      .map((time) => `<option value="${escapeHtml(time)}" ${time === selectedTime ? 'selected' : ''}>${escapeHtml(time)}</option>`)
-      .join('');
+    return currentTimeInputValue(now) > floor ? currentTimeInputValue(now) : floor;
   }
 
   function bookingFormDateParts(value) {
@@ -1060,8 +1029,8 @@
 
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
-          <select class="form-select" name="booking_time_slot" data-edit-booking-time required>${bookingEditTimeOptions(parts.time, parts.date)}</select>
-          <div class="form-text small">Khung giờ cách nhau 30 phút, từ hiện tại đến 24:00.</div>
+          <input class="form-control" name="booking_time_slot" type="time" value="${escapeHtml(parts.time === '24:00' ? '23:59' : parts.time)}" min="${escapeHtml(bookingEditMinTime(parts.date))}" max="23:59" step="60" data-edit-booking-time required>
+          <div class="form-text small">Chọn giờ chính xác theo phút. Giờ hợp lệ bắt đầu từ 17:00, hoặc từ thời điểm hiện tại nếu sửa booking hôm nay.</div>
         </section>
 
         <div class="booking-two-column">
@@ -1827,16 +1796,15 @@
     }
   }
 
-  function syncEditTimeOptions(form) {
+  function syncEditTimeInput(form) {
     const dateInput = form?.querySelector('[data-edit-booking-date]');
-    const timeSelect = form?.querySelector('[data-edit-booking-time]');
+    const timeInput = form?.querySelector('[data-edit-booking-time]');
 
-    if (!dateInput || !timeSelect) {
+    if (!dateInput || !timeInput) {
       return;
     }
 
-    const currentTime = timeSelect.value;
-    timeSelect.innerHTML = bookingEditTimeOptions(currentTime, dateInput.value || todayDateValue());
+    timeInput.min = bookingEditMinTime(dateInput.value || todayDateValue());
   }
 
   function toggleAssignTable(button) {
@@ -3539,7 +3507,7 @@
   document.addEventListener('change', (event) => {
     const editDateInput = event.target.closest('[data-edit-booking-date]');
     if (editDateInput) {
-      syncEditTimeOptions(editDateInput.closest('[data-booking-update]'));
+      syncEditTimeInput(editDateInput.closest('[data-booking-update]'));
       return;
     }
 
