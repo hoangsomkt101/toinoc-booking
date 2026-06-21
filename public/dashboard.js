@@ -410,6 +410,58 @@
       .join('');
   }
 
+  function timeSlotMinutes(timeValue) {
+    if (timeValue === '24:00') {
+      return 24 * 60;
+    }
+
+    const [hours, minutes] = String(timeValue || '').split(':').map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    return hours * 60 + minutes;
+  }
+
+  function formatTimeSlot(minutes) {
+    if (minutes >= 24 * 60) {
+      return '24:00';
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const minutePart = minutes % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutePart).padStart(2, '0')}`;
+  }
+
+  function nextEditableTimeSlotMinutes(now = new Date()) {
+    const currentMinutes = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() || now.getMilliseconds() ? 1 : 0);
+
+    return Math.min(24 * 60, Math.ceil(currentMinutes / 30) * 30);
+  }
+
+  function bookingEditTimeChoices(selectedDate = todayDateValue(), selectedTime = '') {
+    const today = todayDateValue();
+    const startMinutes = selectedDate === today ? nextEditableTimeSlotMinutes() : 0;
+    const slots = [];
+
+    for (let minutes = startMinutes; minutes <= 24 * 60; minutes += 30) {
+      slots.push(formatTimeSlot(minutes));
+    }
+
+    if (selectedTime && !slots.includes(selectedTime)) {
+      slots.push(selectedTime);
+    }
+
+    return [...new Set(slots)].sort((left, right) => timeSlotMinutes(left) - timeSlotMinutes(right));
+  }
+
+  function bookingEditTimeOptions(selectedTime = '', selectedDate = todayDateValue()) {
+    return bookingEditTimeChoices(selectedDate, selectedTime)
+      .map((time) => `<option value="${escapeHtml(time)}" ${time === selectedTime ? 'selected' : ''}>${escapeHtml(time)}</option>`)
+      .join('');
+  }
+
   function bookingFormDateParts(value) {
     const localValue = formatDateTimeLocal(value);
 
@@ -947,6 +999,18 @@
     `;
   }
 
+  function bookingEditAssignmentGrid(booking) {
+    const selectedCount = (booking.assigned_tables || []).length;
+
+    return `
+      <div>
+        ${assignmentAreaGrid(booking)}
+        ${tableGrid(booking)}
+        <div class="form-text" data-assign-selected-count>${selectedCount ? `Đã chọn ${selectedCount} bàn.` : 'Chọn một hoặc nhiều bàn.'}</div>
+      </div>
+    `;
+  }
+
   function managementMessage() {
     return '<p class="form-message small text-body-secondary mb-0" data-management-message role="status"></p>';
   }
@@ -986,28 +1050,18 @@
       <form class="booking-public-form booking-edit-public-form" data-booking-form data-booking-form-mode="edit" data-booking-update="${escapeHtml(booking.id)}">
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">1</span> Ngày đặt bàn <span class="required-mark">*</span></div>
-          <div class="booking-date-row">
-            <button class="booking-date-chip" type="button" data-date-offset="0">Hôm nay</button>
-            <button class="booking-date-chip" type="button" data-date-offset="1">Ngày mai</button>
-            <input class="booking-date-input" name="booking_date" type="date" value="${escapeHtml(parts.date)}" required>
-          </div>
+          <input class="form-control" name="booking_date" type="date" value="${escapeHtml(parts.date)}" data-edit-booking-date required>
         </section>
 
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">2</span> Chi nhánh <span class="required-mark">*</span></div>
-          <input name="branch_id" type="hidden" value="${escapeHtml(booking.branch_id)}" data-booking-branch>
-          <div class="booking-branch-grid">
-            ${bookingBranchCards(booking.branch_id)}
-          </div>
+          <select class="form-select" name="branch_id" data-edit-booking-branch required>${branchOptions(booking.branch_id)}</select>
         </section>
 
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
-          <input name="booking_time_slot" type="hidden" value="${escapeHtml(parts.time)}">
-          <div class="booking-time-grid">
-            ${bookingTimeChoiceButtons(parts.time)}
-          </div>
-          <div class="form-text small">Khung giờ cách nhau 30 phút. Chọn 24:00 sẽ được tính là 00:00 ngày kế tiếp.</div>
+          <select class="form-select" name="booking_time_slot" data-edit-booking-time required>${bookingEditTimeOptions(parts.time, parts.date)}</select>
+          <div class="form-text small">Khung giờ cách nhau 30 phút, từ hiện tại đến 24:00.</div>
         </section>
 
         <div class="booking-two-column">
@@ -1040,6 +1094,13 @@
         <section class="booking-step-block">
           <label class="booking-field-label">Ghi chú <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
           <textarea class="form-control" name="note" rows="3">${escapeHtml(booking.note || '')}</textarea>
+        </section>
+
+        <section class="booking-step-block">
+          <label class="booking-field-label">Xếp bàn</label>
+          <div data-edit-assignment-grid>
+            ${bookingEditAssignmentGrid(booking)}
+          </div>
         </section>
 
         <div class="booking-edit-actions">
@@ -1753,7 +1814,7 @@
   }
 
   function setAssignAreaFilter(button) {
-    const form = button.closest('[data-booking-assign]');
+    const form = button.closest('[data-booking-assign], [data-booking-update]');
 
     if (!form) {
       return;
@@ -1766,8 +1827,20 @@
     }
   }
 
+  function syncEditTimeOptions(form) {
+    const dateInput = form?.querySelector('[data-edit-booking-date]');
+    const timeSelect = form?.querySelector('[data-edit-booking-time]');
+
+    if (!dateInput || !timeSelect) {
+      return;
+    }
+
+    const currentTime = timeSelect.value;
+    timeSelect.innerHTML = bookingEditTimeOptions(currentTime, dateInput.value || todayDateValue());
+  }
+
   function toggleAssignTable(button) {
-    const form = button.closest('[data-booking-assign]');
+    const form = button.closest('[data-booking-assign], [data-booking-update]');
 
     if (!form) {
       return;
@@ -1775,6 +1848,106 @@
 
     button.classList.toggle('selected');
     updateAssignTableSelection(form);
+  }
+
+  function selectedAssignTableIds(form) {
+    return [...(form?.querySelectorAll('[data-assign-table-card].selected') || [])].map((card) => card.dataset.tableId).filter(Boolean);
+  }
+
+  function sortedIdList(ids = []) {
+    return ids.map(String).filter(Boolean).sort((left, right) => Number(left) - Number(right));
+  }
+
+  function sameIdList(left = [], right = []) {
+    const leftIds = sortedIdList(left);
+    const rightIds = sortedIdList(right);
+
+    return leftIds.length === rightIds.length && leftIds.every((id, index) => id === rightIds[index]);
+  }
+
+  function tableById(id) {
+    for (const table of [
+      ...(state.dashboard.assignable_tables || []),
+      ...(state.dashboard.available_tables || []),
+      ...(state.dashboard.active_tables || []),
+      ...allDashboardBookings().flatMap((booking) => booking.assigned_tables || [])
+    ]) {
+      if (String(table.id) === String(id)) {
+        return table;
+      }
+    }
+
+    return undefined;
+  }
+
+  function selectedAssignTables(form) {
+    return selectedAssignTableIds(form)
+      .map((id) => tableById(id))
+      .filter(Boolean);
+  }
+
+  async function ensureAssignableTablesForBranch(branchId) {
+    if (!branchId) {
+      return;
+    }
+
+    const knownTables = state.dashboard.assignable_tables || [];
+    if (knownTables.some((table) => String(table.branch_id) === String(branchId))) {
+      return;
+    }
+
+    const tables = await request(scopedPathWithParams('/api/tables', { branch_id: branchId }));
+    const byId = new Map(knownTables.map((table) => [String(table.id), table]));
+
+    for (const table of tables || []) {
+      if (table.status !== 'BLOCKED') {
+        byId.set(String(table.id), table);
+      }
+    }
+
+    state.dashboard.assignable_tables = [...byId.values()];
+  }
+
+  function editAssignmentBooking(form, selectedTables = selectedAssignTables(form)) {
+    const booking = findBooking(form.dataset.bookingUpdate);
+    const branchId = form.querySelector('[name="branch_id"]')?.value || booking?.branch_id;
+    const branchChanged = booking && String(branchId) !== String(booking.branch_id);
+    const branch = findBranch(branchId);
+    const selectedArea = form.querySelector('[data-assign-area].selected')?.dataset.assignArea;
+    const defaultAreaId = branchChanged ? branch?.areas?.[0]?.id : booking?.area_id;
+
+    return {
+      ...(booking || {}),
+      branch_id: branchId,
+      area_id: selectedArea || defaultAreaId || null,
+      area_name: findArea(selectedArea || defaultAreaId)?.name || '',
+      assigned_tables: selectedTables.filter((table) => String(table.branch_id) === String(branchId))
+    };
+  }
+
+  async function refreshEditAssignmentGrid(form) {
+    if (!form) {
+      return;
+    }
+
+    const branchId = form.querySelector('[name="branch_id"]')?.value;
+    const grid = form.querySelector('[data-edit-assignment-grid]');
+
+    if (!grid) {
+      return;
+    }
+
+    const selectedTables = selectedAssignTables(form);
+    grid.innerHTML = '<div class="text-body-secondary small">Đang tải bàn...</div>';
+
+    try {
+      await ensureAssignableTablesForBranch(branchId);
+      const booking = editAssignmentBooking(form, selectedTables);
+      grid.innerHTML = bookingEditAssignmentGrid(booking);
+      updateAssignTableSelection(form);
+    } catch (error) {
+      grid.innerHTML = `<div class="alert alert-danger mb-0">${escapeHtml(error.message)}</div>`;
+    }
   }
 
   function renderTimelineBooking(booking) {
@@ -2800,7 +2973,32 @@
         button.disabled = false;
         return;
       }
+      const bookingBeforeUpdate = findBooking(form.dataset.bookingUpdate);
+      const selectedArea = form.querySelector('[data-assign-area].selected');
+      const selectedTableIds = selectedAssignTableIds(form);
+      const previousTableIds = (bookingBeforeUpdate?.assigned_tables || []).map((table) => table.id);
+      const branchChanged = bookingBeforeUpdate && String(data.branch_id) !== String(bookingBeforeUpdate.branch_id);
+      const areaChanged = selectedTableIds.length > 0 && selectedArea && String(selectedArea.dataset.assignArea || '') !== String(bookingBeforeUpdate?.area_id || '');
+      const assignmentChanged = branchChanged || areaChanged || !sameIdList(selectedTableIds, previousTableIds);
+
+      if (selectedTableIds.length > 0 && selectedArea?.dataset.assignArea) {
+        data.area_id = selectedArea.dataset.assignArea;
+      }
+
+      if (assignmentChanged && selectedTableIds.length === 0 && previousTableIds.length > 0 && !branchChanged) {
+        setFormStatus(form, selectors.formMessage, 'Vui lòng chọn ít nhất một bàn khi thay đổi xếp bàn.');
+        button.disabled = false;
+        return;
+      }
+
       await request(`/api/bookings/${form.dataset.bookingUpdate}`, { method: 'PUT', body: data });
+
+      if (assignmentChanged && selectedTableIds.length > 0) {
+        await request(`/api/bookings/${form.dataset.bookingUpdate}/assign`, {
+          method: 'POST',
+          body: { area_id: selectedArea?.dataset.assignArea, table_ids: selectedTableIds }
+        });
+      }
       setFormStatus(form, selectors.formMessage, 'Đã cập nhật yêu cầu đặt bàn.');
       await refreshDashboard();
       closeManagementPopup();
@@ -3336,6 +3534,18 @@
     const bookingDateInput = event.target.closest('[data-booking-form] [name="booking_date"]');
     if (bookingDateInput) {
       updateBookingDateChips(bookingDateInput.value, bookingDateInput.closest('[data-booking-form]'));
+    }
+  });
+  document.addEventListener('change', (event) => {
+    const editDateInput = event.target.closest('[data-edit-booking-date]');
+    if (editDateInput) {
+      syncEditTimeOptions(editDateInput.closest('[data-booking-update]'));
+      return;
+    }
+
+    const editBranchSelect = event.target.closest('[data-edit-booking-branch]');
+    if (editBranchSelect) {
+      refreshEditAssignmentGrid(editBranchSelect.closest('[data-booking-update]'));
     }
   });
   document.addEventListener('change', handleBookingStatusSelect);

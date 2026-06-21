@@ -2185,11 +2185,6 @@ a:hover {
 
 .form-control,
 .form-select {
-  min-height: 50px;
-}
-
-.form-control,
-.form-select {
   background-color: #fffdf8;
   border-color: var(--line);
   border-radius: 13px;
