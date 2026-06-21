@@ -51,6 +51,7 @@
     { key: 'completed', label: 'Hoàn tất' },
     { key: 'late_cancelled', label: 'Trễ, huỷ' }
   ];
+  const bookingTimeChoices = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '24:00'];
   let activeBookingTab = 'all';
   let bookingQuickSearchValue = '';
   let notificationSoundUnlocked = false;
@@ -389,6 +390,45 @@
       .join('');
   }
 
+  function bookingBranchCards(selectedId = '') {
+    return state.branches
+      .map(
+        (branch) => `
+          <button class="booking-choice-card ${String(branch.id) === String(selectedId || '') ? 'active' : ''}" type="button" data-branch-choice="${escapeHtml(branch.id)}" aria-pressed="${String(branch.id) === String(selectedId || '') ? 'true' : 'false'}">
+            <span class="booking-choice-name">${escapeHtml(branch.name)}</span>
+            <span class="booking-choice-sub">${escapeHtml(branch.address || 'Chưa có địa chỉ')}</span>
+          </button>
+        `
+      )
+      .join('');
+  }
+
+  function bookingTimeChoiceButtons(selectedTime = '') {
+    return bookingTimeChoices
+      .map((time) => `<button class="booking-time-choice ${time === selectedTime ? 'active' : ''}" type="button" data-time-choice="${escapeHtml(time)}" aria-pressed="${time === selectedTime ? 'true' : 'false'}">${escapeHtml(time)}</button>`)
+      .join('');
+  }
+
+  function bookingFormDateParts(value) {
+    const localValue = formatDateTimeLocal(value);
+
+    if (!localValue) {
+      return { date: todayDateValue(), time: '' };
+    }
+
+    const date = localValue.slice(0, 10);
+    const time = localValue.slice(11, 16);
+
+    if (time === '00:00') {
+      const previousDate = new Date(`${date}T00:00`);
+      previousDate.setDate(previousDate.getDate() - 1);
+
+      return { date: formatDateTimeLocal(previousDate).slice(0, 10), time: '24:00' };
+    }
+
+    return { date, time };
+  }
+
   function sheetTargetTypeLabel(targetType) {
     return targetType === 'ALL' ? 'Sheet tổng' : 'Sheet chia chi nhánh';
   }
@@ -545,12 +585,13 @@
     }
 
     if (!select.options) {
+      const scope = select.closest('[data-booking-form]') || document;
       const fallback = state.branches.length ? String(state.branches[0].id) : '';
       const nextValue = value && state.branches.some((branch) => String(branch.id) === String(value))
         ? String(value)
         : select.value || fallback;
       select.value = nextValue;
-      updateBookingBranchChoices(nextValue);
+      updateBookingBranchChoices(nextValue, scope);
       return;
     }
 
@@ -596,7 +637,8 @@
   }
 
   function syncBookingDateControls() {
-    const dateInput = document.getElementById('booking-date');
+    const createForm = document.getElementById('create-booking-form');
+    const dateInput = createForm?.querySelector('[name="booking_date"]') || document.getElementById('booking-date');
 
     if (!dateInput) {
       return;
@@ -607,12 +649,14 @@
     if (!dateInput.value) {
       dateInput.value = today;
     }
-    updateBookingDateChips(dateInput.value);
+    updateBookingDateChips(dateInput.value, createForm || document);
   }
 
-  function updateBookingDateChips(value) {
-    for (const button of document.querySelectorAll('#create-booking-form [data-date-offset]')) {
-      button.classList.toggle('active', dateOffsetValue(button.dataset.dateOffset) === value);
+  function updateBookingDateChips(value, scope = document) {
+    for (const button of scope.querySelectorAll('[data-date-offset]')) {
+      const active = dateOffsetValue(button.dataset.dateOffset) === value;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
   }
 
@@ -640,20 +684,22 @@
     refreshDashboard();
   }
 
-  function setBookingDateValue(value) {
-    const dateInput = document.getElementById('booking-date');
+  function setBookingDateValue(value, scope = document) {
+    const dateInput = scope.querySelector('[name="booking_date"]') || document.getElementById('booking-date');
 
     if (!dateInput) {
       return;
     }
 
     dateInput.value = value;
-    updateBookingDateChips(value);
+    updateBookingDateChips(value, scope);
   }
 
-  function updateBookingBranchChoices(value) {
-    for (const button of document.querySelectorAll('[data-branch-choice]')) {
-      button.classList.toggle('active', String(button.dataset.branchChoice) === String(value || ''));
+  function updateBookingBranchChoices(value, scope = document) {
+    for (const button of scope.querySelectorAll('[data-branch-choice]')) {
+      const active = String(button.dataset.branchChoice) === String(value || '');
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
   }
 
@@ -662,34 +708,27 @@
       return;
     }
 
-    selectors.bookingBranchGrid.innerHTML = state.branches
-      .map(
-        (branch) => `
-          <button class="booking-choice-card" type="button" data-branch-choice="${escapeHtml(branch.id)}">
-            <span class="booking-choice-name">${escapeHtml(branch.name)}</span>
-            <span class="booking-choice-sub">${escapeHtml(branch.address || 'Chưa có địa chỉ')}</span>
-          </button>
-        `
-      )
-      .join('');
-    updateBookingBranchChoices(selectors.bookingBranch?.value);
+    selectors.bookingBranchGrid.innerHTML = bookingBranchCards(selectors.bookingBranch?.value);
+    updateBookingBranchChoices(selectors.bookingBranch?.value, selectors.bookingBranchGrid.closest('[data-booking-form]') || document);
   }
 
-  function setBookingTimeSlot(value) {
-    const input = document.getElementById('booking-time-slot');
+  function setBookingTimeSlot(value, scope = document) {
+    const input = scope.querySelector('[name="booking_time_slot"]') || document.getElementById('booking-time-slot');
 
     if (input) {
       input.value = value || '';
     }
 
-    for (const button of document.querySelectorAll('[data-time-choice]')) {
-      button.classList.toggle('active', button.dataset.timeChoice === value);
+    for (const button of scope.querySelectorAll('[data-time-choice]')) {
+      const active = button.dataset.timeChoice === value;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
   }
 
-  function setGuestCount(value) {
-    const input = document.querySelector('[data-guest-count]');
-    const display = document.getElementById('booking-guest-display');
+  function setGuestCount(value, scope = document) {
+    const input = scope.querySelector('[data-guest-count]');
+    const display = scope.querySelector('[data-guest-display]') || document.getElementById('booking-guest-display');
     const nextValue = Math.min(50, Math.max(1, Number(value) || 1));
 
     if (input) {
@@ -939,41 +978,74 @@
   }
 
   function bookingEditForm(booking) {
+    const parts = bookingFormDateParts(booking.booking_time);
+    const guestCount = booking.guest_count || 2;
+
     return `
-      <form class="management-form row g-3" data-booking-update="${escapeHtml(booking.id)}">
-        <div class="col-12 col-sm-6">
-          <label class="form-label fw-semibold small">Tên khách hàng</label>
-          <input class="form-control" name="customer_name" value="${escapeHtml(booking.customer_name)}" required>
+      <form class="booking-public-form booking-edit-public-form" data-booking-form data-booking-form-mode="edit" data-booking-update="${escapeHtml(booking.id)}">
+        <section class="booking-step-block">
+          <div class="booking-step-label"><span class="booking-step-number">1</span> Ngày đặt bàn <span class="required-mark">*</span></div>
+          <div class="booking-date-row">
+            <button class="booking-date-chip" type="button" data-date-offset="0">Hôm nay</button>
+            <button class="booking-date-chip" type="button" data-date-offset="1">Ngày mai</button>
+            <input class="booking-date-input" name="booking_date" type="date" value="${escapeHtml(parts.date)}" required>
+          </div>
+        </section>
+
+        <section class="booking-step-block">
+          <div class="booking-step-label"><span class="booking-step-number">2</span> Chi nhánh <span class="required-mark">*</span></div>
+          <input name="branch_id" type="hidden" value="${escapeHtml(booking.branch_id)}" data-booking-branch>
+          <div class="booking-branch-grid">
+            ${bookingBranchCards(booking.branch_id)}
+          </div>
+        </section>
+
+        <section class="booking-step-block">
+          <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
+          <input name="booking_time_slot" type="hidden" value="${escapeHtml(parts.time)}">
+          <div class="booking-time-grid">
+            ${bookingTimeChoiceButtons(parts.time)}
+          </div>
+          <div class="form-text small">Khung giờ cách nhau 30 phút. Chọn 24:00 sẽ được tính là 00:00 ngày kế tiếp.</div>
+        </section>
+
+        <div class="booking-two-column">
+          <section class="booking-step-block">
+            <label class="booking-field-label">Số khách <span class="required-mark">*</span></label>
+            <input name="guest_count" type="hidden" value="${escapeHtml(guestCount)}" data-guest-count>
+            <div class="booking-stepper" aria-label="Chọn số khách">
+              <button class="booking-stepper-button" type="button" data-guest-step="-1" aria-label="Giảm số khách">-</button>
+              <span class="booking-stepper-value" data-guest-display>${escapeHtml(guestCount)}</span>
+              <button class="booking-stepper-button" type="button" data-guest-step="1" aria-label="Tăng số khách">+</button>
+            </div>
+          </section>
+
+          <section class="booking-step-block">
+            <label class="booking-field-label">Số điện thoại <span class="required-mark">*</span></label>
+            <input class="form-control form-control-lg" name="phone" value="${escapeHtml(booking.phone)}" autocomplete="tel" inputmode="tel" required>
+          </section>
         </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label fw-semibold small">Số điện thoại</label>
-          <input class="form-control" name="phone" value="${escapeHtml(booking.phone)}" required>
-        </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label fw-semibold small">Thời gian đặt bàn</label>
-          <input class="form-control" name="booking_time" type="datetime-local" value="${escapeHtml(formatDateTimeLocal(booking.booking_time))}" required>
-        </div>
-        <div class="col-6 col-sm-3">
-          <label class="form-label fw-semibold small">Số khách</label>
-          <input class="form-control" name="guest_count" type="number" min="1" value="${escapeHtml(booking.guest_count)}" required>
-        </div>
-        <div class="col-6 col-sm-3">
-          <label class="form-label fw-semibold small">Chi nhánh</label>
-          <select class="form-select" name="branch_id" required>${branchOptions(booking.branch_id)}</select>
-        </div>
-        <div class="col-12 col-sm-6">
-          <label class="form-label fw-semibold small">Tên nhân viên lên đơn</label>
-          <input class="form-control" name="order_staff_name" value="${escapeHtml(booking.order_staff_name || '')}">
-        </div>
-        <div class="col-12">
-          <label class="form-label fw-semibold small">Ghi chú</label>
+
+        <section class="booking-step-block">
+          <label class="booking-field-label">Tên người đặt <span class="required-mark">*</span></label>
+          <input class="form-control form-control-lg" name="customer_name" value="${escapeHtml(booking.customer_name)}" autocomplete="name" required>
+        </section>
+
+        <section class="booking-step-block">
+          <label class="booking-field-label">Tên nhân viên lên đơn <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
+          <input class="form-control form-control-lg" name="order_staff_name" value="${escapeHtml(booking.order_staff_name || '')}" autocomplete="off">
+        </section>
+
+        <section class="booking-step-block">
+          <label class="booking-field-label">Ghi chú <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
           <textarea class="form-control" name="note" rows="3">${escapeHtml(booking.note || '')}</textarea>
+        </section>
+
+        <div class="booking-edit-actions">
+          <button class="btn btn-warning btn-lg fw-bold form-submit booking-submit-button" type="submit">Lưu thay đổi</button>
+          <button class="btn btn-outline-danger" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}">Xóa đặt bàn</button>
         </div>
-        <div class="col-12 d-grid gap-2 d-sm-flex">
-          <button class="btn btn-warning fw-bold flex-sm-fill" type="submit">Lưu thay đổi</button>
-          <button class="btn btn-outline-danger flex-sm-fill" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}">Xóa đặt bàn</button>
-        </div>
-        <div class="col-12">${managementMessage()}</div>
+        ${managementMessage()}
       </form>
     `;
   }
@@ -1344,43 +1416,32 @@
   }
 
   function actionButtons(booking) {
-    const buttons = [];
-
     if (!canManageBookings()) {
       return '';
     }
 
     const assigned = hasAssignedTables(booking);
-
-    if (booking.status === 'PENDING') {
-      buttons.push('<button class="btn btn-outline-danger btn-sm booking-action-btn" data-action="cancel">Hủy</button>');
-    }
-
-    if (!assigned && (booking.status === 'PENDING' || booking.status === 'CANCELLED' || booking.status === 'CONFIRMED')) {
-      buttons.push(`
-        <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}">Xếp bàn</button>
-      `);
-    }
-
-    if (assigned && ['PENDING', 'CANCELLED', 'CONFIRMED', 'CHECKED_IN'].includes(booking.status)) {
-      buttons.push(`
-        <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-assign" data-booking-id="${escapeHtml(booking.id)}" data-booking-assign-title="Đổi bàn">Đổi bàn</button>
-      `);
-    }
-
-    if (booking.status === 'CONFIRMED' && assigned) {
-      buttons.push('<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="check-in">Check-in</button>');
-    }
+    const callHref = phoneCallHref(booking.phone);
+    const callButton = callHref
+      ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
+      : '<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>Call</button>';
+    let checkButton = '';
 
     if (booking.status === 'CHECKED_IN') {
-      buttons.push('<button class="btn btn-warning btn-sm fw-bold booking-action-btn" data-action="check-out">Check-out</button>');
+      checkButton = '<button class="btn btn-warning btn-sm fw-bold booking-action-btn" data-action="check-out">Check-out</button>';
+    } else if (['PENDING', 'CONFIRMED'].includes(booking.status)) {
+      checkButton = `<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="check-in" ${assigned ? '' : 'disabled title="Cần xếp bàn trước khi check-in"'}>Check-in</button>`;
+    } else if (booking.status === 'CHECKED_OUT') {
+      checkButton = '<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>Đã checkout</button>';
+    } else {
+      checkButton = `<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>${escapeHtml(bookingStatusLabel(booking.status))}</button>`;
     }
 
-    if (booking.status === 'CHECKED_OUT') {
-      buttons.push('<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="complete">Hoàn tất</button>');
-    }
+    const editButton = `
+      <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-edit" data-booking-id="${escapeHtml(booking.id)}">Chỉnh sửa</button>
+    `;
 
-    return buttons.join('');
+    return [callButton, checkButton, editButton].join('');
   }
 
   function bookingManagement(booking) {
@@ -1718,14 +1779,9 @@
     const areaLabel = booking.area_name || 'Chưa chọn khu vực';
     const controls = canManageBookings() ? actionButtons(booking) : '';
     const timelineState = bookingTimelineState(booking);
-    const callHref = phoneCallHref(booking.phone);
-    const callAction = canManageBookings() && callHref && arrivalPendingStatuses.includes(booking.status)
-      ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
-      : '';
-    const actionRow = callAction || controls
+    const actionRow = controls
       ? `
           <div class="action-row timeline-action-row">
-            ${callAction}
             ${controls}
           </div>
         `
@@ -2204,10 +2260,7 @@
     clearBookingSummary();
 
     const form = event.currentTarget;
-    const data = Object.fromEntries(new FormData(form).entries());
-    data.booking_time = bookingDateTimeValue(data.booking_date, data.booking_time_slot);
-    delete data.booking_date;
-    delete data.booking_time_slot;
+    const data = bookingFormPayload(form);
 
     if (!data.branch_id) {
       selectors.formMessage.textContent = 'Vui lòng chọn chi nhánh.';
@@ -2227,8 +2280,8 @@
       form.reset();
       syncBookingDateControls();
       setBranchSelectValue(selectors.bookingBranch, selectedBranchId());
-      setBookingTimeSlot('');
-      setGuestCount(2);
+      setBookingTimeSlot('', form);
+      setGuestCount(2, form);
       clearCustomerQuickfill();
       selectors.formMessage.textContent = 'Đã tạo yêu cầu đặt bàn. Nội dung phiếu hiển thị bên dưới.';
       renderCreatedBookingSummary(booking);
@@ -2238,6 +2291,15 @@
     } catch (error) {
       selectors.formMessage.textContent = error.message;
     }
+  }
+
+  function bookingFormPayload(form) {
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.booking_time = bookingDateTimeValue(data.booking_date, data.booking_time_slot);
+    delete data.booking_date;
+    delete data.booking_time_slot;
+
+    return data;
   }
 
   async function handleCreateUser(event) {
@@ -2724,7 +2786,17 @@
     setFormStatus(form, selectors.formMessage, 'Đang cập nhật yêu cầu đặt bàn...');
 
     try {
-      const data = Object.fromEntries(new FormData(form).entries());
+      const data = bookingFormPayload(form);
+      if (!data.branch_id) {
+        setFormStatus(form, selectors.formMessage, 'Vui lòng chọn chi nhánh.');
+        button.disabled = false;
+        return;
+      }
+      if (!data.booking_time) {
+        setFormStatus(form, selectors.formMessage, 'Vui lòng chọn ngày và giờ đặt bàn.');
+        button.disabled = false;
+        return;
+      }
       await request(`/api/bookings/${form.dataset.bookingUpdate}`, { method: 'PUT', body: data });
       setFormStatus(form, selectors.formMessage, 'Đã cập nhật yêu cầu đặt bàn.');
       await refreshDashboard();
@@ -2930,7 +3002,18 @@
     if (type === 'booking-edit') {
       const booking = findBooking(button.dataset.bookingId);
       if (booking) {
-        openManagementPopup({ eyebrow: 'Đặt bàn', title: 'Chỉnh sửa đặt bàn', body: bookingEditForm(booking) });
+        openManagementPopup({
+          eyebrow: 'Đặt bàn',
+          title: 'Chỉnh sửa đặt bàn',
+          body: bookingEditForm(booking),
+          afterRender: (body) => {
+            const form = body.querySelector('[data-booking-update]');
+            const dateValue = form?.querySelector('[name="booking_date"]')?.value;
+            if (form && dateValue) {
+              updateBookingDateChips(dateValue, form);
+            }
+          }
+        });
       }
       return;
     }
@@ -3091,31 +3174,6 @@
   if (createBookingForm) {
     createBookingForm.addEventListener('submit', handleCreate);
     createBookingForm.addEventListener('click', (event) => {
-      const dateButton = event.target.closest('[data-date-offset]');
-      if (dateButton) {
-        setBookingDateValue(dateOffsetValue(dateButton.dataset.dateOffset));
-        return;
-      }
-
-      const branchButton = event.target.closest('[data-branch-choice]');
-      if (branchButton) {
-        setBranchSelectValue(selectors.bookingBranch, branchButton.dataset.branchChoice);
-        return;
-      }
-
-      const timeButton = event.target.closest('[data-time-choice]');
-      if (timeButton) {
-        setBookingTimeSlot(timeButton.dataset.timeChoice);
-        return;
-      }
-
-      const guestButton = event.target.closest('[data-guest-step]');
-      if (guestButton) {
-        const currentValue = Number(document.querySelector('[data-guest-count]')?.value || 2);
-        setGuestCount(currentValue + Number(guestButton.dataset.guestStep));
-        return;
-      }
-
       const customerSuggestion = event.target.closest('[data-customer-suggestion]');
       if (customerSuggestion) {
         selectCustomerSuggestion(customerSuggestion);
@@ -3132,11 +3190,38 @@
 
     const bookingDateInput = document.getElementById('booking-date');
     if (bookingDateInput) {
-      bookingDateInput.addEventListener('change', () => updateBookingDateChips(bookingDateInput.value));
+      bookingDateInput.addEventListener('change', () => updateBookingDateChips(bookingDateInput.value, createBookingForm));
     }
   }
 
   document.addEventListener('click', (event) => {
+    const bookingFormControl = event.target.closest('[data-date-offset], [data-branch-choice], [data-time-choice], [data-guest-step]');
+    const bookingForm = bookingFormControl?.closest('[data-booking-form]');
+    if (bookingFormControl && bookingForm) {
+      event.preventDefault();
+
+      if (bookingFormControl.matches('[data-date-offset]')) {
+        setBookingDateValue(dateOffsetValue(bookingFormControl.dataset.dateOffset), bookingForm);
+        return;
+      }
+
+      if (bookingFormControl.matches('[data-branch-choice]')) {
+        setBranchSelectValue(bookingForm.querySelector('[data-booking-branch]'), bookingFormControl.dataset.branchChoice);
+        return;
+      }
+
+      if (bookingFormControl.matches('[data-time-choice]')) {
+        setBookingTimeSlot(bookingFormControl.dataset.timeChoice, bookingForm);
+        return;
+      }
+
+      if (bookingFormControl.matches('[data-guest-step]')) {
+        const currentValue = Number(bookingForm.querySelector('[data-guest-count]')?.value || 2);
+        setGuestCount(currentValue + Number(bookingFormControl.dataset.guestStep), bookingForm);
+        return;
+      }
+    }
+
     const bookingTab = event.target.closest('[data-booking-tab]');
     if (bookingTab) {
       event.preventDefault();
@@ -3213,6 +3298,13 @@
     }
     if (event.key === 'Escape' && selectors.managementPopup && !selectors.managementPopup.hidden) {
       closeManagementPopup();
+    }
+  });
+
+  document.addEventListener('change', (event) => {
+    const bookingDateInput = event.target.closest('[data-booking-form] [name="booking_date"]');
+    if (bookingDateInput) {
+      updateBookingDateChips(bookingDateInput.value, bookingDateInput.closest('[data-booking-form]'));
     }
   });
 

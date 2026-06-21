@@ -11,7 +11,7 @@
         <button class="btn btn-soft rounded-circle booking-close-button" type="button" data-close-booking-popup aria-label="Đóng form đặt bàn">X</button>
       </div>
       <div class="booking-popup-body">
-        <form id="create-booking-form" class="booking-public-form">
+        <form id="create-booking-form" class="booking-public-form" data-booking-form data-booking-form-mode="create">
           <section class="booking-step-block">
             <div class="booking-step-label"><span class="booking-step-number">1</span> Ngày đặt bàn <span class="required-mark">*</span></div>
             <div class="booking-date-row">
@@ -63,7 +63,7 @@
               <input id="booking-guest-count" name="guest_count" type="hidden" value="2" data-guest-count>
               <div class="booking-stepper" aria-label="Chọn số khách">
                 <button class="booking-stepper-button" type="button" data-guest-step="-1" aria-label="Giảm số khách">-</button>
-                <span class="booking-stepper-value" id="booking-guest-display">2</span>
+                <span class="booking-stepper-value" id="booking-guest-display" data-guest-display>2</span>
                 <button class="booking-stepper-button" type="button" data-guest-step="1" aria-label="Tăng số khách">+</button>
               </div>
             </section>
