@@ -1910,8 +1910,8 @@
   }
 
   function renderTimelineBooking(booking) {
-    const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ') || 'Chưa xếp bàn';
-    const areaLabel = booking.area_name || 'Chưa chọn khu vực';
+    const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ');
+    const areaLabel = booking.area_name || '';
     const controls = canManageBookings() ? actionButtons(booking) : '';
     const timelineState = bookingTimelineState(booking);
     const actionRow = controls
@@ -1921,8 +1921,13 @@
           </div>
         `
       : '';
-    const tableClass = hasAssignedTables(booking) ? '' : ' timeline-table-missing';
     const branchLabel = shouldShowBookingBranch() && booking.branch_name ? ` · ${booking.branch_name}` : '';
+    const areaMeta = areaLabel
+      ? `<span class="timeline-area" title="Khu vực ${escapeHtml(areaLabel)}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(areaLabel)}</span>`
+      : '';
+    const tableMeta = tables
+      ? `<span class="timeline-table" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>`
+      : '';
     const notice = timelineState.notice
       ? `<div class="timeline-notice timeline-notice-${escapeHtml(timelineState.tone)}">${escapeHtml(timelineState.notice)}</div>`
       : '';
@@ -1951,8 +1956,8 @@
           </div>
           <div class="timeline-meta-row">
             <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)}${escapeHtml(branchLabel)}</span>
-            <span class="timeline-area" title="Khu vực ${escapeHtml(areaLabel)}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(areaLabel)}</span>
-            <span class="timeline-table${tableClass}" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>
+            ${areaMeta}
+            ${tableMeta}
           </div>
           ${notice}
           ${orderStaff}

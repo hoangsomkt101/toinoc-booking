@@ -2110,12 +2110,14 @@ a:hover {
 
 @media (max-width: 991.98px) {
   .booking-timeline-list {
+    align-items: stretch;
     gap: 10px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .booking-timeline-item {
-    display: block;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
   }
 
@@ -2150,10 +2152,16 @@ a:hover {
 
   .timeline-card {
     border-left-width: 3px !important;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     margin-bottom: 0;
   }
 
   .booking-card-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     padding: 10px;
   }
 
@@ -2213,7 +2221,8 @@ a:hover {
     display: flex;
     flex-wrap: nowrap;
     gap: 6px;
-    margin-top: 9px;
+    margin-top: auto;
+    padding-top: 9px;
   }
 
   .timeline-action-row .booking-action-btn {
