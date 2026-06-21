@@ -45,12 +45,10 @@
   const upcomingWarningMinutes = 30;
   const bookingTabDefinitions = [
     { key: 'all', label: 'Tất cả' },
-    { key: 'confirmed', label: 'Đã xác nhận' },
+    { key: 'pending', label: 'Chưa xác nhận' },
     { key: 'upcoming', label: 'Sắp tới' },
-    { key: 'seated', label: 'Đang ngồi' },
-    { key: 'cleaning', label: 'Đang dọn' },
     { key: 'completed', label: 'Hoàn tất' },
-    { key: 'late_cancelled', label: 'Trễ, huỷ' }
+    { key: 'cancelled', label: 'Huỷ' }
   ];
   const bookingTimeChoices = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '24:00'];
   let activeBookingTab = 'all';
@@ -1693,31 +1691,23 @@
 
   function bookingMatchesTab(booking, tabKey, now = new Date()) {
     if (tabKey === 'all') {
-      return booking.status !== 'COMPLETED';
+      return true;
     }
 
-    if (tabKey === 'confirmed') {
-      return booking.status === 'CONFIRMED';
+    if (tabKey === 'pending') {
+      return booking.status === 'PENDING';
     }
 
     if (tabKey === 'upcoming') {
       return isUpcomingBooking(booking, now);
     }
 
-    if (tabKey === 'seated') {
-      return booking.status === 'CHECKED_IN';
-    }
-
-    if (tabKey === 'cleaning') {
-      return booking.status === 'CHECKED_OUT';
-    }
-
     if (tabKey === 'completed') {
       return booking.status === 'COMPLETED';
     }
 
-    if (tabKey === 'late_cancelled') {
-      return isLateBooking(booking, now) || ['CANCELLED', 'NO_SHOW'].includes(booking.status);
+    if (tabKey === 'cancelled') {
+      return ['CANCELLED', 'NO_SHOW'].includes(booking.status);
     }
 
     return true;
