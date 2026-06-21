@@ -419,6 +419,10 @@
     return formatTimeSlot(now.getHours() * 60 + now.getMinutes());
   }
 
+  function isValidTimeInput(value) {
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')) || value === '24:00';
+  }
+
   function bookingEditMinTime(selectedDate = todayDateValue(), now = new Date()) {
     const floor = '17:00';
 
@@ -427,6 +431,16 @@
     }
 
     return currentTimeInputValue(now) > floor ? currentTimeInputValue(now) : floor;
+  }
+
+  function timeInputMinutes(value) {
+    if (value === '24:00') {
+      return 24 * 60;
+    }
+
+    const [hours, minutes] = String(value || '').split(':').map(Number);
+
+    return hours * 60 + minutes;
   }
 
   function bookingFormDateParts(value) {
@@ -1032,8 +1046,8 @@
 
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
-          <input class="form-control" name="booking_time_slot" type="time" value="${escapeHtml(parts.time === '24:00' ? '23:59' : parts.time)}" min="${escapeHtml(bookingEditMinTime(parts.date))}" max="23:59" step="60" data-edit-booking-time required>
-          <div class="form-text small">Chọn giờ chính xác theo phút. Giờ hợp lệ bắt đầu từ 17:00, hoặc từ thời điểm hiện tại nếu sửa booking hôm nay.</div>
+          <input class="form-control" name="booking_time_slot" type="text" value="${escapeHtml(parts.time)}" inputmode="numeric" autocomplete="off" placeholder="HH:mm" pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00" data-edit-booking-time data-min-time="${escapeHtml(bookingEditMinTime(parts.date))}" required>
+          <div class="form-text small">Nhập theo định dạng 24h, ví dụ 17:30. Giờ hợp lệ bắt đầu từ 17:00, hoặc từ thời điểm hiện tại nếu sửa booking hôm nay.</div>
         </section>
 
         <div class="booking-two-column">
@@ -1795,7 +1809,7 @@
       return;
     }
 
-    timeInput.min = bookingEditMinTime(dateInput.value || todayDateValue());
+    timeInput.dataset.minTime = bookingEditMinTime(dateInput.value || todayDateValue());
   }
 
   function toggleAssignTable(button) {
@@ -2442,6 +2456,34 @@
     return data;
   }
 
+  function validateEditBookingTime(form) {
+    const dateInput = form.querySelector('[data-edit-booking-date]');
+    const timeInput = form.querySelector('[data-edit-booking-time]');
+
+    if (!timeInput) {
+      return true;
+    }
+
+    const timeValue = timeInput.value.trim();
+    timeInput.value = timeValue;
+
+    if (!isValidTimeInput(timeValue)) {
+      setFormStatus(form, selectors.formMessage, 'Giờ đến phải theo định dạng HH:mm, ví dụ 17:30.');
+      timeInput.focus();
+      return false;
+    }
+
+    const minTime = bookingEditMinTime(dateInput?.value || todayDateValue());
+    timeInput.dataset.minTime = minTime;
+    if (timeInputMinutes(timeValue) < timeInputMinutes(minTime)) {
+      setFormStatus(form, selectors.formMessage, `Giờ đến phải từ ${minTime} trở đi.`);
+      timeInput.focus();
+      return false;
+    }
+
+    return true;
+  }
+
   async function handleCreateUser(event) {
     const form = event.target.closest('#create-user-form');
     if (!form) {
@@ -2926,6 +2968,11 @@
     setFormStatus(form, selectors.formMessage, 'Đang cập nhật yêu cầu đặt bàn...');
 
     try {
+      if (!validateEditBookingTime(form)) {
+        button.disabled = false;
+        return;
+      }
+
       const data = bookingFormPayload(form);
       if (!data.branch_id) {
         setFormStatus(form, selectors.formMessage, 'Vui lòng chọn chi nhánh.');
