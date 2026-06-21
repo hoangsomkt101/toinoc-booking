@@ -1012,6 +1012,10 @@
   function bookingEditForm(booking) {
     const parts = bookingFormDateParts(booking.booking_time);
     const guestCount = booking.guest_count || 2;
+    const callHref = phoneCallHref(booking.phone);
+    const callButton = callHref
+      ? `<a class="btn btn-wine btn-sm booking-edit-call-button" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
+      : '<button class="btn btn-outline-secondary btn-sm booking-edit-call-button" type="button" disabled>Call</button>';
 
     return `
       <form class="booking-public-form booking-edit-public-form" data-booking-form data-booking-form-mode="edit" data-booking-update="${escapeHtml(booking.id)}">
@@ -1045,6 +1049,7 @@
           <section class="booking-step-block">
             <label class="booking-field-label">Số điện thoại <span class="required-mark">*</span></label>
             <input class="form-control form-control-lg" name="phone" value="${escapeHtml(booking.phone)}" autocomplete="tel" inputmode="tel" required>
+            ${callButton}
           </section>
         </div>
 
@@ -1462,17 +1467,13 @@
       return '';
     }
 
-    const callHref = phoneCallHref(booking.phone);
-    const callButton = callHref
-      ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
-      : '<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>Call</button>';
     const statusSelect = bookingStatusSelect(booking);
 
     const editButton = `
       <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-edit" data-booking-id="${escapeHtml(booking.id)}">Chỉnh sửa</button>
     `;
 
-    return [callButton, statusSelect, editButton].join('');
+    return [statusSelect, editButton].join('');
   }
 
   function bookingManagement(booking) {
@@ -1949,7 +1950,7 @@
             <span class="badge-soft timeline-status timeline-status-${escapeHtml(timelineState.tone)} status-${escapeHtml(booking.status)}">${escapeHtml(timelineState.badge)}</span>
           </div>
           <div class="timeline-meta-row">
-            <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)} khách${escapeHtml(branchLabel)}</span>
+            <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)}${escapeHtml(branchLabel)}</span>
             <span class="timeline-area" title="Khu vực ${escapeHtml(areaLabel)}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(areaLabel)}</span>
             <span class="timeline-table${tableClass}" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>
           </div>

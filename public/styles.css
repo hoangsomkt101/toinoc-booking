@@ -2057,6 +2057,10 @@ a:hover {
 .timeline-note {
   background: #f8f1e7;
   color: #6d645d;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .booking-summary-line {
@@ -2139,6 +2143,17 @@ a:hover {
   font-size: 13px;
   font-weight: 900;
   padding: 8px 12px;
+  width: 100%;
+}
+
+.booking-edit-call-button {
+  align-items: center;
+  border-radius: 13px;
+  display: inline-flex;
+  font-weight: 900;
+  gap: 7px;
+  justify-content: center;
+  margin-top: 10px;
   width: 100%;
 }
 
