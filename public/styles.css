@@ -2142,6 +2142,12 @@ a:hover {
   width: 100%;
 }
 
+.booking-status-select {
+  cursor: pointer;
+  text-align: center;
+  text-align-last: center;
+}
+
 .status-pill,
 .badge-soft {
   align-items: center;

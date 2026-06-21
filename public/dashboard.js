@@ -39,6 +39,7 @@
     CHECKED_OUT: 'Đã trả bàn',
     COMPLETED: 'Hoàn tất'
   };
+  const bookingStatusChoices = Object.keys(bookingStatusLabels);
   const arrivalPendingStatuses = ['PENDING', 'CONFIRMED'];
   const closedBookingStatuses = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
   const upcomingWarningMinutes = 30;
@@ -1415,33 +1416,35 @@
     `;
   }
 
+  function bookingStatusSelect(booking) {
+    const options = bookingStatusChoices
+      .map((status) => `<option value="${escapeHtml(status)}" ${status === booking.status ? 'selected' : ''}>${escapeHtml(bookingStatusLabel(status))}</option>`)
+      .join('');
+
+    return `
+      <label class="visually-hidden" for="booking-status-${escapeHtml(booking.id)}">Trạng thái đặt bàn</label>
+      <select class="form-select form-select-sm booking-action-btn booking-status-select" id="booking-status-${escapeHtml(booking.id)}" data-booking-status-select data-booking-id="${escapeHtml(booking.id)}" data-current-status="${escapeHtml(booking.status)}">
+        ${options}
+      </select>
+    `;
+  }
+
   function actionButtons(booking) {
     if (!canManageBookings()) {
       return '';
     }
 
-    const assigned = hasAssignedTables(booking);
     const callHref = phoneCallHref(booking.phone);
     const callButton = callHref
       ? `<a class="btn btn-wine btn-sm booking-action-btn" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
       : '<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>Call</button>';
-    let checkButton = '';
-
-    if (booking.status === 'CHECKED_IN') {
-      checkButton = '<button class="btn btn-warning btn-sm fw-bold booking-action-btn" data-action="check-out">Check-out</button>';
-    } else if (['PENDING', 'CONFIRMED'].includes(booking.status)) {
-      checkButton = `<button class="btn btn-success btn-sm fw-bold booking-action-btn" data-action="check-in" ${assigned ? '' : 'disabled title="Cần xếp bàn trước khi check-in"'}>Check-in</button>`;
-    } else if (booking.status === 'CHECKED_OUT') {
-      checkButton = '<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>Đã checkout</button>';
-    } else {
-      checkButton = `<button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" disabled>${escapeHtml(bookingStatusLabel(booking.status))}</button>`;
-    }
+    const statusSelect = bookingStatusSelect(booking);
 
     const editButton = `
       <button class="btn btn-outline-secondary btn-sm booking-action-btn" type="button" data-open-management-popup="booking-edit" data-booking-id="${escapeHtml(booking.id)}">Chỉnh sửa</button>
     `;
 
-    return [callButton, checkButton, editButton].join('');
+    return [callButton, statusSelect, editButton].join('');
   }
 
   function bookingManagement(booking) {
@@ -3170,6 +3173,34 @@
     }
   }
 
+  async function handleBookingStatusSelect(event) {
+    const select = event.target.closest('[data-booking-status-select]');
+
+    if (!select) {
+      return;
+    }
+
+    const bookingId = select.dataset.bookingId;
+    const nextStatus = select.value;
+    const previousStatus = select.dataset.currentStatus;
+
+    if (!bookingId || nextStatus === previousStatus) {
+      return;
+    }
+
+    select.disabled = true;
+
+    try {
+      await request(`/api/bookings/${bookingId}`, { method: 'PUT', body: { status: nextStatus } });
+      select.dataset.currentStatus = nextStatus;
+      await refreshDashboard();
+    } catch (error) {
+      select.value = previousStatus;
+      window.alert(error.message);
+      select.disabled = false;
+    }
+  }
+
   const createBookingForm = document.getElementById('create-booking-form');
   if (createBookingForm) {
     createBookingForm.addEventListener('submit', handleCreate);
@@ -3307,6 +3338,7 @@
       updateBookingDateChips(bookingDateInput.value, bookingDateInput.closest('[data-booking-form]'));
     }
   });
+  document.addEventListener('change', handleBookingStatusSelect);
 
   document.addEventListener('submit', handleCreateUser);
   document.addEventListener('submit', handleCreateBranch);

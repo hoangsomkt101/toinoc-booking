@@ -413,6 +413,10 @@ async function updateBooking(id, input = {}) {
 
       if (INACTIVE_RELEASE_STATUSES.includes(nextStatus)) {
         await releaseAssignedTables(client, booking.id);
+      } else {
+        const assignedResult = await client.query('SELECT table_id FROM booking_tables WHERE booking_id = $1', [booking.id]);
+        const tableIds = assignedResult.rows.map((row) => Number(row.table_id));
+        await syncTableStatuses(client, tableIds);
       }
     }
 
