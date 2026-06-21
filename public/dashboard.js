@@ -1019,6 +1019,7 @@
 
     return `
       <form class="booking-public-form booking-edit-public-form" data-booking-form data-booking-form-mode="edit" data-booking-update="${escapeHtml(booking.id)}">
+        ${callButton}
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">1</span> Ngày đặt bàn <span class="required-mark">*</span></div>
           <input class="form-control" name="booking_date" type="date" value="${escapeHtml(parts.date)}" data-edit-booking-date required>
@@ -1049,7 +1050,6 @@
           <section class="booking-step-block">
             <label class="booking-field-label">Số điện thoại <span class="required-mark">*</span></label>
             <input class="form-control form-control-lg" name="phone" value="${escapeHtml(booking.phone)}" autocomplete="tel" inputmode="tel" required>
-            ${callButton}
           </section>
         </div>
 
