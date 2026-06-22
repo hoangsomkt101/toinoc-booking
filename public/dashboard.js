@@ -1615,6 +1615,37 @@
     return { tone: 'neutral', badge: bookingStatusLabel(booking.status), offset: '', notice: '' };
   }
 
+  function bookingVisitMeta(booking) {
+    const visitNumber = Number(booking.customer_visit_number || 0);
+    const bookingCount = Number(booking.customer_booking_count || 0);
+    const previousBookingCount = Math.max(
+      Number(booking.customer_previous_booking_count ?? bookingCount - 1) || 0,
+      0
+    );
+
+    if (visitNumber <= 1 && bookingCount <= 1) {
+      return {
+        label: 'Lần đầu',
+        detail: '0 booking trước',
+        title: 'Lần đầu tới quán'
+      };
+    }
+
+    if (visitNumber > 0) {
+      return {
+        label: `Lần thứ ${visitNumber}`,
+        detail: `${previousBookingCount} booking trước`,
+        title: `Lần thứ ${visitNumber} tới quán · ${previousBookingCount} booking trước đó`
+      };
+    }
+
+    return {
+      label: `${bookingCount} booking`,
+      detail: 'Đã ghi nhận',
+      title: `${bookingCount} booking đã ghi nhận`
+    };
+  }
+
   function renderBookingAlert(alert) {
     const dot = alert.tone === 'neutral'
       ? ''
@@ -1952,6 +1983,7 @@
       ? `<div class="timeline-note">Nhân viên lên đơn: ${escapeHtml(booking.order_staff_name)}</div>`
       : '';
     const customerMeta = bookingCustomerMeta(booking);
+    const visitMeta = bookingVisitMeta(booking);
 
     return `
       <div class="booking-timeline-item timeline-${escapeHtml(timelineState.tone)}" data-booking-id="${escapeHtml(booking.id)}">
@@ -1966,7 +1998,10 @@
               <h3 class="timeline-customer">${escapeHtml(bookingCustomerTitle(booking))}</h3>
               ${customerMeta ? `<div class="booking-meta timeline-phone">${escapeHtml(customerMeta)}</div>` : ''}
             </div>
-            <span class="badge-soft timeline-status timeline-status-${escapeHtml(timelineState.tone)} status-${escapeHtml(booking.status)}">${escapeHtml(timelineState.badge)}</span>
+            <span class="timeline-visit-count" title="${escapeHtml(visitMeta.title)}">
+              <strong>${escapeHtml(visitMeta.label)}</strong>
+              <small>${escapeHtml(visitMeta.detail)}</small>
+            </span>
           </div>
           <div class="timeline-meta-row">
             <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)}${escapeHtml(branchLabel)}</span>

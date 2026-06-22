@@ -1973,30 +1973,39 @@ a:hover {
   margin-top: 3px;
 }
 
-.timeline-status {
+.timeline-visit-count {
+  align-items: center;
+  background: linear-gradient(135deg, #fff4df 0%, #f7d27a 100%);
+  border: 1px solid rgba(237, 174, 50, 0.55);
+  border-radius: 13px;
+  color: var(--wine);
+  display: inline-grid;
   flex: 0 0 auto;
-  max-width: 45%;
+  gap: 1px;
+  line-height: 1.05;
+  max-width: 52%;
+  min-width: 82px;
+  padding: 7px 10px;
   text-align: center;
 }
 
-.badge-soft.timeline-status-red {
-  background: #fee9e8;
-  color: var(--red);
+.timeline-visit-count strong,
+.timeline-visit-count small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.badge-soft.timeline-status-gold {
-  background: #fbf0d0;
-  color: #95720b;
+.timeline-visit-count strong {
+  font-size: 13px;
+  font-weight: 950;
 }
 
-.badge-soft.timeline-status-green {
-  background: #e8f5ef;
-  color: var(--green);
-}
-
-.badge-soft.timeline-status-neutral {
-  background: #f3ecdf;
-  color: #5b5148;
+.timeline-visit-count small {
+  color: #7d5c10;
+  font-size: 10px;
+  font-weight: 850;
 }
 
 .timeline-meta-row {
@@ -2186,12 +2195,19 @@ a:hover {
     white-space: nowrap;
   }
 
-  .timeline-status {
+  .timeline-visit-count {
     border-radius: 9px;
-    font-size: 10px;
-    line-height: 1.15;
-    max-width: 48%;
+    max-width: 50%;
+    min-width: 62px;
     padding: 5px 6px;
+  }
+
+  .timeline-visit-count strong {
+    font-size: 10.5px;
+  }
+
+  .timeline-visit-count small {
+    font-size: 8.5px;
   }
 
   .timeline-meta-row {
@@ -2253,8 +2269,7 @@ a:hover {
     font-size: 14px;
   }
 
-  .timeline-status {
-    font-size: 9.5px;
+  .timeline-visit-count {
     padding-inline: 5px;
   }
 }

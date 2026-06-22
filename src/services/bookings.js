@@ -56,11 +56,25 @@ function bookingSelect(includeLogs = false) {
       b.check_out_at,
       b.created_at,
       b.updated_at,
+      COALESCE(customer_stats.customer_booking_count, 1) AS customer_booking_count,
+      COALESCE(customer_stats.customer_previous_booking_count, 0) AS customer_previous_booking_count,
+      COALESCE(customer_stats.customer_previous_booking_count, 0) + 1 AS customer_visit_number,
       COALESCE(assigned_tables.assigned_tables, '[]'::JSON) AS assigned_tables
       ${includeLogs ? ", COALESCE(status_logs.status_logs, '[]'::JSON) AS status_logs" : ''}
     FROM bookings b
     JOIN branches br ON br.id = b.branch_id
     LEFT JOIN areas ar ON ar.id = b.area_id
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*)::INTEGER AS customer_booking_count,
+        COUNT(*) FILTER (
+          WHERE history.booking_time < b.booking_time
+             OR (history.booking_time = b.booking_time AND history.id < b.id)
+        )::INTEGER AS customer_previous_booking_count
+      FROM bookings history
+      WHERE (b.customer_id IS NOT NULL AND history.customer_id = b.customer_id)
+         OR history.phone = b.phone
+    ) customer_stats ON TRUE
     LEFT JOIN LATERAL (
       SELECT JSON_AGG(
         JSON_BUILD_OBJECT(
@@ -114,6 +128,9 @@ function normalizeBookingRow(row) {
     area_id: row.area_id === null ? null : Number(row.area_id),
     guest_count: Number(row.guest_count),
     actual_guest_count: row.actual_guest_count === null ? null : Number(row.actual_guest_count),
+    customer_booking_count: row.customer_booking_count === undefined ? undefined : Number(row.customer_booking_count || 0),
+    customer_previous_booking_count: row.customer_previous_booking_count === undefined ? undefined : Number(row.customer_previous_booking_count || 0),
+    customer_visit_number: row.customer_visit_number === undefined ? undefined : Number(row.customer_visit_number || 0),
     assigned_tables: Array.isArray(row.assigned_tables) ? row.assigned_tables.map(normalizeTableRow) : [],
     status_logs: Array.isArray(row.status_logs) ? row.status_logs.map((log) => ({ ...log, id: Number(log.id) })) : undefined
   };
