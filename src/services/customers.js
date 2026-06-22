@@ -1,6 +1,6 @@
 const { pool, withTransaction } = require('../db/pool');
 const { badRequest, conflict, notFound } = require('../domain/errors');
-const { normalizePhone, parsePositiveInteger } = require('../domain/validators');
+const { WALK_IN_LABEL, normalizePhone, parsePositiveInteger } = require('../domain/validators');
 
 function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value || {}, key);
@@ -215,6 +215,11 @@ function appendPhonePrefixWhere(where, params, phoneValue) {
 async function upsertCustomerByPhone(client, input) {
   const customerName = normalizeCustomerName(input.customer_name);
   const phone = normalizePhone(input.phone);
+
+  if (phone === WALK_IN_LABEL) {
+    return null;
+  }
+
   const result = await client.query(
     `INSERT INTO customers (customer_name, phone)
      VALUES ($1, $2)

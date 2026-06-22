@@ -19,6 +19,7 @@ const FIELD_LABELS = Object.freeze({
 });
 const LOCAL_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/;
 const VIETNAM_TIME_ZONE_OFFSET = '+07:00';
+const WALK_IN_LABEL = 'Vãng lai';
 
 function fieldLabel(field) {
   return FIELD_LABELS[field] || field;
@@ -41,8 +42,22 @@ function normalizeString(value, field) {
   return trimmed;
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .trim()
+    .toLocaleLowerCase('vi-VN')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ');
+}
+
 function normalizePhone(value, field = 'phone') {
   const rawValue = normalizeString(value, field);
+  if (normalizeSearchText(rawValue) === 'vang lai') {
+    return WALK_IN_LABEL;
+  }
+
   const digits = rawValue.replace(/\D/g, '');
 
   if (!digits) {
@@ -142,9 +157,20 @@ function requireField(input, key) {
 
 function validateBookingPayload(input, options = {}) {
   const partial = options.partial === true;
-  const payload = input || {};
+  const allowWalkIn = options.allowWalkIn === true;
+  const payload = { ...(input || {}) };
   const data = {};
   const required = ['customer_name', 'phone', 'booking_time', 'guest_count', 'branch_id'];
+
+  if (!partial && allowWalkIn) {
+    if (!hasOwn(payload, 'customer_name') || payload.customer_name === undefined || payload.customer_name === null || payload.customer_name === '') {
+      payload.customer_name = WALK_IN_LABEL;
+    }
+
+    if (!hasOwn(payload, 'phone') || payload.phone === undefined || payload.phone === null || payload.phone === '') {
+      payload.phone = WALK_IN_LABEL;
+    }
+  }
 
   if (!partial) {
     for (const key of required) {
@@ -205,6 +231,7 @@ function normalizeTableIds(input) {
 }
 
 module.exports = {
+  WALK_IN_LABEL,
   normalizePhone,
   parsePositiveInteger,
   parseOptionalPositiveInteger,

@@ -354,11 +354,23 @@ async function listTableStatuses(filters = {}, executor = pool) {
 }
 
 async function createBooking(input) {
-  const data = validateBookingPayload(input);
+  const tableIds = Object.prototype.hasOwnProperty.call(input || {}, 'table_ids') || Object.prototype.hasOwnProperty.call(input || {}, 'table_id')
+    ? normalizeTableIds(input)
+    : [];
+  const data = validateBookingPayload(input, { allowWalkIn: tableIds.length > 0 });
 
   const booking = await withTransaction(async (client) => {
     await ensureBranch(client, data.branch_id);
     await ensureAreaForBranch(client, data.area_id, data.branch_id);
+    if (tableIds.length) {
+      await validateAssignableTablesForBooking(client, {
+        bookingId: null,
+        branchId: data.branch_id,
+        bookingTime: data.booking_time,
+        tableIds
+      });
+    }
+
     const customerId = await upsertCustomerByPhone(client, data);
     const bookingResult = await client.query(
       `INSERT INTO bookings (customer_id, branch_id, area_id, customer_name, phone, booking_time, guest_count, order_staff_name, note, status)
@@ -379,12 +391,72 @@ async function createBooking(input) {
 
     await logStatusChange(client, bookingResult.rows[0].id, null, 'PENDING', 'Đã tạo yêu cầu đặt bàn');
 
+    if (tableIds.length) {
+      for (const tableId of tableIds) {
+        await client.query('INSERT INTO booking_tables (booking_id, table_id) VALUES ($1, $2)', [bookingResult.rows[0].id, tableId]);
+      }
+      await client.query("UPDATE bookings SET status = 'CONFIRMED' WHERE id = $1", [bookingResult.rows[0].id]);
+      await logStatusChange(client, bookingResult.rows[0].id, 'PENDING', 'CONFIRMED', 'Đã tạo booking và xếp bàn từ sơ đồ bàn');
+      await syncTableStatuses(client, tableIds);
+    }
+
     return getBookingById(bookingResult.rows[0].id, client);
   });
 
   syncBookingToSheets(booking);
 
   return booking;
+}
+
+async function validateAssignableTablesForBooking(client, { bookingId, branchId, bookingTime, tableIds }) {
+  const tablesResult = await client.query(
+    `SELECT id, branch_id, table_code, status
+     FROM tables
+     WHERE id = ANY($1::BIGINT[])
+     FOR UPDATE`,
+    [tableIds]
+  );
+
+  if (tablesResult.rowCount !== tableIds.length) {
+    throw badRequest('Một hoặc nhiều bàn không tồn tại');
+  }
+
+  const invalidBranchTables = tablesResult.rows.filter((table) => Number(table.branch_id) !== Number(branchId));
+  if (invalidBranchTables.length) {
+    throw badRequest('Tất cả bàn phải thuộc chi nhánh của yêu cầu đặt bàn');
+  }
+
+  const blockedTables = tablesResult.rows.filter((table) => table.status === 'BLOCKED');
+  if (blockedTables.length) {
+    throw conflict('Không thể xếp bàn đang tạm khóa', blockedTables.map((table) => table.table_code));
+  }
+
+  const conflictParams = [tableIds, ACTIVE_ASSIGNMENT_STATUSES, bookingTime];
+  let excludeSql = '';
+
+  if (bookingId) {
+    conflictParams.push(bookingId);
+    excludeSql = `AND b.id <> $${conflictParams.length}`;
+  }
+
+  const conflicts = await client.query(
+    `SELECT t.id, t.table_code, b.id AS booking_id, b.customer_name, b.booking_time, b.status
+     FROM booking_tables bt
+     JOIN bookings b ON b.id = bt.booking_id
+     JOIN tables t ON t.id = bt.table_id
+     WHERE bt.table_id = ANY($1::BIGINT[])
+       AND b.status = ANY($2::TEXT[])
+       AND b.booking_time < $3::TIMESTAMPTZ + ${tableHoldIntervalSql()}
+       AND b.booking_time + ${tableHoldIntervalSql()} > $3::TIMESTAMPTZ
+       ${excludeSql}`,
+    conflictParams
+  );
+
+  if (conflicts.rowCount > 0) {
+    throw conflict('Một hoặc nhiều bàn đã được xếp cho yêu cầu đặt bàn đang hoạt động', conflicts.rows);
+  }
+
+  return tablesResult.rows;
 }
 
 async function updateBooking(id, input = {}) {
@@ -532,46 +604,13 @@ async function assignTables(id, input) {
       throw badRequest(`Không thể xếp bàn cho yêu cầu có trạng thái ${bookingStatusLabel(booking.status)}`);
     }
 
-    const tablesResult = await client.query(
-      `SELECT id, branch_id, table_code, status
-       FROM tables
-       WHERE id = ANY($1::BIGINT[])
-       FOR UPDATE`,
-      [tableIds]
-    );
-
-    if (tablesResult.rowCount !== tableIds.length) {
-      throw badRequest('Một hoặc nhiều bàn không tồn tại');
-    }
-
-    const invalidBranchTables = tablesResult.rows.filter((table) => Number(table.branch_id) !== Number(booking.branch_id));
-    if (invalidBranchTables.length) {
-      throw badRequest('Tất cả bàn phải thuộc chi nhánh của yêu cầu đặt bàn');
-    }
-
     await ensureAreaForBranch(client, areaId, booking.branch_id);
-
-    const blockedTables = tablesResult.rows.filter((table) => table.status === 'BLOCKED');
-    if (blockedTables.length) {
-      throw conflict('Không thể xếp bàn đang tạm khóa', blockedTables.map((table) => table.table_code));
-    }
-
-    const conflicts = await client.query(
-      `SELECT t.id, t.table_code, b.id AS booking_id, b.customer_name, b.booking_time, b.status
-       FROM booking_tables bt
-       JOIN bookings b ON b.id = bt.booking_id
-       JOIN tables t ON t.id = bt.table_id
-       WHERE bt.table_id = ANY($1::BIGINT[])
-         AND b.id <> $2
-         AND b.status = ANY($3::TEXT[])
-         AND b.booking_time < $4::TIMESTAMPTZ + ${tableHoldIntervalSql()}
-         AND b.booking_time + ${tableHoldIntervalSql()} > $4::TIMESTAMPTZ`,
-      [tableIds, booking.id, ACTIVE_ASSIGNMENT_STATUSES, booking.booking_time]
-    );
-
-    if (conflicts.rowCount > 0) {
-      throw conflict('Một hoặc nhiều bàn đã được xếp cho yêu cầu đặt bàn đang hoạt động', conflicts.rows);
-    }
+    await validateAssignableTablesForBooking(client, {
+      bookingId: booking.id,
+      branchId: booking.branch_id,
+      bookingTime: booking.booking_time,
+      tableIds
+    });
 
     const existingResult = await client.query('SELECT table_id FROM booking_tables WHERE booking_id = $1', [booking.id]);
     const existingIds = existingResult.rows.map((row) => Number(row.table_id));

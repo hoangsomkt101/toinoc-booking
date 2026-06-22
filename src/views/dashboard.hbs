@@ -37,8 +37,23 @@
   {{#if canManageBookings}}
     <section class="table-status-page" aria-label="Tình trạng bàn theo ngày">
       <div class="table-status-toolbar mb-3">
-        <label class="visually-hidden" for="table-quick-search">Tìm bàn nhanh theo số bàn</label>
-        <input class="form-control table-status-search" id="table-quick-search" type="search" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="Tìm nhanh bàn số 1-100" autocomplete="off" enterkeyhint="search" data-table-quick-search>
+        <div class="table-status-toolbar-grid">
+          <div>
+            <label class="visually-hidden" for="table-quick-search">Tìm bàn nhanh theo số bàn</label>
+            <input class="form-control table-status-search" id="table-quick-search" type="search" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="Tìm nhanh bàn số 1-100" autocomplete="off" enterkeyhint="search" data-table-quick-search>
+          </div>
+          <div>
+            <label class="form-label table-booking-time-label" for="table-booking-time">Giờ tạo booking</label>
+            <input class="form-control table-booking-time-input" id="table-booking-time" type="time" value="18:00" min="00:00" max="23:59" step="60" data-table-booking-time>
+          </div>
+        </div>
+      </div>
+      <div class="table-booking-action-bar mb-4" data-table-booking-bar hidden>
+        <div class="table-booking-action-copy">
+          <strong data-table-booking-count>Đã chọn 0 bàn</strong>
+          <span data-table-booking-summary>Chọn bàn để tạo booking nhanh.</span>
+        </div>
+        <button class="btn btn-warning fw-bold" type="button" data-open-table-booking>Tạo booking</button>
       </div>
       <section class="metric-grid table-status-metrics mb-4" aria-label="Tổng quan tình trạng bàn">
         <article class="metric green">

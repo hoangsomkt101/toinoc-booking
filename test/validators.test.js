@@ -59,6 +59,17 @@ test('normalizePhone stores a stable customer key', () => {
   assert.equal(normalizePhone('0084-90-900-0000'), '0909000000');
 });
 
+test('normalizePhone accepts walk-in bookings', () => {
+  assert.equal(normalizePhone(' vãng lai '), 'Vãng lai');
+  assert.equal(validateBookingPayload({
+    customer_name: '',
+    phone: '',
+    booking_time: '2027-01-01T18:00',
+    guest_count: '2',
+    branch_id: '1'
+  }, { allowWalkIn: true }).customer_name, 'Vãng lai');
+});
+
 test('validateBookingPayload treats local booking times as Vietnam time', () => {
   const basePayload = {
     customer_name: 'Linh Nguyen',
