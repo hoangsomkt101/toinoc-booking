@@ -70,6 +70,7 @@ test('manager can operate bookings and choose table data but cannot manage users
 
   assertAllowed(routeGuard(apiRouter, '/dashboard', 'get'), 'manager');
   assertAllowed(routeGuard(apiRouter, '/tables', 'get'), 'manager');
+  assertAllowed(routeGuard(apiRouter, '/table-statuses', 'get'), 'manager');
   assertAllowed(routeGuard(branchRouter, '/', 'get'), 'manager');
   assertAllowed(routeGuard(branchRouter, '/:id', 'get'), 'manager');
   assertAllowed(routeGuard(areaRouter, '/', 'get'), 'manager');
@@ -90,6 +91,7 @@ test('sale cannot read operational dashboard, table, branch, area, or user APIs'
   for (const [router, path, method] of [
     [apiRouter, '/dashboard', 'get'],
     [apiRouter, '/tables', 'get'],
+    [apiRouter, '/table-statuses', 'get'],
     [apiRouter, '/online-users', 'get'],
     [branchRouter, '/', 'get'],
     [branchRouter, '/:id', 'get'],
@@ -139,6 +141,7 @@ test('admin passes all guarded route categories', () => {
     [apiClientRouter, '/', 'get'],
     [sheetSettingsRouter, '/', 'get'],
     [apiRouter, '/dashboard', 'get'],
+    [apiRouter, '/table-statuses', 'get'],
     [branchRouter, '/', 'post'],
     [branchRouter, '/:id', 'put'],
     [areaRouter, '/', 'post'],

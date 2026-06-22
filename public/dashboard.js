@@ -12,6 +12,7 @@
   const state = {
     user: window.__CURRENT_USER__ || {},
     dashboard: window.__DASHBOARD__ || {},
+    tableStatuses: window.__TABLE_STATUSES__ || {},
     bookings: window.__BOOKINGS__ || [],
     customers: window.__CUSTOMERS__ || [],
     apiClients: window.__API_CLIENTS__ || [],
@@ -79,6 +80,7 @@
     dashboardDateControls: document.querySelector('[data-dashboard-date-controls]'),
     dashboardDateFilter: document.querySelector('[data-dashboard-date-filter]'),
     bookingAlerts: document.getElementById('booking-alerts'),
+    tableStatusList: document.getElementById('table-status-list'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
     customerList: document.getElementById('customer-list'),
@@ -254,7 +256,7 @@
   }
 
   function setDashboardDateUrl(dateValue) {
-    if (window.__DASHBOARD_SECTION__ !== 'bookings') {
+    if (!usesDashboardDateScope()) {
       return;
     }
 
@@ -534,6 +536,10 @@
     return dashboardBookingDateFromUrl();
   }
 
+  function usesDashboardDateScope() {
+    return window.__DASHBOARD_SECTION__ === 'bookings' || window.__DASHBOARD_SECTION__ === 'table';
+  }
+
   function dashboardQuery() {
     const params = new URLSearchParams();
     const branchId = selectedBranchId();
@@ -542,7 +548,7 @@
       params.set('branch_id', branchId);
     }
 
-    if (window.__DASHBOARD_SECTION__ === 'bookings') {
+    if (usesDashboardDateScope()) {
       const bookingDate = selectedDashboardBookingDate();
       if (bookingDate) {
         params.set('booking_date', bookingDate);
@@ -2040,6 +2046,148 @@
     renderBookings(selectors.openBookings, filteredBookings);
   }
 
+  function tableHoldEndTime(booking) {
+    const date = booking.status === 'CHECKED_IN' && booking.check_in_at
+      ? new Date(booking.check_in_at)
+      : bookingDate(booking);
+
+    return date && !Number.isNaN(date.getTime()) ? new Date(date.getTime() + 4 * 60 * 60 * 1000) : null;
+  }
+
+  function tableBookingStatusRank(booking, now = new Date()) {
+    if (booking.status === 'CHECKED_IN') {
+      const holdEnd = tableHoldEndTime(booking);
+      const minutesToOut = holdEnd ? Math.ceil((holdEnd.getTime() - now.getTime()) / 60000) : null;
+
+      return minutesToOut !== null && minutesToOut >= 0 && minutesToOut <= upcomingWarningMinutes ? 3 : 2;
+    }
+
+    if (booking.status === 'CONFIRMED' || booking.status === 'PENDING') {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  function bookingForTable(table, bookings, now = new Date()) {
+    const tableBookings = bookings
+      .filter((booking) => ['PENDING', 'CONFIRMED', 'CHECKED_IN'].includes(booking.status))
+      .filter((booking) => (booking.assigned_tables || []).some((assignedTable) => String(assignedTable.id) === String(table.id)))
+      .sort((left, right) => {
+        const rankDifference = tableBookingStatusRank(right, now) - tableBookingStatusRank(left, now);
+
+        if (rankDifference !== 0) {
+          return rankDifference;
+        }
+
+        return (bookingDate(left)?.getTime() || 0) - (bookingDate(right)?.getTime() || 0);
+      });
+
+    return tableBookings[0];
+  }
+
+  function tableStatusMeta(table, booking, now = new Date()) {
+    if (!booking) {
+      return { key: 'available', label: 'Trống', tone: 'green', detail: 'Chưa xếp booking' };
+    }
+
+    if (booking.status === 'CHECKED_IN') {
+      const holdEnd = tableHoldEndTime(booking);
+      const minutesToOut = holdEnd ? Math.ceil((holdEnd.getTime() - now.getTime()) / 60000) : null;
+      const isSoonOut = minutesToOut !== null && minutesToOut >= 0 && minutesToOut <= upcomingWarningMinutes;
+
+      return {
+        key: isSoonOut ? 'soon-out' : 'occupied',
+        label: isSoonOut ? 'Sắp out' : 'Đang ngồi',
+        tone: isSoonOut ? 'gold' : 'red',
+        detail: holdEnd ? `Dự kiến out ${formatBookingHour(holdEnd)}` : 'Khách đang dùng bàn'
+      };
+    }
+
+    return {
+      key: 'reserved',
+      label: 'Đang xếp',
+      tone: 'neutral',
+      detail: `${bookingStatusLabel(booking.status)} · ${formatBookingHour(booking.booking_time)}`
+    };
+  }
+
+  function tableSortValue(table) {
+    const code = String(table.table_code || '');
+
+    return /^\d+$/.test(code) ? Number(code) : Number.MAX_SAFE_INTEGER;
+  }
+
+  function renderTableStatusCard(item) {
+    const booking = item.booking;
+    const meta = item.meta;
+    const customer = booking ? bookingCustomerTitle(booking) : 'Sẵn sàng nhận khách';
+    const bookingMeta = booking
+      ? `${escapeHtml(booking.guest_count)} khách · ${escapeHtml(formatBookingHour(booking.booking_time))}`
+      : escapeHtml(item.table.status === 'BLOCKED' ? 'Bàn đang tạm khóa' : 'Không có booking đang xếp');
+
+    return `
+      <article class="table-status-card table-status-${escapeHtml(meta.key)}">
+        <div class="table-status-card-top">
+          <div>
+            <span class="table-status-code">Bàn ${escapeHtml(item.table.table_code)}</span>
+            <div class="table-status-branch">${escapeHtml(item.table.branch_name || '')}</div>
+          </div>
+          <span class="table-status-pill table-status-pill-${escapeHtml(meta.tone)}">${escapeHtml(meta.label)}</span>
+        </div>
+        <div class="table-status-customer">${escapeHtml(customer)}</div>
+        <div class="table-status-meta">${bookingMeta}</div>
+        <div class="table-status-detail">${escapeHtml(meta.detail)}</div>
+      </article>
+    `;
+  }
+
+  function renderTableStatusBoard() {
+    if (!selectors.tableStatusList) {
+      return;
+    }
+
+    const now = new Date();
+    const tables = (state.tableStatuses?.tables || state.dashboard.assignable_tables || state.dashboard.available_tables || [])
+      .filter((table) => String(table.status) !== 'BLOCKED')
+      .sort((left, right) => {
+        const branchCompare = String(left.branch_name || '').localeCompare(String(right.branch_name || ''), 'vi', { numeric: true });
+        if (branchCompare !== 0) {
+          return branchCompare;
+        }
+
+        const numberDifference = tableSortValue(left) - tableSortValue(right);
+        if (numberDifference !== 0) {
+          return numberDifference;
+        }
+
+        return String(left.table_code || '').localeCompare(String(right.table_code || ''), 'vi', { numeric: true });
+      });
+    const bookings = state.tableStatuses?.bookings || allDashboardBookings();
+    const items = tables.map((table) => {
+      const booking = bookingForTable(table, bookings, now);
+      return { table, booking, meta: tableStatusMeta(table, booking, now) };
+    });
+    const counts = items.reduce((totals, item) => {
+      totals[item.meta.key] = (totals[item.meta.key] || 0) + 1;
+      return totals;
+    }, {});
+
+    const countAvailable = document.getElementById('table-count-available');
+    const countReserved = document.getElementById('table-count-reserved');
+    const countOccupied = document.getElementById('table-count-occupied');
+    const countSoonOut = document.getElementById('table-count-soon-out');
+
+    if (countAvailable) countAvailable.textContent = counts.available || 0;
+    if (countReserved) countReserved.textContent = counts.reserved || 0;
+    if (countOccupied) countOccupied.textContent = counts.occupied || 0;
+    if (countSoonOut) countSoonOut.textContent = counts['soon-out'] || 0;
+
+    selectors.tableStatusList.innerHTML = items.length
+      ? items.map(renderTableStatusCard).join('')
+      : '<div class="alert alert-light border mb-0">Không có bàn trong phạm vi chi nhánh này.</div>';
+  }
+
   function renderCounts() {
     const counts = state.dashboard.counts || {};
     const countToday = document.getElementById('count-today');
@@ -2381,6 +2529,7 @@
   function render() {
     renderCounts();
     renderBookingBoard();
+    renderTableStatusBoard();
     renderOnlineUsers();
     renderBranches();
     renderCustomers();
@@ -2421,8 +2570,12 @@
     }
 
     if (canManageBookings()) {
-      const dashboard = await request(scopedPath('/api/dashboard'));
-      state.dashboard = dashboard || state.dashboard;
+      if (window.__DASHBOARD_SECTION__ === 'table') {
+        state.tableStatuses = await request(scopedPath('/api/table-statuses')) || state.tableStatuses;
+      } else {
+        const dashboard = await request(scopedPath('/api/dashboard'));
+        state.dashboard = dashboard || state.dashboard;
+      }
       state.bookings = [];
     } else {
       state.bookings = await request(scopedPath('/api/bookings'));
@@ -3618,7 +3771,7 @@
         url.searchParams.delete('branch_id');
       }
 
-      if (window.__DASHBOARD_SECTION__ === 'bookings') {
+      if (usesDashboardDateScope()) {
         const bookingDate = selectedDashboardBookingDate();
         if (bookingDate) {
           url.searchParams.set('booking_date', bookingDate);

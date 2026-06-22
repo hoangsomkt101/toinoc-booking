@@ -33,6 +33,32 @@
   {{/if}}
 {{/if}}
 
+{{#if isTableSection}}
+  {{#if canManageBookings}}
+    <section class="table-status-page" aria-label="Tình trạng bàn theo ngày">
+      <section class="metric-grid table-status-metrics mb-4" aria-label="Tổng quan tình trạng bàn">
+        <article class="metric green">
+          <strong id="table-count-available">0</strong>
+          <small>Bàn trống</small>
+        </article>
+        <article class="metric">
+          <strong id="table-count-reserved">0</strong>
+          <small>Đang xếp</small>
+        </article>
+        <article class="metric red">
+          <strong id="table-count-occupied">0</strong>
+          <small>Đang ngồi</small>
+        </article>
+        <article class="metric gold">
+          <strong id="table-count-soon-out">0</strong>
+          <small>Sắp out</small>
+        </article>
+      </section>
+      <div id="table-status-list" class="table-status-list"></div>
+    </section>
+  {{/if}}
+{{/if}}
+
 {{#if isBranchesSection}}
   <section class="admin-panel">
     <div class="section-title mt-0">

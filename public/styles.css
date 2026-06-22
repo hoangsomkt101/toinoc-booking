@@ -1742,6 +1742,131 @@ a:hover {
   color: var(--green);
 }
 
+.metric.gold {
+  background: #fff4df;
+}
+
+.metric.gold strong,
+.metric.gold small {
+  color: #9a6f0c;
+}
+
+.metric.red {
+  background: #fee9e8;
+}
+
+.metric.red strong,
+.metric.red small {
+  color: var(--red);
+}
+
+.table-status-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.table-status-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+}
+
+.table-status-card {
+  background: #fff;
+  border: 1px solid rgba(231, 221, 206, 0.85);
+  border-left: 5px solid #d8cbbb;
+  border-radius: 16px;
+  box-shadow: 0 10px 22px rgba(83, 58, 35, 0.07);
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.table-status-available {
+  border-left-color: var(--green);
+}
+
+.table-status-reserved {
+  border-left-color: #b8aa9a;
+}
+
+.table-status-occupied {
+  border-left-color: var(--red);
+}
+
+.table-status-soon-out {
+  border-left-color: var(--gold);
+}
+
+.table-status-card-top {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.table-status-code {
+  color: var(--ink);
+  display: block;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.table-status-branch,
+.table-status-meta,
+.table-status-detail {
+  color: #6d645d;
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-status-pill {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+  padding: 7px 8px;
+  white-space: nowrap;
+}
+
+.table-status-pill-green {
+  background: #e8f5ef;
+  color: var(--green);
+}
+
+.table-status-pill-neutral {
+  background: #f3ecdf;
+  color: #5b5148;
+}
+
+.table-status-pill-red {
+  background: #fee9e8;
+  color: var(--red);
+}
+
+.table-status-pill-gold {
+  background: #fff4df;
+  color: #9a6f0c;
+}
+
+.table-status-customer {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.15;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .booking-board,
 .booking-card-list {
   display: grid;
@@ -2108,6 +2233,37 @@ a:hover {
 }
 
 @media (max-width: 991.98px) {
+  .table-status-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-status-list {
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-status-card {
+    border-left-width: 3px;
+    border-radius: 13px;
+    gap: 7px;
+    padding: 10px;
+  }
+
+  .table-status-code {
+    font-size: 18px;
+  }
+
+  .table-status-customer {
+    font-size: 13px;
+  }
+
+  .table-status-branch,
+  .table-status-meta,
+  .table-status-detail,
+  .table-status-pill {
+    font-size: 10px;
+  }
+
   .booking-timeline-list {
     align-items: stretch;
     gap: 10px;

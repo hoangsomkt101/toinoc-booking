@@ -8,15 +8,15 @@
   {{else}}
     <span class="fab disabled" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
   {{/if}}
-  {{#if canManageCustomers}}
-    <a class="nav-item {{#if isCustomersSection}}active{{/if}}" href="/customers{{branchQueryString}}">
-      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-address-book"></i></span>
-      <span>Khách</span>
+  {{#if canManageBookings}}
+    <a class="nav-item {{#if isTableSection}}active{{/if}}" href="/table{{branchQueryString}}">
+      <span class="bottom-nav-icon" aria-hidden="true"><i class="fa-solid fa-chair"></i></span>
+      <span>Bàn</span>
     </a>
   {{else}}
     <span class="nav-item disabled" aria-hidden="true">
-      <span class="bottom-nav-icon"><i class="fa-solid fa-address-book"></i></span>
-      <span>Khách</span>
+      <span class="bottom-nav-icon"><i class="fa-solid fa-chair"></i></span>
+      <span>Bàn</span>
     </span>
   {{/if}}
 </nav>

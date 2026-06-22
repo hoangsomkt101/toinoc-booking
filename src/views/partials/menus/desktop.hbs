@@ -9,6 +9,12 @@
       <span>Tạo đặt bàn</span>
     </button>
   {{/if}}
+  {{#if canManageBookings}}
+    <a class="desktop-nav-link {{#if isTableSection}}active{{/if}}" href="/table{{branchQueryString}}">
+      <span class="desktop-nav-icon" aria-hidden="true"><i class="fa-solid fa-chair"></i></span>
+      <span>Tình trạng bàn</span>
+    </a>
+  {{/if}}
   {{#if canManageBranches}}
     <a class="desktop-nav-link {{#if isBranchesSection}}active{{/if}}" href="/branches{{branchQueryString}}">
       <span class="desktop-nav-icon" aria-hidden="true"><i class="fa-solid fa-store"></i></span>

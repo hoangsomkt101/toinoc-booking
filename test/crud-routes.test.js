@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const apiClientRouter = require('../src/routes/api-clients');
+const apiRouter = require('../src/routes/api');
 const bookingRouter = require('../src/routes/bookings');
 const branchRouter = require('../src/routes/branches');
 const customerRouter = require('../src/routes/customers');
@@ -28,6 +29,15 @@ test('booking API exposes CRUD routes and lifecycle actions', () => {
     { path: '/:id/check-in', methods: ['post'] },
     { path: '/:id/check-out', methods: ['post'] },
     { path: '/:id/cancel', methods: ['post'] }
+  ]);
+});
+
+test('operational API exposes dashboard and table status routes', () => {
+  assert.deepEqual(routeMethods(apiRouter), [
+    { path: '/dashboard', methods: ['get'] },
+    { path: '/tables', methods: ['get'] },
+    { path: '/table-statuses', methods: ['get'] },
+    { path: '/online-users', methods: ['get'] }
   ]);
 });
 

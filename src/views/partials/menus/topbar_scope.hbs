@@ -1,5 +1,5 @@
 <header class="desktop-topbar desktop-topbar-with-scope" aria-label="Thanh thông tin quản trị">
-  <form id="branch-scope-form" class="desktop-topbar-scope {{#if isBookingsSection}}{{#if showBookingDateFilter}}desktop-topbar-scope-with-date{{/if}}{{/if}} d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/{{dashboardSection}}">
+  <form id="branch-scope-form" class="desktop-topbar-scope {{#if showBookingDateFilter}}desktop-topbar-scope-with-date{{/if}} d-flex flex-column flex-lg-row flex-lg-nowrap align-items-lg-end justify-content-start gap-3" method="get" action="/{{dashboardSection}}">
     <div class="scope-field scope-branch-field">
       <select class="form-select scope-branch-select" name="branch_id" id="branch-scope-select" aria-label="Chi nhánh" data-branch-scope>
         {{#if canManageBranches}}
@@ -10,16 +10,14 @@
         {{/each}}
       </select>
     </div>
-    {{#if isBookingsSection}}
-      {{#if showBookingDateFilter}}
-        <div class="scope-field scope-date-field">
-          <div class="booking-date-row dashboard-date-row" data-dashboard-date-controls>
-            <button class="booking-date-chip" type="button" data-dashboard-date-offset="0">Hôm nay</button>
-            <button class="booking-date-chip" type="button" data-dashboard-date-offset="1">Ngày mai</button>
-            <input class="booking-date-input dashboard-date-input" id="booking-date-filter" name="booking_date" type="date" value="{{selectedBookingDate}}" aria-label="Ngày đặt bàn" data-dashboard-date-filter>
-          </div>
+    {{#if showBookingDateFilter}}
+      <div class="scope-field scope-date-field">
+        <div class="booking-date-row dashboard-date-row" data-dashboard-date-controls>
+          <button class="booking-date-chip" type="button" data-dashboard-date-offset="0">Hôm nay</button>
+          <button class="booking-date-chip" type="button" data-dashboard-date-offset="1">Ngày mai</button>
+          <input class="booking-date-input dashboard-date-input" id="booking-date-filter" name="booking_date" type="date" value="{{selectedBookingDate}}" aria-label="Ngày đặt bàn" data-dashboard-date-filter>
         </div>
-      {{/if}}
+      </div>
     {{/if}}
   </form>
 </header>

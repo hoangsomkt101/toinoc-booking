@@ -321,6 +321,22 @@ async function listTables(filters = {}, executor = pool) {
   return result.rows.map(normalizeTableRow);
 }
 
+async function listTableStatuses(filters = {}, executor = pool) {
+  const normalizedFilters = dashboardFilters(filters);
+  const branchFilter = normalizedFilters.branch_id ? { branch_id: normalizedFilters.branch_id } : {};
+  const dateFilter = normalizedFilters.booking_date ? { booking_date: normalizedFilters.booking_date } : {};
+
+  const [tables, bookings] = await Promise.all([
+    listTables(branchFilter, executor),
+    listBookings({ ...branchFilter, ...dateFilter, period: 'open' }, executor)
+  ]);
+
+  return {
+    tables: tables.filter((table) => table.status !== 'BLOCKED'),
+    bookings
+  };
+}
+
 async function createBooking(input) {
   const data = validateBookingPayload(input);
 
@@ -690,6 +706,7 @@ module.exports = {
   createBooking,
   deleteBooking,
   getBookingById,
+  listTableStatuses,
   listBookings,
   listTables,
   updateBooking,

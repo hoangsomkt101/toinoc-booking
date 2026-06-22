@@ -42,6 +42,15 @@ router.get(
 );
 
 router.get(
+  '/table-statuses',
+  requireManager,
+  asyncHandler(async (req, res) => {
+    const tableStatuses = await bookingService.listTableStatuses(scopedBranchQuery(req));
+    res.json({ data: tableStatuses });
+  })
+);
+
+router.get(
   '/online-users',
   requireManager,
   asyncHandler(async (req, res) => {

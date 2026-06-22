@@ -155,11 +155,13 @@ async function renderDashboard(req, res, section) {
   const scopedQuery = canManageBranches || !selectedBranchId
     ? req.query
     : { ...req.query, branch_id: selectedBranchId };
-  const bookingDate = section === 'bookings' ? selectedBookingDate(req) : '';
+  const hasDateScope = section === 'bookings' || section === 'table';
+  const bookingDate = hasDateScope ? selectedBookingDate(req) : '';
   const dashboardQuery = bookingDate ? { ...scopedQuery, booking_date: bookingDate } : scopedQuery;
   const isSettingsSection = section === 'setting';
-  const [dashboard, bookings, customers, users, apiClients, sheetTargets] = await Promise.all([
+  const [dashboard, tableStatuses, bookings, customers, users, apiClients, sheetTargets] = await Promise.all([
     canManageBookings ? bookingService.getDashboardData(dashboardQuery) : {},
+    section === 'table' && canManageBookings ? bookingService.listTableStatuses(dashboardQuery) : {},
     section === 'bookings' && canViewBookings ? bookingService.listBookings(dashboardQuery) : [],
     section === 'customers' && canManageCustomers ? customerService.listCustomers(scopedQuery) : [],
     section === 'users' && canManageUsers ? userService.listUsers(req.user) : [],
@@ -170,7 +172,7 @@ async function renderDashboard(req, res, section) {
   res.render('dashboard', {
     bodyClass: 'dashboard-body mobile-app-body',
     bodyId: 'page-top',
-    title: 'Tổng quan quản lý đặt bàn',
+    title: section === 'table' ? 'Tình trạng bàn' : 'Tổng quan quản lý đặt bàn',
     isDashboardLayout: true,
     branchQueryString: selectedBranchId ? `?branch_id=${encodeURIComponent(selectedBranchId)}` : '',
     canCreateBooking,
@@ -189,12 +191,14 @@ async function renderDashboard(req, res, section) {
     })),
     currentUser: { ...req.user, role_label: ROLE_LABELS[req.user.role] || req.user.role },
     dashboard,
+    tableStatuses,
     dashboardSection: section,
     showOperationsSummary: section === 'bookings' && canManageBookings,
-    showBookingDateFilter: section === 'bookings' && canViewBookings,
+    showBookingDateFilter: hasDateScope && canViewBookings,
     isBookingsSection: section === 'bookings',
     isBranchesSection: section === 'branches',
     isCustomersSection: section === 'customers',
+    isTableSection: section === 'table',
     isSettingsSection,
     isUsersSection: section === 'users',
     onlineUsers: canManageBranches && realtime ? realtime.getOnlineUsers() : [],
@@ -214,6 +218,15 @@ router.get(
   requireAuthenticated,
   asyncHandler(async (req, res) => {
     await renderDashboard(req, res, 'bookings');
+  })
+);
+
+router.get(
+  '/table',
+  requireAuthenticated,
+  requireRole('manager'),
+  asyncHandler(async (req, res) => {
+    await renderDashboard(req, res, 'table');
   })
 );
 
