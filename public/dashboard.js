@@ -64,6 +64,7 @@
   let bookingQuickSearchValue = '';
   let tableQuickSearchValue = '';
   let tableBookingSelectionIds = new Set();
+  const customerLookupTimers = new WeakMap();
   let notificationSoundUnlocked = false;
   const notificationSound = typeof window.Audio === 'function' ? new window.Audio('/notification.mp3') : null;
   if (notificationSound) {
@@ -2387,13 +2388,14 @@
         </section>
 
         <section class="booking-step-block">
-          <label class="booking-field-label">Tên khách <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
-          <input class="form-control form-control-lg" name="customer_name" autocomplete="name" placeholder="Để trống sẽ tự điền Vãng lai">
+          <label class="booking-field-label">Số điện thoại <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
+          <input class="form-control form-control-lg" name="phone" autocomplete="tel" inputmode="tel" placeholder="Nhập SĐT để tìm khách cũ" data-customer-phone>
+          <div class="customer-quickfill" data-customer-quickfill role="status" aria-live="polite"></div>
         </section>
 
         <section class="booking-step-block">
-          <label class="booking-field-label">Số điện thoại <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
-          <input class="form-control form-control-lg" name="phone" autocomplete="tel" inputmode="tel" placeholder="Để trống sẽ tự điền 000">
+          <label class="booking-field-label">Tên khách <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
+          <input class="form-control form-control-lg" name="customer_name" autocomplete="name" placeholder="Chọn khách cũ hoặc nhập tên mới" data-customer-name>
         </section>
 
         <button class="btn btn-warning btn-lg fw-bold form-submit booking-submit-button" type="submit">Tạo booking</button>
@@ -3109,19 +3111,51 @@
     renderCustomers();
   }
 
-  function clearCustomerQuickfill() {
-    if (selectors.customerQuickfill) {
-      selectors.customerQuickfill.innerHTML = '';
+  function customerLookupForm(scope) {
+    return scope?.matches?.('form') ? scope : scope?.closest?.('form') || document.getElementById('create-booking-form');
+  }
+
+  function customerQuickfillElement(scope) {
+    const form = customerLookupForm(scope);
+
+    return form?.querySelector('[data-customer-quickfill]') || selectors.customerQuickfill;
+  }
+
+  function customerPhoneInput(scope) {
+    const form = customerLookupForm(scope);
+
+    return form?.querySelector('[data-customer-phone], [name="phone"]') || document.getElementById('booking-phone');
+  }
+
+  function customerNameInput(scope) {
+    const form = customerLookupForm(scope);
+
+    return form?.querySelector('[data-customer-name], [name="customer_name"]') || document.getElementById('booking-customer-name');
+  }
+
+  function customerLookupPath(scope, path, params = {}) {
+    const branchId = customerLookupForm(scope)?.querySelector('[name="branch_id"]')?.value || selectedBranchId();
+
+    return scopedPathWithParams(path, { ...params, branch_id: branchId });
+  }
+
+  function clearCustomerQuickfill(scope) {
+    const quickfill = customerQuickfillElement(scope);
+
+    if (quickfill) {
+      quickfill.innerHTML = '';
     }
   }
 
-  function renderCustomerQuickfill(result) {
-    if (!selectors.customerQuickfill) {
+  function renderCustomerQuickfill(result, scope) {
+    const quickfill = customerQuickfillElement(scope);
+
+    if (!quickfill) {
       return;
     }
 
     if (!result || !result.customer) {
-      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Khách mới, chưa có lịch sử đặt bàn.</div>';
+      quickfill.innerHTML = '<div class="customer-quickfill-note">Khách mới, chưa có lịch sử đặt bàn.</div>';
       return;
     }
 
@@ -3134,7 +3168,7 @@
           .join('<br>')
       : 'Chưa có booking trong phạm vi chi nhánh này.';
 
-    selectors.customerQuickfill.innerHTML = `
+    quickfill.innerHTML = `
       <div class="customer-quickfill-card">
         <strong>Đã nhận diện: ${escapeHtml(customer.customer_name)}</strong>
         <span>${escapeHtml(customer.booking_count || 0)} booking trước đó</span>
@@ -3143,13 +3177,15 @@
     `;
   }
 
-  function renderCustomerSuggestions(customers = []) {
-    if (!selectors.customerQuickfill) {
+  function renderCustomerSuggestions(customers = [], scope) {
+    const quickfill = customerQuickfillElement(scope);
+
+    if (!quickfill) {
       return;
     }
 
     if (!customers.length) {
-      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Chưa có khách cũ khớp số này.</div>';
+      quickfill.innerHTML = '<div class="customer-quickfill-note">Chưa có khách cũ khớp số này.</div>';
       return;
     }
 
@@ -3169,7 +3205,7 @@
       })
       .join('');
 
-    selectors.customerQuickfill.innerHTML = `
+    quickfill.innerHTML = `
       <div class="customer-suggestion-list">
         <div class="customer-suggestion-title">Khách cũ khớp số điện thoại</div>
         ${items}
@@ -3177,36 +3213,38 @@
     `;
   }
 
-  async function suggestCustomersForBooking(phoneValue) {
+  async function suggestCustomersForBooking(phoneValue, scope) {
     const phone = normalizeClientPhone(phoneValue);
+    const quickfill = customerQuickfillElement(scope);
 
     if (phone.length < 2) {
-      clearCustomerQuickfill();
+      clearCustomerQuickfill(scope);
       return;
     }
 
     if (phone.length >= 10) {
-      await lookupCustomerForBooking(phoneValue);
+      await lookupCustomerForBooking(phoneValue, scope);
       return;
     }
 
-    if (selectors.customerQuickfill) {
-      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Đang gợi ý khách cũ...</div>';
+    if (quickfill) {
+      quickfill.innerHTML = '<div class="customer-quickfill-note">Đang gợi ý khách cũ...</div>';
     }
 
     try {
-      const customers = await request(scopedPathWithParams('/api/customers/suggest', { phone }));
-      renderCustomerSuggestions(customers || []);
+      const customers = await request(customerLookupPath(scope, '/api/customers/suggest', { phone }));
+      renderCustomerSuggestions(customers || [], scope);
     } catch (error) {
-      if (selectors.customerQuickfill) {
-        selectors.customerQuickfill.innerHTML = `<div class="customer-quickfill-note text-danger">${escapeHtml(error.message)}</div>`;
+      if (quickfill) {
+        quickfill.innerHTML = `<div class="customer-quickfill-note text-danger">${escapeHtml(error.message)}</div>`;
       }
     }
   }
 
   function selectCustomerSuggestion(button) {
-    const phoneInput = document.getElementById('booking-phone');
-    const nameInput = document.getElementById('booking-customer-name');
+    const form = customerLookupForm(button);
+    const phoneInput = customerPhoneInput(form);
+    const nameInput = customerNameInput(form);
 
     if (phoneInput) {
       phoneInput.value = button.dataset.customerPhone || '';
@@ -3216,31 +3254,32 @@
       nameInput.value = button.dataset.customerName || '';
     }
 
-    lookupCustomerForBooking(button.dataset.customerPhone || '');
+    lookupCustomerForBooking(button.dataset.customerPhone || '', form);
   }
 
-  async function lookupCustomerForBooking(phoneValue) {
+  async function lookupCustomerForBooking(phoneValue, scope) {
     const phone = normalizeClientPhone(phoneValue);
+    const quickfill = customerQuickfillElement(scope);
 
     if (phone.length < 8) {
-      clearCustomerQuickfill();
+      clearCustomerQuickfill(scope);
       return;
     }
 
-    if (selectors.customerQuickfill) {
-      selectors.customerQuickfill.innerHTML = '<div class="customer-quickfill-note">Đang tìm khách hàng...</div>';
+    if (quickfill) {
+      quickfill.innerHTML = '<div class="customer-quickfill-note">Đang tìm khách hàng...</div>';
     }
 
     try {
-      const result = await request(scopedPathWithParams('/api/customers/lookup', { phone }));
-      const nameInput = document.getElementById('booking-customer-name');
+      const result = await request(customerLookupPath(scope, '/api/customers/lookup', { phone }));
+      const nameInput = customerNameInput(scope);
       if (result?.customer && nameInput && !nameInput.value.trim()) {
         nameInput.value = result.customer.customer_name;
       }
-      renderCustomerQuickfill(result);
+      renderCustomerQuickfill(result, scope);
     } catch (error) {
-      if (selectors.customerQuickfill) {
-        selectors.customerQuickfill.innerHTML = `<div class="customer-quickfill-note text-danger">${escapeHtml(error.message)}</div>`;
+      if (quickfill) {
+        quickfill.innerHTML = `<div class="customer-quickfill-note text-danger">${escapeHtml(error.message)}</div>`;
       }
     }
   }
@@ -4055,6 +4094,13 @@
   }
 
   document.addEventListener('click', (event) => {
+    const tableCustomerSuggestion = event.target.closest('[data-table-booking-create] [data-customer-suggestion]');
+    if (tableCustomerSuggestion) {
+      event.preventDefault();
+      selectCustomerSuggestion(tableCustomerSuggestion);
+      return;
+    }
+
     const bookingFormControl = event.target.closest('[data-date-offset], [data-branch-choice], [data-time-choice], [data-guest-step]');
     const bookingForm = bookingFormControl?.closest('[data-booking-form]');
     if (bookingFormControl && bookingForm) {
@@ -4180,6 +4226,34 @@
       updateBookingDateChips(bookingDateInput.value, bookingDateInput.closest('[data-booking-form]'));
     }
   });
+
+  document.addEventListener('pointerdown', (event) => {
+    const tableCustomerSuggestion = event.target.closest('[data-table-booking-create] [data-customer-suggestion]');
+    if (tableCustomerSuggestion) {
+      event.preventDefault();
+      selectCustomerSuggestion(tableCustomerSuggestion);
+    }
+  });
+
+  document.addEventListener('input', (event) => {
+    const phoneInput = event.target.closest('[data-table-booking-create] [data-customer-phone]');
+    if (!phoneInput) {
+      return;
+    }
+
+    window.clearTimeout(customerLookupTimers.get(phoneInput));
+    customerLookupTimers.set(phoneInput, window.setTimeout(() => {
+      suggestCustomersForBooking(phoneInput.value, phoneInput.closest('form'));
+    }, 250));
+  });
+
+  document.addEventListener('focusout', (event) => {
+    const phoneInput = event.target.closest('[data-table-booking-create] [data-customer-phone]');
+    if (phoneInput) {
+      suggestCustomersForBooking(phoneInput.value, phoneInput.closest('form'));
+    }
+  });
+
   document.addEventListener('change', (event) => {
     const editDateInput = event.target.closest('[data-edit-booking-date]');
     if (editDateInput) {
