@@ -172,7 +172,7 @@ test('create booking with table ids assigns tables and skips walk-in customer up
     branch_address: '',
     area_name: 'Trong nhà',
     customer_name: 'Vãng lai',
-    phone: 'Vãng lai',
+    phone: '000',
     booking_time: '2027-01-01T11:00:00.000Z',
     guest_count: 8,
     order_staff_name: null,
@@ -276,10 +276,10 @@ test('create booking with table ids assigns tables and skips walk-in customer up
 
   assert.equal(result.status, 'CONFIRMED');
   assert.equal(result.customer_id, null);
-  assert.equal(result.phone, 'Vãng lai');
+  assert.equal(result.phone, '000');
   assert.equal(insertedBookingParams[0], null);
   assert.equal(insertedBookingParams[3], 'Vãng lai');
-  assert.equal(insertedBookingParams[4], 'Vãng lai');
+  assert.equal(insertedBookingParams[4], '000');
   assert.deepEqual(insertedTables, [[31, 9], [31, 10]]);
   assert.ok(!queries.some((query) => /INSERT INTO customers/.test(query.sql)));
 });

@@ -60,14 +60,17 @@ test('normalizePhone stores a stable customer key', () => {
 });
 
 test('normalizePhone accepts walk-in bookings', () => {
-  assert.equal(normalizePhone(' vãng lai '), 'Vãng lai');
-  assert.equal(validateBookingPayload({
+  assert.equal(normalizePhone(' vãng lai '), '000');
+  const payload = validateBookingPayload({
     customer_name: '',
     phone: '',
     booking_time: '2027-01-01T18:00',
     guest_count: '2',
     branch_id: '1'
-  }, { allowWalkIn: true }).customer_name, 'Vãng lai');
+  }, { allowWalkIn: true });
+
+  assert.equal(payload.customer_name, 'Vãng lai');
+  assert.equal(payload.phone, '000');
 });
 
 test('validateBookingPayload treats local booking times as Vietnam time', () => {

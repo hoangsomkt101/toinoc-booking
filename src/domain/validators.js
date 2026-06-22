@@ -20,6 +20,7 @@ const FIELD_LABELS = Object.freeze({
 const LOCAL_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/;
 const VIETNAM_TIME_ZONE_OFFSET = '+07:00';
 const WALK_IN_LABEL = 'Vãng lai';
+const WALK_IN_PHONE = '000';
 
 function fieldLabel(field) {
   return FIELD_LABELS[field] || field;
@@ -55,7 +56,7 @@ function normalizeSearchText(value) {
 function normalizePhone(value, field = 'phone') {
   const rawValue = normalizeString(value, field);
   if (normalizeSearchText(rawValue) === 'vang lai') {
-    return WALK_IN_LABEL;
+    return WALK_IN_PHONE;
   }
 
   const digits = rawValue.replace(/\D/g, '');
@@ -168,7 +169,7 @@ function validateBookingPayload(input, options = {}) {
     }
 
     if (!hasOwn(payload, 'phone') || payload.phone === undefined || payload.phone === null || payload.phone === '') {
-      payload.phone = WALK_IN_LABEL;
+      payload.phone = WALK_IN_PHONE;
     }
   }
 
@@ -232,6 +233,7 @@ function normalizeTableIds(input) {
 
 module.exports = {
   WALK_IN_LABEL,
+  WALK_IN_PHONE,
   normalizePhone,
   parsePositiveInteger,
   parseOptionalPositiveInteger,

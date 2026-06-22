@@ -293,7 +293,7 @@
       return booking.customer_name;
     }
 
-    if (normalizeClientSearchText(booking.phone) === 'vang lai') {
+    if (normalizeClientPhone(booking.phone) === '000') {
       return booking.customer_name;
     }
 
@@ -2393,7 +2393,7 @@
 
         <section class="booking-step-block">
           <label class="booking-field-label">Số điện thoại <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
-          <input class="form-control form-control-lg" name="phone" autocomplete="tel" inputmode="tel" placeholder="Để trống sẽ tự điền Vãng lai">
+          <input class="form-control form-control-lg" name="phone" autocomplete="tel" inputmode="tel" placeholder="Để trống sẽ tự điền 000">
         </section>
 
         <button class="btn btn-warning btn-lg fw-bold form-submit booking-submit-button" type="submit">Tạo booking</button>
@@ -2438,7 +2438,7 @@
       .map((id) => id.trim())
       .filter(Boolean);
     data.customer_name = String(data.customer_name || '').trim() || 'Vãng lai';
-    data.phone = String(data.phone || '').trim() || 'Vãng lai';
+    data.phone = String(data.phone || '').trim() || '000';
     data.table_ids = tableIds;
     data.area_id = form.querySelector('[data-assign-area].selected')?.dataset.assignArea || '';
 

@@ -1,6 +1,6 @@
 const { pool, withTransaction } = require('../db/pool');
 const { badRequest, conflict, notFound } = require('../domain/errors');
-const { WALK_IN_LABEL, normalizePhone, parsePositiveInteger } = require('../domain/validators');
+const { WALK_IN_PHONE, normalizePhone, parsePositiveInteger } = require('../domain/validators');
 
 function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value || {}, key);
@@ -216,7 +216,7 @@ async function upsertCustomerByPhone(client, input) {
   const customerName = normalizeCustomerName(input.customer_name);
   const phone = normalizePhone(input.phone);
 
-  if (phone === WALK_IN_LABEL) {
+  if (phone === WALK_IN_PHONE) {
     return null;
   }
 
