@@ -2195,15 +2195,20 @@ a:hover {
   }
 
   .timeline-meta-row {
-    align-items: flex-start;
-    display: grid;
+    align-items: center;
+    display: flex;
+    flex-wrap: nowrap;
     font-size: 11px;
     gap: 5px;
     margin-top: 9px;
-    white-space: normal;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
   .timeline-meta-row > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
