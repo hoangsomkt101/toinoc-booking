@@ -1618,15 +1618,10 @@
   function bookingVisitMeta(booking) {
     const visitNumber = Number(booking.customer_visit_number || 0);
     const bookingCount = Number(booking.customer_booking_count || 0);
-    const previousBookingCount = Math.max(
-      Number(booking.customer_previous_booking_count ?? bookingCount - 1) || 0,
-      0
-    );
 
     if (visitNumber <= 1 && bookingCount <= 1) {
       return {
         label: 'Lần đầu',
-        detail: '0 booking trước',
         title: 'Lần đầu tới quán'
       };
     }
@@ -1634,15 +1629,13 @@
     if (visitNumber > 0) {
       return {
         label: `Lần thứ ${visitNumber}`,
-        detail: `${previousBookingCount} booking trước`,
-        title: `Lần thứ ${visitNumber} tới quán · ${previousBookingCount} booking trước đó`
+        title: `Lần thứ ${visitNumber} tới quán`
       };
     }
 
     return {
-      label: `${bookingCount} booking`,
-      detail: 'Đã ghi nhận',
-      title: `${bookingCount} booking đã ghi nhận`
+      label: bookingCount > 1 ? `Lần thứ ${bookingCount}` : 'Lần đầu',
+      title: bookingCount > 1 ? `Lần thứ ${bookingCount} tới quán` : 'Lần đầu tới quán'
     };
   }
 
@@ -2000,7 +1993,6 @@
             </div>
             <span class="timeline-visit-count" title="${escapeHtml(visitMeta.title)}">
               <strong>${escapeHtml(visitMeta.label)}</strong>
-              <small>${escapeHtml(visitMeta.detail)}</small>
             </span>
           </div>
           <div class="timeline-meta-row">

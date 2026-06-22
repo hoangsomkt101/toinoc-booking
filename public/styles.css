@@ -1979,33 +1979,23 @@ a:hover {
   border: 1px solid rgba(237, 174, 50, 0.55);
   border-radius: 13px;
   color: var(--wine);
-  display: inline-grid;
+  display: inline-flex;
   flex: 0 0 auto;
-  gap: 1px;
-  line-height: 1.05;
-  max-width: 52%;
-  min-width: 82px;
-  padding: 7px 10px;
+  justify-content: center;
+  line-height: 1.15;
+  max-width: 42%;
+  min-width: 68px;
+  padding: 7px 11px;
   text-align: center;
 }
 
-.timeline-visit-count strong,
-.timeline-visit-count small {
+.timeline-visit-count strong {
   display: block;
+  font-size: 13px;
+  font-weight: 950;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.timeline-visit-count strong {
-  font-size: 13px;
-  font-weight: 950;
-}
-
-.timeline-visit-count small {
-  color: #7d5c10;
-  font-size: 10px;
-  font-weight: 850;
 }
 
 .timeline-meta-row {
@@ -2197,17 +2187,13 @@ a:hover {
 
   .timeline-visit-count {
     border-radius: 9px;
-    max-width: 50%;
-    min-width: 62px;
+    max-width: 45%;
+    min-width: 54px;
     padding: 5px 6px;
   }
 
   .timeline-visit-count strong {
     font-size: 10.5px;
-  }
-
-  .timeline-visit-count small {
-    font-size: 8.5px;
   }
 
   .timeline-meta-row {
