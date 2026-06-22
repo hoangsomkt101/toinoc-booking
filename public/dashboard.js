@@ -1122,6 +1122,14 @@
     const callButton = callHref
       ? `<a class="btn btn-wine btn-sm booking-edit-call-button" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
       : '<button class="btn btn-outline-secondary btn-sm booking-edit-call-button" type="button" disabled>Call</button>';
+    const orderStaffField = isAdminUser()
+      ? `
+        <section class="booking-step-block">
+          <label class="booking-field-label">Tên nhân viên lên đơn <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
+          <input class="form-control form-control-lg" name="order_staff_name" value="${escapeHtml(booking.order_staff_name || '')}" autocomplete="off">
+        </section>
+      `
+      : '';
 
     return `
       <form class="booking-public-form booking-edit-public-form" data-booking-form data-booking-form-mode="edit" data-booking-update="${escapeHtml(booking.id)}">
@@ -1164,10 +1172,7 @@
           <input class="form-control form-control-lg" name="customer_name" value="${escapeHtml(booking.customer_name)}" autocomplete="name" required>
         </section>
 
-        <section class="booking-step-block">
-          <label class="booking-field-label">Tên nhân viên lên đơn <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
-          <input class="form-control form-control-lg" name="order_staff_name" value="${escapeHtml(booking.order_staff_name || '')}" autocomplete="off">
-        </section>
+        ${orderStaffField}
 
         <section class="booking-step-block">
           <label class="booking-field-label">Ghi chú <span class="text-body-secondary fw-normal">(không bắt buộc)</span></label>
@@ -2072,7 +2077,7 @@
     const note = booking.note
       ? `<div class="timeline-note">Ghi chú: ${escapeHtml(booking.note)}</div>`
       : '';
-    const orderStaff = booking.order_staff_name
+    const orderStaff = isAdminUser() && booking.order_staff_name
       ? `<div class="timeline-note">Nhân viên lên đơn: ${escapeHtml(booking.order_staff_name)}</div>`
       : '';
     const customerMeta = bookingCustomerMeta(booking);
@@ -2979,6 +2984,10 @@
     data.booking_time = bookingDateTimeValue(data.booking_date, data.booking_time_slot);
     delete data.booking_date;
     delete data.booking_time_slot;
+
+    if (form.dataset.bookingFormMode === 'edit' && !isAdminUser()) {
+      delete data.order_staff_name;
+    }
 
     return data;
   }

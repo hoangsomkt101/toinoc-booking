@@ -7,6 +7,7 @@ const bookingRouter = require('../src/routes/bookings');
 const branchRouter = require('../src/routes/branches');
 const sheetSettingsRouter = require('../src/routes/sheet-settings');
 const userRouter = require('../src/routes/users');
+const bookingService = require('../src/services/bookings');
 
 function routeGuard(router, path, method) {
   const layer = router.stack.find((item) => item.route && item.route.path === path && item.route.methods[method]);
@@ -34,6 +35,32 @@ function assertDenied(guard, role, statusCode = 403) {
   const error = invokeGuard(guard, role);
 
   assert.equal(error && error.statusCode, statusCode);
+}
+
+function routeHandler(router, path, method) {
+  const layer = router.stack.find((item) => item.route && item.route.path === path && item.route.methods[method]);
+
+  assert.ok(layer, `Missing route ${method.toUpperCase()} ${path}`);
+  return layer.route.stack.at(-1).handle;
+}
+
+function invokeBookingUpdate(role, body) {
+  return new Promise((resolve, reject) => {
+    const handler = routeHandler(bookingRouter, '/:id', 'put');
+    const req = {
+      app: { locals: {} },
+      body,
+      params: { id: '12' },
+      user: { role }
+    };
+    const res = {
+      json(payload) {
+        resolve(payload.data);
+      }
+    };
+
+    handler(req, res, reject);
+  });
 }
 
 test('sale can create and list bookings without management actions', () => {
@@ -86,6 +113,28 @@ test('manager can operate bookings and choose table data but cannot manage users
   ]) {
     assertDenied(routeGuard(userRouter, path, method), 'manager');
   }
+});
+
+test('only admin can update booking order staff name', async () => {
+  const originalUpdateBooking = bookingService.updateBooking;
+  const capturedUpdates = [];
+
+  bookingService.updateBooking = async (id, payload) => {
+    capturedUpdates.push({ id, payload });
+    return { id: Number(id), ...payload };
+  };
+
+  try {
+    await invokeBookingUpdate('manager', { customer_name: 'Khách A', order_staff_name: 'Manager sửa' });
+    await invokeBookingUpdate('admin', { customer_name: 'Khách B', order_staff_name: 'Admin sửa' });
+  } finally {
+    bookingService.updateBooking = originalUpdateBooking;
+  }
+
+  assert.deepEqual(capturedUpdates, [
+    { id: '12', payload: { customer_name: 'Khách A' } },
+    { id: '12', payload: { customer_name: 'Khách B', order_staff_name: 'Admin sửa' } }
+  ]);
 });
 
 test('sale cannot read operational dashboard, table, branch, area, or user APIs', () => {

@@ -41,6 +41,16 @@ function createBookingPayload(req) {
   return payload;
 }
 
+function updateBookingPayload(req) {
+  const payload = { ...req.body };
+
+  if (req.user.role !== 'admin') {
+    delete payload.order_staff_name;
+  }
+
+  return payload;
+}
+
 router.post(
   '/',
   requireBookingCreate,
@@ -73,7 +83,7 @@ router.put(
   '/:id',
   requireBookingManage,
   asyncHandler(async (req, res) => {
-    const booking = await bookingService.updateBooking(req.params.id, req.body);
+    const booking = await bookingService.updateBooking(req.params.id, updateBookingPayload(req));
     broadcast(req, SOCKET_EVENTS.booking_updated, booking);
     res.json({ data: booking });
   })
