@@ -15,6 +15,8 @@ const {
 
 const INACTIVE_RELEASE_STATUSES = ['CANCELLED', 'NO_SHOW', 'CHECKED_OUT', 'COMPLETED'];
 const TABLE_HOLD_HOURS = 4;
+const QUICK_SOON_OUT_MINUTES = 15;
+const QUICK_TABLE_STATUSES = Object.freeze(['AVAILABLE', 'RESERVED', 'OCCUPIED', 'SOON_OUT']);
 const BOOKING_STATUS_LABELS = Object.freeze({
   PENDING: 'chờ xác nhận',
   CONFIRMED: 'đã xác nhận',
@@ -32,6 +34,20 @@ function bookingStatusLabel(status) {
 
 function tableHoldIntervalSql() {
   return `INTERVAL '${TABLE_HOLD_HOURS} hours'`;
+}
+
+function tableSoonOutCheckInSql() {
+  return `NOW() - ${tableHoldIntervalSql()} + INTERVAL '${QUICK_SOON_OUT_MINUTES} minutes'`;
+}
+
+function normalizeQuickTableStatus(status) {
+  const normalized = String(status || '').trim().toUpperCase();
+
+  if (!QUICK_TABLE_STATUSES.includes(normalized)) {
+    throw badRequest('Trạng thái bàn không hợp lệ', { allowed: QUICK_TABLE_STATUSES });
+  }
+
+  return normalized;
 }
 
 function bookingSelect(includeLogs = false) {
@@ -633,6 +649,144 @@ async function checkOutBooking(id, input = {}) {
   });
 }
 
+async function updateQuickTableStatus(id, input = {}) {
+  const tableId = parsePositiveInteger(id, 'id');
+  const nextStatus = normalizeQuickTableStatus(input.status);
+
+  return withTransaction(async (client) => {
+    const tableResult = await client.query(
+      `SELECT id, status
+       FROM tables
+       WHERE id = $1
+       FOR UPDATE`,
+      [tableId]
+    );
+
+    if (tableResult.rowCount === 0) {
+      throw notFound('Không tìm thấy bàn');
+    }
+
+    const table = tableResult.rows[0];
+    if (table.status === 'BLOCKED') {
+      throw conflict('Không thể cập nhật bàn đang tạm khóa');
+    }
+
+    const bookingResult = await client.query(
+      `SELECT b.*
+       FROM booking_tables bt
+       JOIN bookings b ON b.id = bt.booking_id
+       WHERE bt.table_id = $1
+         AND b.status = ANY($2::TEXT[])
+       ORDER BY
+         CASE b.status WHEN 'CHECKED_IN' THEN 2 WHEN 'CONFIRMED' THEN 1 WHEN 'PENDING' THEN 1 ELSE 0 END DESC,
+         b.booking_time ASC,
+         b.id ASC
+       FOR UPDATE OF b`,
+      [tableId, ACTIVE_ASSIGNMENT_STATUSES]
+    );
+    const bookingId = input.booking_id ? parsePositiveInteger(input.booking_id, 'booking_id') : undefined;
+    const booking = bookingId
+      ? bookingResult.rows.find((row) => Number(row.id) === Number(bookingId))
+      : bookingResult.rows[0];
+
+    if (!booking) {
+      if (nextStatus === 'AVAILABLE') {
+        await client.query("UPDATE tables SET status = 'AVAILABLE' WHERE id = $1 AND status <> 'BLOCKED'", [tableId]);
+        return { table: await getTableById(tableId, client), booking: null };
+      }
+
+      throw badRequest('Cần có booking đã xếp bàn trước khi đổi trạng thái bàn');
+    }
+
+    if (nextStatus === 'AVAILABLE') {
+      const assignedResult = await client.query('SELECT table_id FROM booking_tables WHERE booking_id = $1', [booking.id]);
+      const tableIds = assignedResult.rows.map((row) => Number(row.table_id));
+
+      await client.query('DELETE FROM booking_tables WHERE booking_id = $1', [booking.id]);
+      await client.query('UPDATE bookings SET area_id = NULL WHERE id = $1', [booking.id]);
+
+      if (booking.status === 'CHECKED_IN') {
+        await client.query(
+          `UPDATE bookings
+           SET status = 'CONFIRMED', check_in_at = NULL, actual_guest_count = NULL
+           WHERE id = $1`,
+          [booking.id]
+        );
+        await logStatusChange(client, booking.id, 'CHECKED_IN', 'CONFIRMED', 'Đã trả bàn về trống và xoá xếp bàn');
+      }
+
+      await syncTableStatuses(client, tableIds);
+
+      return { table: await getTableById(tableId, client), booking: await getBookingById(booking.id, client) };
+    }
+
+    if (nextStatus === 'RESERVED') {
+      if (booking.status !== 'CONFIRMED') {
+        await client.query(
+          `UPDATE bookings
+           SET status = 'CONFIRMED', check_in_at = NULL, check_out_at = NULL, actual_guest_count = NULL
+           WHERE id = $1`,
+          [booking.id]
+        );
+        await logStatusChange(client, booking.id, booking.status, 'CONFIRMED', 'Đã chuyển trạng thái bàn sang đang xếp');
+      }
+    }
+
+    if (nextStatus === 'OCCUPIED') {
+      const actualGuestCount = parseOptionalPositiveInteger(input.actual_guest_count, 'actual_guest_count') || booking.guest_count;
+      await client.query(
+        `UPDATE bookings
+         SET status = 'CHECKED_IN', check_in_at = NOW(), check_out_at = NULL, actual_guest_count = $1
+         WHERE id = $2`,
+        [actualGuestCount, booking.id]
+      );
+      await logStatusChange(client, booking.id, booking.status, 'CHECKED_IN', 'Đã chuyển trạng thái bàn sang đang ngồi');
+    }
+
+    if (nextStatus === 'SOON_OUT') {
+      const actualGuestCount = parseOptionalPositiveInteger(input.actual_guest_count, 'actual_guest_count') || booking.guest_count;
+      await client.query(
+        `UPDATE bookings
+         SET status = 'CHECKED_IN', check_in_at = ${tableSoonOutCheckInSql()}, check_out_at = NULL, actual_guest_count = $1
+         WHERE id = $2`,
+        [actualGuestCount, booking.id]
+      );
+      await logStatusChange(client, booking.id, booking.status, 'CHECKED_IN', 'Đã chuyển trạng thái bàn sang sắp out');
+    }
+
+    const assignedResult = await client.query('SELECT table_id FROM booking_tables WHERE booking_id = $1', [booking.id]);
+    const tableIds = assignedResult.rows.map((row) => Number(row.table_id));
+    await syncTableStatuses(client, tableIds.length ? tableIds : [tableId]);
+
+    return { table: await getTableById(tableId, client), booking: await getBookingById(booking.id, client) };
+  });
+}
+
+async function getTableById(id, executor = pool) {
+  const tableId = parsePositiveInteger(id, 'id');
+  const result = await executor.query(
+    `SELECT
+       t.id,
+       t.branch_id,
+       br.name AS branch_name,
+       t.table_code,
+       t.capacity,
+       t.status,
+       t.created_at,
+       t.updated_at
+     FROM tables t
+     JOIN branches br ON br.id = t.branch_id
+     WHERE t.id = $1`,
+    [tableId]
+  );
+
+  if (result.rowCount === 0) {
+    throw notFound('Không tìm thấy bàn');
+  }
+
+  return normalizeTableRow(result.rows[0]);
+}
+
 async function cancelBooking(id) {
   return withTransaction(async (client) => {
     const booking = await lockBooking(client, id);
@@ -713,6 +867,7 @@ module.exports = {
   assignTables,
   checkInBooking,
   checkOutBooking,
+  updateQuickTableStatus,
   cancelBooking,
   getDashboardData
 };

@@ -44,6 +44,12 @@
   const arrivalPendingStatuses = ['PENDING', 'CONFIRMED'];
   const closedBookingStatuses = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
   const upcomingWarningMinutes = 30;
+  const tableQuickStatusChoices = [
+    { value: 'AVAILABLE', key: 'available', label: 'Trống' },
+    { value: 'RESERVED', key: 'reserved', label: 'Đang xếp' },
+    { value: 'OCCUPIED', key: 'occupied', label: 'Đang ngồi' },
+    { value: 'SOON_OUT', key: 'soon-out', label: 'Sắp out' }
+  ];
   const bookingTabDefinitions = [
     { key: 'all', label: 'Tất cả' },
     { key: 'pending', label: 'Chưa xác nhận' },
@@ -2118,29 +2124,26 @@
     return /^\d+$/.test(code) ? Number(code) : Number.MAX_SAFE_INTEGER;
   }
 
-  function tableQuickStatusOptions(booking) {
-    const options = booking
-      ? [
-          { value: 'PENDING', label: 'Chờ xác nhận' },
-          { value: 'CONFIRMED', label: 'Đang xếp' },
-          { value: 'CHECKED_IN', label: 'Đang ngồi' },
-          { value: 'CHECKED_OUT', label: 'Đã out' },
-          { value: 'COMPLETED', label: 'Hoàn tất' },
-          { value: 'CANCELLED', label: 'Hủy' }
-        ]
-      : [{ value: '', label: 'Trống', disabled: true }];
-    const currentValue = booking ? booking.status : '';
+  function tableQuickStatusValue(statusKey) {
+    return tableQuickStatusChoices.find((choice) => choice.key === statusKey)?.value || 'AVAILABLE';
+  }
 
-    return options
-      .map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === currentValue ? 'selected' : ''} ${option.disabled ? 'disabled' : ''}>${escapeHtml(option.label)}</option>`)
+  function tableQuickStatusOptions(meta, booking) {
+    const currentValue = tableQuickStatusValue(meta.key);
+
+    return tableQuickStatusChoices
+      .map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === currentValue ? 'selected' : ''} ${!booking && option.value !== 'AVAILABLE' ? 'disabled' : ''}>${escapeHtml(option.label)}</option>`)
       .join('');
   }
 
-  function tableQuickStatusSelect(booking) {
+  function tableQuickStatusSelect(item) {
+    const booking = item.booking;
+    const currentValue = tableQuickStatusValue(item.meta.key);
+
     return `
-      <label class="visually-hidden" for="table-status-select-${escapeHtml(booking?.id || 'empty')}">Đổi trạng thái bàn</label>
-      <select class="form-select form-select-sm table-status-select" id="table-status-select-${escapeHtml(booking?.id || 'empty')}" data-table-status-select data-booking-id="${escapeHtml(booking?.id || '')}" data-current-status="${escapeHtml(booking?.status || '')}" ${booking ? '' : 'disabled'}>
-        ${tableQuickStatusOptions(booking)}
+      <label class="visually-hidden" for="table-status-select-${escapeHtml(item.table.id)}">Đổi trạng thái bàn</label>
+      <select class="form-select form-select-sm table-status-select table-status-select-${escapeHtml(item.meta.key)}" id="table-status-select-${escapeHtml(item.table.id)}" data-table-status-select data-table-id="${escapeHtml(item.table.id)}" data-table-code="${escapeHtml(item.table.table_code)}" data-booking-id="${escapeHtml(booking?.id || '')}" data-current-status="${escapeHtml(currentValue)}" ${booking ? '' : 'disabled'}>
+        ${tableQuickStatusOptions(item.meta, booking)}
       </select>
     `;
   }
@@ -2160,12 +2163,11 @@
             <span class="table-status-code">Bàn ${escapeHtml(item.table.table_code)}</span>
             <div class="table-status-branch">${escapeHtml(item.table.branch_name || '')}</div>
           </div>
-          <span class="table-status-pill table-status-pill-${escapeHtml(meta.tone)}">${escapeHtml(meta.label)}</span>
         </div>
         <div class="table-status-customer">${escapeHtml(customer)}</div>
         <div class="table-status-meta">${bookingMeta}</div>
         <div class="table-status-detail">${escapeHtml(meta.detail)}</div>
-        ${tableQuickStatusSelect(booking)}
+        ${tableQuickStatusSelect(item)}
       </article>
     `;
   }
@@ -3618,26 +3620,15 @@
     }
   }
 
-  async function updateBookingStatusFast(bookingId, nextStatus, booking) {
-    if (nextStatus === 'CHECKED_IN') {
-      await request(`/api/bookings/${bookingId}/check-in`, {
-        method: 'POST',
-        body: { actual_guest_count: booking ? booking.guest_count : undefined }
-      });
-      return;
-    }
-
-    if (nextStatus === 'CHECKED_OUT' && booking?.status === 'CHECKED_IN') {
-      await request(`/api/bookings/${bookingId}/check-out`, { method: 'POST', body: {} });
-      return;
-    }
-
-    if (nextStatus === 'CANCELLED') {
-      await request(`/api/bookings/${bookingId}/cancel`, { method: 'POST', body: {} });
-      return;
-    }
-
-    await request(`/api/bookings/${bookingId}`, { method: 'PUT', body: { status: nextStatus } });
+  async function updateTableQuickStatusFast(tableId, nextStatus, booking) {
+    await request(`/api/tables/${tableId}/status`, {
+      method: 'PATCH',
+      body: {
+        status: nextStatus,
+        booking_id: booking?.id,
+        actual_guest_count: booking?.actual_guest_count || booking?.guest_count
+      }
+    });
   }
 
   async function handleTableStatusSelect(event) {
@@ -3647,16 +3638,23 @@
       return;
     }
 
+    const tableId = select.dataset.tableId;
     const bookingId = select.dataset.bookingId;
     const nextStatus = select.value;
     const previousStatus = select.dataset.currentStatus;
-    const booking = findBooking(bookingId) || (state.tableStatuses?.bookings || []).find((item) => String(item.id) === String(bookingId));
+    const booking = (state.tableStatuses?.bookings || []).find((item) => String(item.id) === String(bookingId)) || findBooking(bookingId);
 
-    if (!bookingId || !nextStatus || nextStatus === previousStatus) {
+    if (!tableId || !nextStatus || nextStatus === previousStatus) {
       return;
     }
 
-    if (nextStatus === 'CANCELLED' && !window.confirm(`Chuyển booking của “${booking ? booking.customer_name : bookingId}” sang Đã hủy?`)) {
+    if (nextStatus !== 'AVAILABLE' && !booking) {
+      select.value = previousStatus;
+      window.alert('Cần có booking đã xếp bàn trước khi đổi trạng thái bàn.');
+      return;
+    }
+
+    if (nextStatus === 'AVAILABLE' && booking && !window.confirm(`Chuyển bàn ${select.dataset.tableCode || ''} về Trống? Booking của “${booking.customer_name}” sẽ tự xoá các bàn đã xếp và trở về chưa xếp bàn.`)) {
       select.value = previousStatus;
       return;
     }
@@ -3664,7 +3662,7 @@
     select.disabled = true;
 
     try {
-      await updateBookingStatusFast(bookingId, nextStatus, booking);
+      await updateTableQuickStatusFast(tableId, nextStatus, booking);
       select.dataset.currentStatus = nextStatus;
       await refreshDashboard();
     } catch (error) {

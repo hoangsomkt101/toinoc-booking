@@ -1,6 +1,33 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const bookingService = require('../src/services/bookings');
+const { pool } = require('../src/db/pool');
+
+const originalConnect = pool.connect.bind(pool);
+
+function mockPoolTransaction(handler) {
+  const queries = [];
+
+  pool.connect = async () => ({
+    async query(sql, params = []) {
+      const text = String(sql);
+      queries.push({ sql: text, params });
+
+      if (['BEGIN', 'COMMIT', 'ROLLBACK'].includes(text)) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      return handler(text, params);
+    },
+    release() {}
+  });
+
+  return queries;
+}
+
+test.afterEach(() => {
+  pool.connect = originalConnect;
+});
 
 test('booking list exposes customer visit counters', async () => {
   let capturedSql = '';
@@ -41,4 +68,96 @@ test('table status data combines tables and date scoped open bookings', async ()
   assert.match(capturedSql[1], /b\.branch_id = \$1/);
   assert.match(capturedSql[1], /b\.booking_time >= \$2::date/);
   assert.match(capturedSql[1], /b\.status IN \('PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT'\)/);
+});
+
+test('quick table status available clears assignment and reopens checked-in booking', async () => {
+  const bookingRow = {
+    id: 20,
+    customer_id: null,
+    branch_id: 1,
+    area_id: null,
+    branch_name: 'Chi nhánh 1',
+    branch_address: '',
+    area_name: null,
+    customer_name: 'Khách A',
+    phone: '0900000000',
+    booking_time: '2026-06-22T12:00:00.000Z',
+    guest_count: 4,
+    order_staff_name: null,
+    note: null,
+    status: 'CONFIRMED',
+    actual_guest_count: null,
+    check_in_at: null,
+    check_out_at: null,
+    created_at: null,
+    updated_at: null,
+    customer_booking_count: 1,
+    customer_previous_booking_count: 0,
+    customer_visit_number: 1,
+    assigned_tables: [],
+    status_logs: []
+  };
+  const queries = mockPoolTransaction(async (sql, params = []) => {
+    if (/SELECT id, status\s+FROM tables/s.test(sql)) {
+      assert.deepEqual(params, [9]);
+      return { rowCount: 1, rows: [{ id: 9, status: 'OCCUPIED' }] };
+    }
+
+    if (/SELECT b\.\*\s+FROM booking_tables/s.test(sql)) {
+      assert.deepEqual(params, [9, ['PENDING', 'CONFIRMED', 'CHECKED_IN']]);
+      return { rowCount: 1, rows: [{ id: 20, status: 'CHECKED_IN', guest_count: 4 }] };
+    }
+
+    if (/SELECT table_id FROM booking_tables WHERE booking_id = \$1/.test(sql)) {
+      assert.deepEqual(params, [20]);
+      return { rowCount: 2, rows: [{ table_id: 9 }, { table_id: 10 }] };
+    }
+
+    if (/DELETE FROM booking_tables WHERE booking_id = \$1/.test(sql)) {
+      assert.deepEqual(params, [20]);
+      return { rowCount: 2, rows: [] };
+    }
+
+    if (/UPDATE bookings SET area_id = NULL WHERE id = \$1/.test(sql)) {
+      assert.deepEqual(params, [20]);
+      return { rowCount: 1, rows: [] };
+    }
+
+    if (/UPDATE bookings\s+SET status = 'CONFIRMED'/s.test(sql)) {
+      assert.deepEqual(params, [20]);
+      return { rowCount: 1, rows: [] };
+    }
+
+    if (/INSERT INTO booking_status_logs/.test(sql)) {
+      assert.deepEqual(params.slice(0, 3), [20, 'CHECKED_IN', 'CONFIRMED']);
+      return { rowCount: 1, rows: [] };
+    }
+
+    if (/UPDATE tables t\s+SET status = CASE/s.test(sql)) {
+      assert.deepEqual(params[0], [9, 10]);
+      return { rowCount: 2, rows: [] };
+    }
+
+    if (/FROM tables t\s+JOIN branches br ON br\.id = t\.branch_id\s+WHERE t\.id = \$1/s.test(sql)) {
+      assert.deepEqual(params, [9]);
+      return {
+        rowCount: 1,
+        rows: [{ id: 9, branch_id: 1, branch_name: 'Chi nhánh 1', table_code: '9', capacity: 4, status: 'AVAILABLE' }]
+      };
+    }
+
+    if (/FROM bookings b/s.test(sql) && /WHERE b\.id = \$1/.test(sql)) {
+      assert.deepEqual(params, [20]);
+      return { rowCount: 1, rows: [bookingRow] };
+    }
+
+    throw new Error(`Unexpected query: ${sql}`);
+  });
+
+  const result = await bookingService.updateQuickTableStatus(9, { status: 'AVAILABLE', booking_id: 20 });
+
+  assert.equal(result.table.status, 'AVAILABLE');
+  assert.equal(result.booking.status, 'CONFIRMED');
+  assert.deepEqual(result.booking.assigned_tables, []);
+  assert.ok(queries.some((query) => /DELETE FROM booking_tables WHERE booking_id = \$1/.test(query.sql)));
 });

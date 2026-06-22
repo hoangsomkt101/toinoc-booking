@@ -1,6 +1,7 @@
 const express = require('express');
 const bookingService = require('../services/bookings');
 const { badRequest } = require('../domain/errors');
+const { SOCKET_EVENTS } = require('../domain/constants');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../middleware/async-handler');
 
@@ -23,6 +24,12 @@ function scopedBranchQuery(req) {
   throw badRequest('Vui lòng chọn chi nhánh');
 }
 
+function broadcast(req, eventName, payload) {
+  if (req.app.locals.realtime) {
+    req.app.locals.realtime.broadcast(eventName, payload);
+  }
+}
+
 router.get(
   '/dashboard',
   requireManager,
@@ -38,6 +45,19 @@ router.get(
   asyncHandler(async (req, res) => {
     const tables = await bookingService.listTables(scopedBranchQuery(req));
     res.json({ data: tables });
+  })
+);
+
+router.patch(
+  '/tables/:id/status',
+  requireManager,
+  asyncHandler(async (req, res) => {
+    const result = await bookingService.updateQuickTableStatus(req.params.id, req.body);
+    broadcast(req, SOCKET_EVENTS.table_assignment_changed, result);
+    if (result.booking) {
+      broadcast(req, SOCKET_EVENTS.booking_updated, result.booking);
+    }
+    res.json({ data: result });
   })
 );
 

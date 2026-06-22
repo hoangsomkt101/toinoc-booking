@@ -36,6 +36,7 @@ test('operational API exposes dashboard and table status routes', () => {
   assert.deepEqual(routeMethods(apiRouter), [
     { path: '/dashboard', methods: ['get'] },
     { path: '/tables', methods: ['get'] },
+    { path: '/tables/:id/status', methods: ['patch'] },
     { path: '/table-statuses', methods: ['get'] },
     { path: '/online-users', methods: ['get'] }
   ]);
