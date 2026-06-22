@@ -3696,6 +3696,29 @@ a:hover {
     padding: 1.5rem 1.75rem 2rem;
   }
 
+  .dashboard-page-main .table-status-page {
+    padding-bottom: 6rem;
+  }
+
+  .dashboard-page-main .table-status-toolbar {
+    backdrop-filter: blur(14px);
+    background: rgba(255, 253, 249, 0.96);
+    border-top: 1px solid rgba(231, 221, 206, 0.88);
+    bottom: 0;
+    box-shadow: 0 -0.75rem 1.65rem rgba(83, 58, 35, 0.11);
+    left: 16.75rem;
+    margin: 0 !important;
+    padding: 0.85rem 1.75rem calc(0.85rem + var(--app-safe-area-bottom));
+    position: fixed;
+    right: 0;
+    z-index: 1029;
+  }
+
+  .dashboard-page-main .table-status-search,
+  .dashboard-page-main .table-booking-create-button {
+    min-height: 46px;
+  }
+
   .dashboard-page-main .metric-grid {
     gap: 1rem;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3852,5 +3875,11 @@ a:hover {
 
   .dashboard-page-main {
     padding: 1.75rem 2rem 2.25rem;
+  }
+
+  .dashboard-page-main .table-status-toolbar {
+    left: 17.5rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
   }
 }
