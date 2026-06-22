@@ -1796,7 +1796,11 @@ a:hover {
   align-items: end;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: minmax(0, 24rem) minmax(8rem, 10rem);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.table-status-toolbar-grid.has-table-booking-action {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
 }
 
 .table-status-search {
@@ -1804,54 +1808,19 @@ a:hover {
   font-weight: 900;
 }
 
-.table-booking-time-label {
-  color: var(--ink);
-  font-size: 0.72rem;
-  font-weight: 950;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.35rem;
-  text-transform: uppercase;
-}
-
-.table-booking-time-input {
-  border-color: rgba(237, 174, 50, 0.55);
-  font-weight: 900;
-}
-
-.table-booking-action-bar {
+.table-booking-action-inline {
   align-items: center;
-  background: #fff8e5;
-  border: 1px solid rgba(246, 194, 62, 0.45);
-  border-radius: 16px;
-  box-shadow: 0 10px 22px rgba(83, 58, 35, 0.08);
   display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  padding: 0.85rem;
+  justify-content: stretch;
 }
 
-.table-booking-action-bar[hidden] {
+.table-booking-action-inline[hidden] {
   display: none;
 }
 
-.table-booking-action-copy {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.table-booking-action-copy strong {
-  color: var(--ink);
-  font-weight: 950;
-}
-
-.table-booking-action-copy span {
-  color: #6d645d;
-  font-size: 0.82rem;
-  font-weight: 800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.table-booking-create-button {
+  min-height: 42px;
+  width: 100%;
 }
 
 .table-status-list {
@@ -2393,15 +2362,6 @@ a:hover {
 @media (max-width: 991.98px) {
   .table-status-toolbar-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .table-booking-action-bar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .table-booking-action-copy span {
-    white-space: normal;
   }
 
   .table-status-metrics {

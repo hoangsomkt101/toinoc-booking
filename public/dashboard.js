@@ -92,10 +92,7 @@
     bookingAlerts: document.getElementById('booking-alerts'),
     tableStatusList: document.getElementById('table-status-list'),
     tableQuickSearch: document.querySelector('[data-table-quick-search]'),
-    tableBookingTime: document.querySelector('[data-table-booking-time]'),
     tableBookingBar: document.querySelector('[data-table-booking-bar]'),
-    tableBookingCount: document.querySelector('[data-table-booking-count]'),
-    tableBookingSummary: document.querySelector('[data-table-booking-summary]'),
     tableBookingCreateButton: document.querySelector('[data-open-table-booking]'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
@@ -552,12 +549,8 @@
     return dashboardBookingDateFromUrl();
   }
 
-  function selectedTableBookingTimeSlot() {
-    return selectors.tableBookingTime?.value || '18:00';
-  }
-
   function selectedTableBookingDateTime() {
-    return bookingDateTimeValue(selectedDashboardBookingDate(), selectedTableBookingTimeSlot());
+    return formatDateTimeLocal(new Date());
   }
 
   function usesDashboardDateScope() {
@@ -2226,12 +2219,11 @@
     `;
   }
 
-  function tableBookingConflictForTable(table, bookings = state.tableStatuses?.bookings || allDashboardBookings()) {
+  function tableBookingConflictForTable(table, bookings = state.tableStatuses?.bookings || allDashboardBookings(), bookingTime = selectedTableBookingDateTime()) {
     if (!table) {
       return null;
     }
 
-    const bookingTime = selectedTableBookingDateTime();
     if (!bookingTime) {
       return null;
     }
@@ -2270,15 +2262,6 @@
     return capacityTotal || Math.max(1, tables.length);
   }
 
-  function tableBookingSelectionSummary(tables = selectedTableBookingTables()) {
-    const branch = tableBookingBranch();
-    const tableCodes = tables.map((table) => table.table_code).join(', ');
-    const timeLabel = formatDateTime(selectedTableBookingDateTime());
-    const branchLabel = branch ? branch.name : 'Chưa chọn chi nhánh';
-
-    return `Bàn ${tableCodes} · ${branchLabel} · ${timeLabel}`;
-  }
-
   function updateTableBookingBar() {
     if (!selectors.tableBookingBar) {
       return;
@@ -2288,14 +2271,7 @@
     const count = tables.length;
 
     selectors.tableBookingBar.hidden = count === 0;
-    if (selectors.tableBookingCount) {
-      selectors.tableBookingCount.textContent = count ? `Đã chọn ${count} bàn` : 'Đã chọn 0 bàn';
-    }
-    if (selectors.tableBookingSummary) {
-      selectors.tableBookingSummary.textContent = count
-        ? tableBookingSelectionSummary(tables)
-        : 'Chọn bàn để tạo booking nhanh.';
-    }
+    selectors.tableBookingBar.closest('.table-status-toolbar-grid')?.classList.toggle('has-table-booking-action', count > 0);
     if (selectors.tableBookingCreateButton) {
       selectors.tableBookingCreateButton.disabled = count === 0;
     }
@@ -2372,24 +2348,21 @@
     `;
   }
 
-  function tableBookingForm() {
+  function tableBookingForm(bookingTime = selectedTableBookingDateTime()) {
     const tables = selectedTableBookingTables();
     const branch = tableBookingBranch();
     const tableIds = tables.map((table) => table.id);
     const tableCodes = tables.map((table) => table.table_code).join(', ');
-    const bookingDateValue = selectedDashboardBookingDate();
-    const timeSlot = selectedTableBookingTimeSlot();
     const guestCount = tableBookingGuestCount(tables);
 
     return `
       <form class="booking-public-form table-booking-form" data-table-booking-create data-table-ids="${escapeHtml(tableIds.join(','))}">
-        <input type="hidden" name="booking_date" value="${escapeHtml(bookingDateValue)}">
-        <input type="hidden" name="booking_time_slot" value="${escapeHtml(timeSlot)}">
+        <input type="hidden" name="booking_time" value="${escapeHtml(bookingTime)}">
         <input type="hidden" name="branch_id" value="${escapeHtml(branch?.id || '')}">
         <input type="hidden" name="guest_count" value="${escapeHtml(guestCount)}">
         <section class="management-form-note table-booking-summary-card">
           <strong>${escapeHtml(branch?.name || 'Chưa chọn chi nhánh')}</strong>
-          <span>${escapeHtml(formatDateTime(bookingDateTimeValue(bookingDateValue, timeSlot)))} · Bàn ${escapeHtml(tableCodes)} · ${escapeHtml(guestCount)} khách theo sức chứa bàn</span>
+          <span>Bàn ${escapeHtml(tableCodes)} · ${escapeHtml(guestCount)} khách theo sức chứa bàn · ${escapeHtml(formatDateTime(bookingTime))}</span>
         </section>
 
         <section class="booking-step-block">
@@ -2416,6 +2389,7 @@
   function openTableBookingPopup() {
     const tables = selectedTableBookingTables();
     const branch = tableBookingBranch();
+    const bookingTime = selectedTableBookingDateTime();
 
     if (!tables.length) {
       window.alert('Vui lòng tích chọn ít nhất một bàn trước khi tạo booking.');
@@ -2427,7 +2401,18 @@
       return;
     }
 
-    openManagementPopup({ eyebrow: 'Tình trạng bàn', title: 'Tạo booking nhanh', body: tableBookingForm() });
+    const bookings = state.tableStatuses?.bookings || allDashboardBookings();
+    const conflictItem = tables
+      .map((table) => ({ table, booking: tableBookingConflictForTable(table, bookings, bookingTime) }))
+      .find((item) => item.booking);
+
+    if (conflictItem) {
+      window.alert(`Bàn ${conflictItem.table.table_code} đang trùng booking #${conflictItem.booking.id} lúc ${formatBookingHour(conflictItem.booking.booking_time)}.`);
+      renderTableStatusBoard();
+      return;
+    }
+
+    openManagementPopup({ eyebrow: 'Tình trạng bàn', title: 'Tạo booking nhanh', body: tableBookingForm(bookingTime) });
   }
 
   function tableBookingPayload(form) {
@@ -2438,11 +2423,8 @@
       .filter(Boolean);
     data.customer_name = String(data.customer_name || '').trim() || 'Vãng lai';
     data.phone = String(data.phone || '').trim() || 'Vãng lai';
-    data.booking_time = bookingDateTimeValue(data.booking_date, data.booking_time_slot);
     data.table_ids = tableIds;
     data.area_id = form.querySelector('[data-assign-area].selected')?.dataset.assignArea || '';
-    delete data.booking_date;
-    delete data.booking_time_slot;
 
     return data;
   }
@@ -4271,12 +4253,6 @@
   if (selectors.tableQuickSearch) {
     selectors.tableQuickSearch.addEventListener('input', () => {
       tableQuickSearchValue = selectors.tableQuickSearch.value;
-      renderTableStatusBoard();
-    });
-  }
-
-  if (selectors.tableBookingTime) {
-    selectors.tableBookingTime.addEventListener('change', () => {
       renderTableStatusBoard();
     });
   }
