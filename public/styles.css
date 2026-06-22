@@ -1820,6 +1820,7 @@ a:hover {
 
 .table-booking-create-button {
   min-height: 42px;
+  white-space: nowrap;
   width: 100%;
 }
 
@@ -2392,7 +2393,7 @@ a:hover {
   }
 
   .table-status-toolbar-grid.has-table-booking-action {
-    grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+    grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 38%);
   }
 
   .table-status-search,
