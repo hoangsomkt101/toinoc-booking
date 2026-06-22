@@ -428,7 +428,7 @@
   }
 
   function isValidTimeInput(value) {
-    return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')) || value === '24:00';
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ''));
   }
 
   function bookingEditMinTime(selectedDate = todayDateValue(), now = new Date()) {
@@ -442,10 +442,6 @@
   }
 
   function timeInputMinutes(value) {
-    if (value === '24:00') {
-      return 24 * 60;
-    }
-
     const [hours, minutes] = String(value || '').split(':').map(Number);
 
     return hours * 60 + minutes;
@@ -1058,8 +1054,8 @@
 
         <section class="booking-step-block">
           <div class="booking-step-label"><span class="booking-step-number">3</span> Giờ đến <span class="required-mark">*</span></div>
-          <input class="form-control" name="booking_time_slot" type="text" value="${escapeHtml(parts.time)}" inputmode="numeric" autocomplete="off" placeholder="HH:mm" pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00" data-edit-booking-time data-min-time="${escapeHtml(bookingEditMinTime(parts.date))}" required>
-          <div class="form-text small">Nhập theo định dạng 24h, ví dụ 17:30. Giờ hợp lệ bắt đầu từ 17:00, hoặc từ thời điểm hiện tại nếu sửa booking hôm nay.</div>
+          <input class="form-control" name="booking_time_slot" type="time" value="${escapeHtml(parts.time === '24:00' ? '23:59' : parts.time)}" min="${escapeHtml(bookingEditMinTime(parts.date))}" max="23:59" step="60" data-edit-booking-time required>
+          <div class="form-text small">Chọn giờ chính xác theo phút. Giờ hợp lệ bắt đầu từ 17:00, hoặc từ thời điểm hiện tại nếu sửa booking hôm nay.</div>
         </section>
 
         <div class="booking-two-column">
@@ -1845,7 +1841,7 @@
       return;
     }
 
-    timeInput.dataset.minTime = bookingEditMinTime(dateInput.value || todayDateValue());
+    timeInput.min = bookingEditMinTime(dateInput.value || todayDateValue());
   }
 
   function toggleAssignTable(button) {
@@ -2678,13 +2674,13 @@
     timeInput.value = timeValue;
 
     if (!isValidTimeInput(timeValue)) {
-      setFormStatus(form, selectors.formMessage, 'Giờ đến phải theo định dạng HH:mm, ví dụ 17:30.');
+      setFormStatus(form, selectors.formMessage, 'Vui lòng chọn giờ đến hợp lệ.');
       timeInput.focus();
       return false;
     }
 
     const minTime = bookingEditMinTime(dateInput?.value || todayDateValue());
-    timeInput.dataset.minTime = minTime;
+    timeInput.min = minTime;
     if (timeInputMinutes(timeValue) < timeInputMinutes(minTime)) {
       setFormStatus(form, selectors.formMessage, `Giờ đến phải từ ${minTime} trở đi.`);
       timeInput.focus();
