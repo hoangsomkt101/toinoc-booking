@@ -62,6 +62,7 @@
   const bookingTimeChoices = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '24:00'];
   let activeBookingTab = 'all';
   let bookingQuickSearchValue = '';
+  let tableQuickSearchValue = '';
   let notificationSoundUnlocked = false;
   const notificationSound = typeof window.Audio === 'function' ? new window.Audio('/notification.mp3') : null;
   if (notificationSound) {
@@ -89,6 +90,7 @@
     dashboardDateFilter: document.querySelector('[data-dashboard-date-filter]'),
     bookingAlerts: document.getElementById('booking-alerts'),
     tableStatusList: document.getElementById('table-status-list'),
+    tableQuickSearch: document.querySelector('[data-table-quick-search]'),
     branchList: document.getElementById('branch-list'),
     branchFormMessage: document.getElementById('branch-form-message'),
     customerList: document.getElementById('customer-list'),
@@ -621,6 +623,21 @@
 
     return normalizeClientSearchText(booking.customer_name).includes(term)
       || (phoneTerm && normalizeClientPhone(booking.phone).includes(phoneTerm));
+  }
+
+  function tableQuickSearchTerm() {
+    return String(tableQuickSearchValue || '').trim();
+  }
+
+  function tableMatchesQuickSearch(table) {
+    const term = tableQuickSearchTerm();
+
+    if (!term) {
+      return true;
+    }
+
+    return String(table.id || '').includes(term)
+      || String(table.table_code || '').includes(term);
   }
 
   function setBranchSelectValue(select, value) {
@@ -2239,6 +2256,7 @@
       const booking = bookingForTable(table, bookings, now);
       return { table, booking, meta: tableStatusMeta(table, booking, now) };
     });
+    const visibleItems = items.filter((item) => tableMatchesQuickSearch(item.table));
     const counts = items.reduce((totals, item) => {
       totals[item.meta.key] = (totals[item.meta.key] || 0) + 1;
       return totals;
@@ -2254,9 +2272,11 @@
     if (countOccupied) countOccupied.textContent = counts.occupied || 0;
     if (countSoonOut) countSoonOut.textContent = counts['soon-out'] || 0;
 
-    selectors.tableStatusList.innerHTML = items.length
-      ? items.map(renderTableStatusCard).join('')
-      : '<div class="alert alert-light border mb-0">Không có bàn trong phạm vi chi nhánh này.</div>';
+    selectors.tableStatusList.innerHTML = visibleItems.length
+      ? visibleItems.map(renderTableStatusCard).join('')
+      : tableQuickSearchTerm()
+        ? '<div class="alert alert-light border mb-0">Không tìm thấy bàn theo ID này.</div>'
+        : '<div class="alert alert-light border mb-0">Không có bàn trong phạm vi chi nhánh này.</div>';
   }
 
   function renderCounts() {
@@ -3935,6 +3955,13 @@
     selectors.bookingQuickSearch.addEventListener('input', () => {
       bookingQuickSearchValue = selectors.bookingQuickSearch.value;
       renderBookingBoard();
+    });
+  }
+
+  if (selectors.tableQuickSearch) {
+    selectors.tableQuickSearch.addEventListener('input', () => {
+      tableQuickSearchValue = selectors.tableQuickSearch.value;
+      renderTableStatusBoard();
     });
   }
 

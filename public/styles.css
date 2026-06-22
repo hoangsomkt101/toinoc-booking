@@ -1788,6 +1788,15 @@ a:hover {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.table-status-toolbar {
+  max-width: 24rem;
+}
+
+.table-status-search {
+  border-color: rgba(237, 174, 50, 0.55);
+  font-weight: 900;
+}
+
 .table-status-list {
   display: grid;
   gap: 12px;
