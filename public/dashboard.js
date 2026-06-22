@@ -1122,6 +1122,9 @@
     const callButton = callHref
       ? `<a class="btn btn-wine btn-sm booking-edit-call-button" href="${escapeHtml(callHref)}"><i class="fa-solid fa-phone" aria-hidden="true"></i> Call</a>`
       : '<button class="btn btn-outline-secondary btn-sm booking-edit-call-button" type="button" disabled>Call</button>';
+    const deleteButton = isAdminUser()
+      ? `<button class="btn btn-outline-danger" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}">Xóa đặt bàn</button>`
+      : '';
     const orderStaffField = isAdminUser()
       ? `
         <section class="booking-step-block">
@@ -1188,7 +1191,7 @@
 
         <div class="booking-edit-actions">
           <button class="btn btn-warning btn-lg fw-bold form-submit booking-submit-button" type="submit">Lưu thay đổi</button>
-          <button class="btn btn-outline-danger" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}">Xóa đặt bàn</button>
+          ${deleteButton}
         </div>
         ${managementMessage()}
       </form>
@@ -2080,6 +2083,9 @@
     const orderStaff = isAdminUser() && booking.order_staff_name
       ? `<div class="timeline-note">Nhân viên lên đơn: ${escapeHtml(booking.order_staff_name)}</div>`
       : '';
+    const deleteButton = isAdminUser()
+      ? `<button class="booking-card-delete-button" type="button" data-delete-booking="${escapeHtml(booking.id)}" data-booking-name="${escapeHtml(booking.customer_name)}" aria-label="Xóa vĩnh viễn booking của ${escapeHtml(booking.customer_name)}" title="Xóa vĩnh viễn booking">X</button>`
+      : '';
     const customerMeta = bookingCustomerMeta(booking);
     const visitMeta = bookingVisitMeta(booking);
 
@@ -2090,6 +2096,7 @@
           ${timelineState.offset ? `<small>${escapeHtml(timelineState.offset)}</small>` : ''}
         </div>
         <article class="card booking-card timeline-card ${escapeHtml(timelineState.tone)}" data-booking-id="${escapeHtml(booking.id)}">
+        ${deleteButton}
         <div class="card-body booking-card-body">
           <div class="timeline-card-header">
             <div class="booking-card-main">

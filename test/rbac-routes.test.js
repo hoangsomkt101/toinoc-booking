@@ -86,7 +86,6 @@ test('manager can operate bookings and choose table data but cannot manage users
     ['/', 'get'],
     ['/:id', 'get'],
     ['/:id', 'put'],
-    ['/:id', 'delete'],
     ['/:id/assign', 'post'],
     ['/:id/check-in', 'post'],
     ['/:id/check-out', 'post'],
@@ -94,6 +93,8 @@ test('manager can operate bookings and choose table data but cannot manage users
   ]) {
     assertAllowed(routeGuard(bookingRouter, path, method), 'manager');
   }
+
+  assertDenied(routeGuard(bookingRouter, '/:id', 'delete'), 'manager');
 
   assertAllowed(routeGuard(apiRouter, '/dashboard', 'get'), 'manager');
   assertAllowed(routeGuard(apiRouter, '/tables', 'get'), 'manager');
@@ -135,6 +136,15 @@ test('only admin can update booking order staff name', async () => {
     { id: '12', payload: { customer_name: 'Khách A' } },
     { id: '12', payload: { customer_name: 'Khách B', order_staff_name: 'Admin sửa' } }
   ]);
+});
+
+test('only admin can permanently delete bookings', () => {
+  const guard = routeGuard(bookingRouter, '/:id', 'delete');
+
+  assertAllowed(guard, 'admin');
+  assertDenied(guard, 'manager');
+  assertDenied(guard, 'sale');
+  assertDenied(guard, null, 401);
 });
 
 test('sale cannot read operational dashboard, table, branch, area, or user APIs', () => {
@@ -188,6 +198,7 @@ test('only admin can manage sheet settings', () => {
 test('admin passes all guarded route categories', () => {
   for (const [router, path, method] of [
     [bookingRouter, '/', 'post'],
+    [bookingRouter, '/:id', 'delete'],
     [bookingRouter, '/:id/assign', 'post'],
     [apiClientRouter, '/', 'get'],
     [sheetSettingsRouter, '/', 'get'],

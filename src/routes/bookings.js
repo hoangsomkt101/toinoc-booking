@@ -8,6 +8,7 @@ const { SOCKET_EVENTS } = require('../domain/constants');
 const router = express.Router();
 const requireBookingCreate = requireRole('sale');
 const requireBookingManage = requireRole('manager');
+const requireBookingDelete = requireRole('admin');
 
 function scopedBookingQuery(req) {
   if (req.user.role === 'admin') {
@@ -91,7 +92,7 @@ router.put(
 
 router.delete(
   '/:id',
-  requireBookingManage,
+  requireBookingDelete,
   asyncHandler(async (req, res) => {
     const booking = await bookingService.deleteBooking(req.params.id);
     broadcast(req, SOCKET_EVENTS.booking_cancelled, booking);

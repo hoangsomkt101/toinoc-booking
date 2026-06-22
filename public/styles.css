@@ -2216,6 +2216,33 @@ a:hover {
   box-shadow: 0 13px 28px rgba(71, 52, 36, 0.08);
 }
 
+.booking-card-delete-button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid rgba(201, 58, 51, 0.28);
+  border-radius: 999px;
+  box-shadow: 0 0.45rem 1rem rgba(83, 58, 35, 0.12);
+  color: var(--red);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 950;
+  height: 1.75rem;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: -0.45rem;
+  top: -0.45rem;
+  width: 1.75rem;
+  z-index: 2;
+}
+
+.booking-card-delete-button:hover,
+.booking-card-delete-button:focus {
+  background: var(--red);
+  color: #fff;
+  outline: 0;
+}
+
 .booking-card-body {
   padding: 18px;
 }
