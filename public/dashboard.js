@@ -2118,6 +2118,33 @@
     return /^\d+$/.test(code) ? Number(code) : Number.MAX_SAFE_INTEGER;
   }
 
+  function tableQuickStatusOptions(booking) {
+    const options = booking
+      ? [
+          { value: 'PENDING', label: 'Chờ xác nhận' },
+          { value: 'CONFIRMED', label: 'Đang xếp' },
+          { value: 'CHECKED_IN', label: 'Đang ngồi' },
+          { value: 'CHECKED_OUT', label: 'Đã out' },
+          { value: 'COMPLETED', label: 'Hoàn tất' },
+          { value: 'CANCELLED', label: 'Hủy' }
+        ]
+      : [{ value: '', label: 'Trống', disabled: true }];
+    const currentValue = booking ? booking.status : '';
+
+    return options
+      .map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === currentValue ? 'selected' : ''} ${option.disabled ? 'disabled' : ''}>${escapeHtml(option.label)}</option>`)
+      .join('');
+  }
+
+  function tableQuickStatusSelect(booking) {
+    return `
+      <label class="visually-hidden" for="table-status-select-${escapeHtml(booking?.id || 'empty')}">Đổi trạng thái bàn</label>
+      <select class="form-select form-select-sm table-status-select" id="table-status-select-${escapeHtml(booking?.id || 'empty')}" data-table-status-select data-booking-id="${escapeHtml(booking?.id || '')}" data-current-status="${escapeHtml(booking?.status || '')}" ${booking ? '' : 'disabled'}>
+        ${tableQuickStatusOptions(booking)}
+      </select>
+    `;
+  }
+
   function renderTableStatusCard(item) {
     const booking = item.booking;
     const meta = item.meta;
@@ -2138,6 +2165,7 @@
         <div class="table-status-customer">${escapeHtml(customer)}</div>
         <div class="table-status-meta">${bookingMeta}</div>
         <div class="table-status-detail">${escapeHtml(meta.detail)}</div>
+        ${tableQuickStatusSelect(booking)}
       </article>
     `;
   }
@@ -3590,6 +3618,62 @@
     }
   }
 
+  async function updateBookingStatusFast(bookingId, nextStatus, booking) {
+    if (nextStatus === 'CHECKED_IN') {
+      await request(`/api/bookings/${bookingId}/check-in`, {
+        method: 'POST',
+        body: { actual_guest_count: booking ? booking.guest_count : undefined }
+      });
+      return;
+    }
+
+    if (nextStatus === 'CHECKED_OUT' && booking?.status === 'CHECKED_IN') {
+      await request(`/api/bookings/${bookingId}/check-out`, { method: 'POST', body: {} });
+      return;
+    }
+
+    if (nextStatus === 'CANCELLED') {
+      await request(`/api/bookings/${bookingId}/cancel`, { method: 'POST', body: {} });
+      return;
+    }
+
+    await request(`/api/bookings/${bookingId}`, { method: 'PUT', body: { status: nextStatus } });
+  }
+
+  async function handleTableStatusSelect(event) {
+    const select = event.target.closest('[data-table-status-select]');
+
+    if (!select) {
+      return;
+    }
+
+    const bookingId = select.dataset.bookingId;
+    const nextStatus = select.value;
+    const previousStatus = select.dataset.currentStatus;
+    const booking = findBooking(bookingId) || (state.tableStatuses?.bookings || []).find((item) => String(item.id) === String(bookingId));
+
+    if (!bookingId || !nextStatus || nextStatus === previousStatus) {
+      return;
+    }
+
+    if (nextStatus === 'CANCELLED' && !window.confirm(`Chuyển booking của “${booking ? booking.customer_name : bookingId}” sang Đã hủy?`)) {
+      select.value = previousStatus;
+      return;
+    }
+
+    select.disabled = true;
+
+    try {
+      await updateBookingStatusFast(bookingId, nextStatus, booking);
+      select.dataset.currentStatus = nextStatus;
+      await refreshDashboard();
+    } catch (error) {
+      select.value = previousStatus;
+      window.alert(error.message);
+      select.disabled = false;
+    }
+  }
+
   const createBookingForm = document.getElementById('create-booking-form');
   if (createBookingForm) {
     createBookingForm.addEventListener('submit', handleCreate);
@@ -3740,6 +3824,7 @@
     }
   });
   document.addEventListener('change', handleBookingStatusSelect);
+  document.addEventListener('change', handleTableStatusSelect);
 
   document.addEventListener('submit', handleCreateUser);
   document.addEventListener('submit', handleCreateBranch);
