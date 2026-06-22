@@ -2010,6 +2010,10 @@ a:hover {
   gap: 14px;
 }
 
+.booking-quick-search-toolbar {
+  max-width: none;
+}
+
 .booking-alert-grid {
   display: grid;
   gap: 10px;
@@ -2370,6 +2374,28 @@ a:hover {
 }
 
 @media (max-width: 991.98px) {
+  .booking-board {
+    padding-bottom: 74px;
+  }
+
+  .booking-quick-search-toolbar {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 253, 249, 0.96);
+    border-top: 1px solid var(--line);
+    bottom: calc(var(--bottom-nav-height) + var(--app-safe-area-bottom));
+    box-shadow: 0 -10px 26px rgba(83, 58, 35, 0.12);
+    left: 0;
+    margin: 0 !important;
+    padding: 0.65rem 0.75rem;
+    position: fixed;
+    right: 0;
+    z-index: 1029;
+  }
+
+  .booking-quick-search-toolbar .form-control {
+    min-height: 44px;
+  }
+
   .table-status-page {
     padding-bottom: 74px;
   }
@@ -3701,6 +3727,11 @@ a:hover {
     padding-bottom: 6rem;
   }
 
+  .dashboard-page-main .booking-board {
+    padding-bottom: 6rem;
+  }
+
+  .dashboard-page-main .booking-quick-search-toolbar,
   .dashboard-page-main .table-status-toolbar {
     backdrop-filter: blur(14px);
     background: rgba(255, 253, 249, 0.96);
@@ -3715,6 +3746,7 @@ a:hover {
     z-index: 1029;
   }
 
+  .dashboard-page-main .booking-quick-search-toolbar .form-control,
   .dashboard-page-main .table-status-search,
   .dashboard-page-main .table-booking-create-button {
     min-height: 46px;
@@ -3878,6 +3910,7 @@ a:hover {
     padding: 1.75rem 2rem 2.25rem;
   }
 
+  .dashboard-page-main .booking-quick-search-toolbar,
   .dashboard-page-main .table-status-toolbar {
     left: 17.5rem;
     padding-left: 2rem;
