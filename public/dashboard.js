@@ -41,9 +41,11 @@
     COMPLETED: 'Hoàn tất'
   };
   const bookingStatusChoices = Object.keys(bookingStatusLabels);
+  const activeAssignmentStatuses = ['PENDING', 'CONFIRMED', 'CHECKED_IN'];
   const arrivalPendingStatuses = ['PENDING', 'CONFIRMED'];
   const closedBookingStatuses = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
   const upcomingWarningMinutes = 30;
+  const tableHoldMilliseconds = 4 * 60 * 60 * 1000;
   const tableQuickStatusChoices = [
     { value: 'AVAILABLE', key: 'available', label: 'Trống' },
     { value: 'RESERVED', key: 'reserved', label: 'Đang xếp' },
@@ -939,6 +941,36 @@
     });
   }
 
+  function bookingTimesOverlap(left, right) {
+    const leftDate = bookingDate(left);
+    const rightDate = bookingDate(right);
+
+    if (!leftDate || !rightDate) {
+      return true;
+    }
+
+    return rightDate.getTime() < leftDate.getTime() + tableHoldMilliseconds
+      && rightDate.getTime() + tableHoldMilliseconds > leftDate.getTime();
+  }
+
+  function otherAssignedBookingForTable(table, booking) {
+    if (!table || !booking) {
+      return null;
+    }
+
+    return allDashboardBookings().find((otherBooking) => (
+      String(otherBooking.id) !== String(booking.id)
+      && String(otherBooking.branch_id) === String(booking.branch_id)
+      && activeAssignmentStatuses.includes(otherBooking.status)
+      && bookingTimesOverlap(booking, otherBooking)
+      && (otherBooking.assigned_tables || []).some((assignedTable) => String(assignedTable.id) === String(table.id))
+    )) || null;
+  }
+
+  function selectedAssignmentCount(booking) {
+    return (booking.assigned_tables || []).filter((table) => !otherAssignedBookingForTable(table, booking)).length;
+  }
+
   function assignmentAreaGrid(booking) {
     const branch = findBranch(booking.branch_id);
     const areas = branch?.areas || [];
@@ -971,11 +1003,17 @@
     }
 
     const items = tables.map((table) => {
-      const selected = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id));
+      const ownAssigned = assigned.some((assignedTable) => String(assignedTable.id) === String(table.id));
+      const assignedBooking = otherAssignedBookingForTable(table, booking);
+      const disabled = Boolean(assignedBooking);
+      const selected = ownAssigned && !disabled;
+      const disabledLabel = disabled ? `Đã đặt #${assignedBooking.id}` : '';
+      const disabledTitle = disabled ? `Bàn đã được xếp cho booking #${assignedBooking.id} - ${assignedBooking.customer_name}` : '';
 
       return `
-        <button class="assign-table-card ${selected ? 'selected' : ''}" type="button" data-assign-table-card data-table-id="${escapeHtml(table.id)}" aria-pressed="${selected ? 'true' : 'false'}">
+        <button class="assign-table-card ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}" type="button" data-assign-table-card data-table-id="${escapeHtml(table.id)}" aria-pressed="${selected ? 'true' : 'false'}" ${disabled ? `disabled aria-disabled="true" title="${escapeHtml(disabledTitle)}"` : ''}>
           <span class="assign-table-code">${escapeHtml(table.table_code)}</span>
+          ${disabled ? `<span class="assign-table-status">${escapeHtml(disabledLabel)}</span>` : ''}
         </button>
       `;
     });
@@ -989,7 +1027,7 @@
   }
 
   function bookingEditAssignmentGrid(booking) {
-    const selectedCount = (booking.assigned_tables || []).length;
+    const selectedCount = selectedAssignmentCount(booking);
 
     return `
       <div>
@@ -1009,7 +1047,7 @@
     const areaLabel = booking.area_name ? ` · Khu vực: ${booking.area_name}` : '';
     const shouldAutoConfirm = booking.status === 'PENDING' || booking.status === 'CANCELLED';
     const submitLabel = shouldAutoConfirm ? 'Lưu bàn & xác nhận' : 'Lưu bàn';
-    const selectedCount = (booking.assigned_tables || []).length;
+    const selectedCount = selectedAssignmentCount(booking);
     const selectedMessage = selectedCount
       ? shouldAutoConfirm
         ? `Đã chọn ${selectedCount} bàn. Lưu bàn sẽ tự xác nhận booking.`
@@ -1715,7 +1753,8 @@
     for (const booking of [
       ...(state.bookings || []),
       ...(state.dashboard.open_bookings || []),
-      ...(state.dashboard.closed_bookings || [])
+      ...(state.dashboard.closed_bookings || []),
+      ...(state.tableStatuses?.bookings || [])
     ]) {
       const key = String(booking.id);
       if (!seenIds.has(key)) {
@@ -1803,7 +1842,7 @@
       return;
     }
 
-    const selectedCount = form.querySelectorAll('[data-assign-table-card].selected').length;
+    const selectedCount = selectedAssignTableIds(form).length;
     const counter = form.querySelector('[data-assign-selected-count]');
 
     for (const card of form.querySelectorAll('[data-assign-table-card]')) {
@@ -1847,7 +1886,7 @@
   function toggleAssignTable(button) {
     const form = button.closest('[data-booking-assign], [data-booking-update]');
 
-    if (!form) {
+    if (!form || button.disabled || button.getAttribute('aria-disabled') === 'true') {
       return;
     }
 
@@ -1856,7 +1895,10 @@
   }
 
   function selectedAssignTableIds(form) {
-    return [...(form?.querySelectorAll('[data-assign-table-card].selected') || [])].map((card) => card.dataset.tableId).filter(Boolean);
+    return [...(form?.querySelectorAll('[data-assign-table-card].selected') || [])]
+      .filter((card) => !card.disabled && card.getAttribute('aria-disabled') !== 'true')
+      .map((card) => card.dataset.tableId)
+      .filter(Boolean);
   }
 
   function sortedIdList(ids = []) {
@@ -1916,6 +1958,8 @@
   function editAssignmentBooking(form, selectedTables = selectedAssignTables(form)) {
     const booking = findBooking(form.dataset.bookingUpdate);
     const branchId = form.querySelector('[name="branch_id"]')?.value || booking?.branch_id;
+    const dateValue = form.querySelector('[name="booking_date"]')?.value;
+    const timeSlot = form.querySelector('[name="booking_time_slot"]')?.value;
     const branchChanged = booking && String(branchId) !== String(booking.branch_id);
     const branch = findBranch(branchId);
     const selectedArea = form.querySelector('[data-assign-area].selected')?.dataset.assignArea;
@@ -1924,6 +1968,7 @@
     return {
       ...(booking || {}),
       branch_id: branchId,
+      booking_time: bookingDateTimeValue(dateValue, timeSlot) || booking?.booking_time,
       area_id: selectedArea || defaultAreaId || null,
       area_name: findArea(selectedArea || defaultAreaId)?.name || '',
       assigned_tables: selectedTables.filter((table) => String(table.branch_id) === String(branchId))
@@ -3234,7 +3279,7 @@
     event.preventDefault();
     const bookingId = form.dataset.bookingAssign;
     const button = form.querySelector('[type="submit"]');
-    const tableIds = [...form.querySelectorAll('[data-assign-table-card].selected')].map((card) => card.dataset.tableId);
+    const tableIds = selectedAssignTableIds(form);
     const selectedArea = form.querySelector('[data-assign-area].selected');
     const autoConfirm = form.dataset.autoConfirm === 'true';
     button.disabled = true;
@@ -3808,7 +3853,15 @@
   document.addEventListener('change', (event) => {
     const editDateInput = event.target.closest('[data-edit-booking-date]');
     if (editDateInput) {
-      syncEditTimeInput(editDateInput.closest('[data-booking-update]'));
+      const form = editDateInput.closest('[data-booking-update]');
+      syncEditTimeInput(form);
+      refreshEditAssignmentGrid(form);
+      return;
+    }
+
+    const editTimeInput = event.target.closest('[data-edit-booking-time]');
+    if (editTimeInput) {
+      refreshEditAssignmentGrid(editTimeInput.closest('[data-booking-update]'));
       return;
     }
 
