@@ -626,7 +626,7 @@
   }
 
   function tableQuickSearchTerm() {
-    return String(tableQuickSearchValue || '').trim();
+    return String(tableQuickSearchValue || '').replace(/\D/g, '');
   }
 
   function tableMatchesQuickSearch(table) {
@@ -636,8 +636,7 @@
       return true;
     }
 
-    return String(table.id || '').includes(term)
-      || String(table.table_code || '').includes(term);
+    return String(table.table_code || '').trim() === term;
   }
 
   function setBranchSelectValue(select, value) {
@@ -2275,7 +2274,7 @@
     selectors.tableStatusList.innerHTML = visibleItems.length
       ? visibleItems.map(renderTableStatusCard).join('')
       : tableQuickSearchTerm()
-        ? '<div class="alert alert-light border mb-0">Không tìm thấy bàn theo ID này.</div>'
+        ? '<div class="alert alert-light border mb-0">Không tìm thấy bàn số này.</div>'
         : '<div class="alert alert-light border mb-0">Không có bàn trong phạm vi chi nhánh này.</div>';
   }
 

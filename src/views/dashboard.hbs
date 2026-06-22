@@ -37,8 +37,8 @@
   {{#if canManageBookings}}
     <section class="table-status-page" aria-label="Tình trạng bàn theo ngày">
       <div class="table-status-toolbar mb-3">
-        <label class="visually-hidden" for="table-quick-search">Tìm bàn nhanh theo ID hoặc mã bàn</label>
-        <input class="form-control table-status-search" id="table-quick-search" type="search" inputmode="numeric" placeholder="Tìm nhanh bàn theo ID" autocomplete="off" enterkeyhint="search" data-table-quick-search>
+        <label class="visually-hidden" for="table-quick-search">Tìm bàn nhanh theo số bàn</label>
+        <input class="form-control table-status-search" id="table-quick-search" type="search" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="Tìm nhanh bàn số 1-100" autocomplete="off" enterkeyhint="search" data-table-quick-search>
       </div>
       <section class="metric-grid table-status-metrics mb-4" aria-label="Tổng quan tình trạng bàn">
         <article class="metric green">
