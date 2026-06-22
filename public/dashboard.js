@@ -650,6 +650,22 @@
     return String(table.table_code || '').trim() === term;
   }
 
+  function scrollToQuickSearchTable() {
+    const term = tableQuickSearchTerm();
+    if (!term || !selectors.tableStatusList) {
+      return;
+    }
+
+    const target = selectors.tableStatusList.querySelector('[data-table-quick-match="true"]');
+    if (!target) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    });
+  }
+
   function setBranchSelectValue(select, value) {
     if (!select) {
       return;
@@ -2441,9 +2457,10 @@
     const conflictLabel = item.bookingConflict
       ? `Trùng booking #${item.bookingConflict.id} lúc ${formatBookingHour(item.bookingConflict.booking_time)}`
       : '';
+    const quickMatch = tableMatchesQuickSearch(item.table);
 
     return `
-      <article class="table-status-card table-status-${escapeHtml(meta.key)} ${selected ? 'table-status-card-selected' : ''}" data-table-booking-card data-table-id="${escapeHtml(item.table.id)}">
+      <article class="table-status-card table-status-${escapeHtml(meta.key)} ${selected ? 'table-status-card-selected' : ''} ${tableQuickSearchTerm() && quickMatch ? 'table-status-card-quick-match' : ''}" data-table-booking-card data-table-id="${escapeHtml(item.table.id)}" data-table-quick-match="${quickMatch ? 'true' : 'false'}">
         <div class="table-status-card-top">
           <div>
             <span class="table-status-code">Bàn ${escapeHtml(item.table.table_code)}</span>
@@ -2491,11 +2508,11 @@
       return { table, booking, bookingConflict: tableBookingConflictForTable(table, bookings), meta: tableStatusMeta(table, booking, now) };
     });
     syncTableBookingSelection(items);
-    const visibleItems = items.filter((item) => tableMatchesQuickSearch(item.table));
     const counts = items.reduce((totals, item) => {
       totals[item.meta.key] = (totals[item.meta.key] || 0) + 1;
       return totals;
     }, {});
+    const hasQuickSearchMatch = !tableQuickSearchTerm() || items.some((item) => tableMatchesQuickSearch(item.table));
 
     const countAvailable = document.getElementById('table-count-available');
     const countReserved = document.getElementById('table-count-reserved');
@@ -2507,11 +2524,13 @@
     if (countOccupied) countOccupied.textContent = counts.occupied || 0;
     if (countSoonOut) countSoonOut.textContent = counts['soon-out'] || 0;
 
-    selectors.tableStatusList.innerHTML = visibleItems.length
-      ? visibleItems.map(renderTableStatusCard).join('')
+    selectors.tableStatusList.innerHTML = items.length
+      ? `${tableQuickSearchTerm() && !hasQuickSearchMatch ? '<div class="alert alert-light border mb-0 table-status-search-note">Không tìm thấy bàn số này.</div>' : ''}${items.map(renderTableStatusCard).join('')}`
       : tableQuickSearchTerm()
         ? '<div class="alert alert-light border mb-0">Không tìm thấy bàn số này.</div>'
         : '<div class="alert alert-light border mb-0">Không có bàn trong phạm vi chi nhánh này.</div>';
+
+    scrollToQuickSearchTable();
   }
 
   function renderCounts() {

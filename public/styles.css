@@ -1846,6 +1846,15 @@ a:hover {
   box-shadow: 0 12px 26px rgba(143, 16, 45, 0.13);
 }
 
+.table-status-card-quick-match {
+  border-color: var(--app-warning);
+  box-shadow: 0 0 0 0.22rem rgba(246, 194, 62, 0.28), 0 12px 26px rgba(83, 58, 35, 0.12);
+}
+
+.table-status-search-note {
+  grid-column: 1 / -1;
+}
+
 .table-status-available {
   border-left-color: var(--green);
 }
