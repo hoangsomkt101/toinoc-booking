@@ -21,3 +21,38 @@ test('customer booking counters ignore branch scope', async () => {
   const statsSql = capturedSql.match(/LEFT JOIN LATERAL \(\s+SELECT\s+COUNT\(\*\)::INTEGER AS booking_count[\s\S]*?\) stats ON TRUE/)[0];
   assert.doesNotMatch(statsSql, /b\.branch_id/);
 });
+
+test('customer name search uses only the trigram-friendly name predicate for text', async () => {
+  let capturedSql = '';
+  let capturedParams = [];
+  const executor = {
+    async query(sql, params = []) {
+      capturedSql = String(sql);
+      capturedParams = params;
+      return { rows: [] };
+    }
+  };
+
+  await customerService.listCustomers({ q: 'Nguyễn' }, executor);
+
+  assert.deepEqual(capturedParams, ['%Nguyễn%']);
+  assert.match(capturedSql, /c\.customer_name ILIKE \$1/);
+  assert.doesNotMatch(capturedSql, /c\.phone LIKE/);
+});
+
+test('customer numeric search checks indexed name and phone predicates', async () => {
+  let capturedSql = '';
+  let capturedParams = [];
+  const executor = {
+    async query(sql, params = []) {
+      capturedSql = String(sql);
+      capturedParams = params;
+      return { rows: [] };
+    }
+  };
+
+  await customerService.listCustomers({ q: '090-12' }, executor);
+
+  assert.deepEqual(capturedParams, ['%090-12%', '%09012%']);
+  assert.match(capturedSql, /c\.customer_name ILIKE \$1 OR c\.phone LIKE \$2/);
+});

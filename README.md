@@ -90,6 +90,8 @@ Default seeded login usernames are `admin`, `manager`, and `sale`; their passwor
 - `POST /api/bookings/:id/check-out`
 - `POST /api/bookings/:id/cancel`
 
+`GET /api/bookings` supports server-side search and pagination with `q`, `page`, `limit` (maximum `100`), and optional `view` (`all`, `pending`, `upcoming`, `completed`, `cancelled`). Paginated responses include a top-level `pagination` object.
+
 Supporting endpoints:
 - `GET /api/dashboard`
 - `GET /api/tables`

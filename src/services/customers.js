@@ -176,12 +176,11 @@ function appendSearchWhere(where, params, query) {
 
   if (digits) {
     params.push(`%${normalizePhone(query)}%`);
-  } else {
-    params.push(`%${query}%`);
+    where.push(`(c.customer_name ILIKE $${nameParam} OR c.phone LIKE $${params.length})`);
+    return;
   }
 
-  const phoneParam = params.length;
-  where.push(`(c.customer_name ILIKE $${nameParam} OR c.phone LIKE $${phoneParam})`);
+  where.push(`c.customer_name ILIKE $${nameParam}`);
 }
 
 function appendBranchScope(where, params, branchId) {

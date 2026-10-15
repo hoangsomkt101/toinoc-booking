@@ -66,8 +66,16 @@ router.get(
   '/',
   requireBookingCreate,
   asyncHandler(async (req, res) => {
-    const bookings = await bookingService.listBookings(scopedBookingQuery(req));
-    res.json({ data: bookings });
+    const filters = scopedBookingQuery(req);
+    const wantsPagination = ['q', 'page', 'limit', 'view'].some((key) => Object.prototype.hasOwnProperty.call(req.query, key));
+
+    if (wantsPagination) {
+      const result = await bookingService.searchBookings(filters);
+      return res.json({ data: result.items, pagination: result.pagination });
+    }
+
+    const bookings = await bookingService.listBookings(filters);
+    return res.json({ data: bookings });
   })
 );
 

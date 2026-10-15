@@ -49,6 +49,44 @@ test('booking list exposes customer visit counters', async () => {
   assert.match(capturedSql, /history\.phone = b\.phone/);
 });
 
+test('booking search runs on PostgreSQL with filters and pagination', async () => {
+  const queries = [];
+  const executor = {
+    async query(sql, params = []) {
+      queries.push({ sql: String(sql), params });
+
+      if (/SELECT COUNT\(\*\)::INTEGER AS total FROM bookings b/.test(sql)) {
+        return { rowCount: 1, rows: [{ total: 23 }] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    }
+  };
+
+  const result = await bookingService.searchBookings({
+    branch_id: '7',
+    booking_date: '2026-06-22',
+    q: '090-12',
+    page: '2',
+    limit: '10',
+    view: 'pending'
+  }, executor);
+
+  assert.deepEqual(result, {
+    items: [],
+    pagination: { page: 2, limit: 10, total: 23, total_pages: 3 }
+  });
+  assert.equal(queries.length, 2);
+  assert.match(queries[0].sql, /b\.branch_id = \$1/);
+  assert.match(queries[0].sql, /b\.customer_name ILIKE \$2/);
+  assert.match(queries[0].sql, /b\.phone LIKE \$3/);
+  assert.match(queries[0].sql, /b\.booking_time >= \$4::date/);
+  assert.match(queries[0].sql, /b\.status = 'PENDING'/);
+  assert.deepEqual(queries[0].params, [7, '%090-12%', '%09012%', '2026-06-22']);
+  assert.match(queries[1].sql, /LIMIT \$5 OFFSET \$6/);
+  assert.deepEqual(queries[1].params, [7, '%090-12%', '%09012%', '2026-06-22', 10, 10]);
+});
+
 test('table status data combines tables and date scoped open bookings', async () => {
   const capturedSql = [];
   const executor = {

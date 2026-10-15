@@ -27,6 +27,9 @@ const BOOKING_STATUS_LABELS = Object.freeze({
   COMPLETED: 'hoàn tất'
 });
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const BOOKING_SEARCH_VIEWS = Object.freeze(['all', 'pending', 'upcoming', 'completed', 'cancelled']);
+const DEFAULT_BOOKING_PAGE_SIZE = 20;
+const MAX_BOOKING_PAGE_SIZE = 100;
 
 function bookingStatusLabel(status) {
   return BOOKING_STATUS_LABELS[status] || status;
@@ -232,7 +235,30 @@ async function getBookingById(id, executor = pool) {
   return normalizeBookingRow(result.rows[0]);
 }
 
-async function listBookings(filters = {}, executor = pool) {
+function normalizeBookingSearch(value) {
+  const query = String(value || '').trim();
+
+  if (query.length > 120) {
+    throw badRequest('Từ khóa tìm kiếm tối đa 120 ký tự');
+  }
+
+  return query;
+}
+
+function normalizePaginationValue(value, field, fallback, maximum) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw badRequest(`${field} phải là số nguyên dương`);
+  }
+
+  return maximum ? Math.min(parsed, maximum) : parsed;
+}
+
+function bookingListParts(filters = {}) {
   const params = [];
   const where = [];
 
@@ -249,6 +275,38 @@ async function listBookings(filters = {}, executor = pool) {
 
     params.push(statuses);
     where.push(`b.status = ANY($${params.length}::TEXT[])`);
+  }
+
+  const query = normalizeBookingSearch(filters.q);
+  if (query) {
+    params.push(`%${query}%`);
+    const nameParam = params.length;
+    const phone = query.replace(/\D/g, '');
+
+    if (phone) {
+      params.push(`%${phone}%`);
+      where.push(`(b.customer_name ILIKE $${nameParam} OR b.phone LIKE $${params.length})`);
+    } else {
+      where.push(`b.customer_name ILIKE $${nameParam}`);
+    }
+  }
+
+  if (filters.view) {
+    const view = String(filters.view).trim().toLowerCase();
+    if (!BOOKING_SEARCH_VIEWS.includes(view)) {
+      throw badRequest('Chế độ lọc booking không hợp lệ', { allowed: BOOKING_SEARCH_VIEWS });
+    }
+
+    if (view === 'pending') {
+      where.push("b.status = 'PENDING'");
+    } else if (view === 'upcoming') {
+      where.push("b.status IN ('PENDING', 'CONFIRMED')");
+      where.push('b.booking_time >= NOW()');
+    } else if (view === 'completed') {
+      where.push("b.status = 'COMPLETED'");
+    } else if (view === 'cancelled') {
+      where.push("b.status IN ('CANCELLED', 'NO_SHOW')");
+    }
   }
 
   const bookingDate = normalizeBookingDate(filters.booking_date);
@@ -289,12 +347,47 @@ async function listBookings(filters = {}, executor = pool) {
   const orderSql = filters.period === 'closed'
     ? 'ORDER BY b.updated_at DESC, b.id DESC'
     : 'ORDER BY b.booking_time ASC, b.id ASC';
+
+  return { params, whereSql, orderSql };
+}
+
+async function listBookings(filters = {}, executor = pool) {
+  const { params, whereSql, orderSql } = bookingListParts(filters);
   const result = await executor.query(
     `${bookingSelect(false)} ${whereSql} ${orderSql} LIMIT 200`,
     params
   );
 
   return result.rows.map(normalizeBookingRow);
+}
+
+async function searchBookings(filters = {}, executor = pool) {
+  const requestedPage = normalizePaginationValue(filters.page, 'page', 1);
+  const limit = normalizePaginationValue(filters.limit, 'limit', DEFAULT_BOOKING_PAGE_SIZE, MAX_BOOKING_PAGE_SIZE);
+  const { params, whereSql, orderSql } = bookingListParts(filters);
+  const countResult = await executor.query(
+    `SELECT COUNT(*)::INTEGER AS total FROM bookings b ${whereSql}`,
+    params
+  );
+  const total = Number(countResult.rows[0]?.total || 0);
+  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+  const page = totalPages === 0 ? 1 : Math.min(requestedPage, totalPages);
+  const offset = (page - 1) * limit;
+  const listParams = [...params, limit, offset];
+  const result = await executor.query(
+    `${bookingSelect(false)} ${whereSql} ${orderSql} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    listParams
+  );
+
+  return {
+    items: result.rows.map(normalizeBookingRow),
+    pagination: {
+      page,
+      limit,
+      total,
+      total_pages: totalPages
+    }
+  };
 }
 
 async function listTables(filters = {}, executor = pool) {
@@ -901,6 +994,7 @@ module.exports = {
   getBookingById,
   listTableStatuses,
   listBookings,
+  searchBookings,
   listTables,
   updateBooking,
   assignTables,

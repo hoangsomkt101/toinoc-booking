@@ -14,6 +14,12 @@
     dashboard: window.__DASHBOARD__ || {},
     tableStatuses: window.__TABLE_STATUSES__ || {},
     bookings: window.__BOOKINGS__ || [],
+    bookingSearch: {
+      items: [],
+      pagination: null,
+      loading: false,
+      error: ''
+    },
     customers: window.__CUSTOMERS__ || [],
     apiClients: window.__API_CLIENTS__ || [],
     sheetTargets: window.__SHEET_TARGETS__ || [],
@@ -62,6 +68,8 @@
   const bookingTimeChoices = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '24:00'];
   let activeBookingTab = 'all';
   let bookingQuickSearchValue = '';
+  let bookingSearchTimer;
+  let bookingSearchRequestId = 0;
   let tableQuickSearchValue = '';
   let tableBookingSelectionIds = new Set();
   const customerLookupTimers = new WeakMap();
@@ -74,6 +82,7 @@
     openBookings: document.getElementById('open-booking-list'),
     bookingTabs: document.getElementById('booking-tabs'),
     bookingQuickSearch: document.querySelector('[data-booking-quick-search]'),
+    bookingPagination: document.getElementById('booking-pagination'),
     formMessage: document.getElementById('form-message'),
     bookingBranch: document.querySelector('[data-booking-branch]'),
     bookingBranchGrid: document.getElementById('booking-branch-grid'),
@@ -1888,7 +1897,11 @@
     }
 
     activeBookingTab = tabKey;
-    renderBookingBoard();
+    if (bookingQuickSearchTerm()) {
+      refreshBookingSearch(1);
+    } else {
+      renderBookingBoard();
+    }
   }
 
   function updateAssignTableSelection(form) {
@@ -2142,14 +2155,53 @@
       : `<div class="alert alert-light border mb-0">${escapeHtml(emptyMessage)}</div>`;
   }
 
-  function renderBookingBoard() {
-    const bookings = allDashboardBookings();
-    const now = new Date();
-    const filteredBookings = bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now) && bookingMatchesQuickSearch(booking));
+  function renderBookingPagination() {
+    if (!selectors.bookingPagination) {
+      return;
+    }
 
-    renderBookingAlerts(bookings);
-    renderBookingTabs(bookings);
-    renderBookings(selectors.openBookings, filteredBookings);
+    const pagination = state.bookingSearch.pagination;
+    const searchActive = Boolean(bookingQuickSearchTerm());
+
+    if (!searchActive || state.bookingSearch.loading || !pagination || pagination.total_pages <= 1) {
+      selectors.bookingPagination.hidden = true;
+      selectors.bookingPagination.innerHTML = '';
+      return;
+    }
+
+    selectors.bookingPagination.hidden = false;
+    selectors.bookingPagination.innerHTML = `
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span class="small text-body-secondary">${escapeHtml(pagination.total)} kết quả · Trang ${escapeHtml(pagination.page)}/${escapeHtml(pagination.total_pages)}</span>
+        <div class="btn-group" role="group" aria-label="Chuyển trang kết quả tìm booking">
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-booking-page="${escapeHtml(pagination.page - 1)}" ${pagination.page <= 1 ? 'disabled' : ''}>Trước</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-booking-page="${escapeHtml(pagination.page + 1)}" ${pagination.page >= pagination.total_pages ? 'disabled' : ''}>Sau</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBookingBoard() {
+    const dashboardBookings = allDashboardBookings();
+    const searchActive = Boolean(bookingQuickSearchTerm());
+    const bookings = searchActive ? state.bookingSearch.items : dashboardBookings;
+    const now = new Date();
+    const filteredBookings = searchActive
+      ? bookings
+      : bookings.filter((booking) => bookingMatchesTab(booking, activeBookingTab, now) && bookingMatchesQuickSearch(booking));
+
+    renderBookingAlerts(dashboardBookings);
+    renderBookingTabs(dashboardBookings);
+
+    if (searchActive && state.bookingSearch.loading) {
+      selectors.openBookings.innerHTML = '<div class="alert alert-light border mb-0">Đang tìm booking...</div>';
+    } else if (searchActive && state.bookingSearch.error) {
+      selectors.openBookings.innerHTML = `<div class="alert alert-danger mb-0">${escapeHtml(state.bookingSearch.error)}</div>`;
+    } else {
+      renderBookings(selectors.openBookings, filteredBookings);
+    }
+
+    renderBookingPagination();
   }
 
   function tableHoldEndTime(booking) {
@@ -2898,7 +2950,7 @@
     renderUsers();
   }
 
-  async function request(path, options = {}) {
+  async function requestEnvelope(path, options = {}) {
     const response = await fetch(path, {
       credentials: 'same-origin',
       headers: {
@@ -2920,7 +2972,57 @@
       throw new Error(payload.error ? payload.error.message : 'Yêu cầu không thành công');
     }
 
-    return payload.data;
+    return payload;
+  }
+
+  async function request(path, options = {}) {
+    const payload = await requestEnvelope(path, options);
+
+    return payload?.data;
+  }
+
+  async function refreshBookingSearch(page = 1) {
+    const query = String(bookingQuickSearchValue || '').trim();
+
+    if (!query) {
+      bookingSearchRequestId += 1;
+      state.bookingSearch = { items: [], pagination: null, loading: false, error: '' };
+      renderBookingBoard();
+      return;
+    }
+
+    const requestId = ++bookingSearchRequestId;
+    state.bookingSearch.loading = true;
+    state.bookingSearch.error = '';
+    renderBookingBoard();
+
+    try {
+      const payload = await requestEnvelope(scopedPathWithParams('/api/bookings', {
+        q: query,
+        page,
+        limit: 20,
+        view: activeBookingTab
+      }));
+
+      if (requestId !== bookingSearchRequestId) {
+        return;
+      }
+
+      state.bookingSearch.items = payload.data || [];
+      state.bookingSearch.pagination = payload.pagination || null;
+      state.bookingSearch.loading = false;
+    } catch (error) {
+      if (requestId !== bookingSearchRequestId) {
+        return;
+      }
+
+      state.bookingSearch.items = [];
+      state.bookingSearch.pagination = null;
+      state.bookingSearch.loading = false;
+      state.bookingSearch.error = error.message;
+    }
+
+    renderBookingBoard();
   }
 
   async function refreshDashboard() {
@@ -2939,7 +3041,11 @@
     } else {
       state.bookings = await request(scopedPath('/api/bookings'));
     }
-    render();
+    if (bookingQuickSearchTerm()) {
+      await refreshBookingSearch(state.bookingSearch.pagination?.page || 1);
+    } else {
+      render();
+    }
   }
 
   async function handleCreate(event) {
@@ -4110,6 +4216,13 @@
   }
 
   document.addEventListener('click', (event) => {
+    const bookingPageButton = event.target.closest('[data-booking-page]');
+    if (bookingPageButton && !bookingPageButton.disabled) {
+      event.preventDefault();
+      refreshBookingSearch(Number(bookingPageButton.dataset.bookingPage));
+      return;
+    }
+
     const tableCustomerSuggestion = event.target.closest('[data-table-booking-create] [data-customer-suggestion]');
     if (tableCustomerSuggestion) {
       event.preventDefault();
@@ -4355,7 +4468,18 @@
   if (selectors.bookingQuickSearch) {
     selectors.bookingQuickSearch.addEventListener('input', () => {
       bookingQuickSearchValue = selectors.bookingQuickSearch.value;
+      window.clearTimeout(bookingSearchTimer);
+      bookingSearchRequestId += 1;
+
+      if (!bookingQuickSearchTerm()) {
+        refreshBookingSearch(1);
+        return;
+      }
+
+      state.bookingSearch.loading = true;
+      state.bookingSearch.error = '';
       renderBookingBoard();
+      bookingSearchTimer = window.setTimeout(() => refreshBookingSearch(1), 250);
     });
   }
 
