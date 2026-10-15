@@ -2106,7 +2106,6 @@
 
   function renderTimelineBooking(booking) {
     const tables = (booking.assigned_tables || []).map((table) => table.table_code).join(', ');
-    const areaLabel = booking.area_name || '';
     const controls = canManageBookings() ? actionButtons(booking) : '';
     const timelineState = bookingTimelineState(booking);
     const actionRow = controls
@@ -2115,10 +2114,6 @@
             ${controls}
           </div>
         `
-      : '';
-    const branchLabel = shouldShowBookingBranch() && booking.branch_name ? ` · ${booking.branch_name}` : '';
-    const areaMeta = areaLabel
-      ? `<span class="timeline-area" title="Khu vực ${escapeHtml(areaLabel)}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${escapeHtml(areaLabel)}</span>`
       : '';
     const tableMeta = tables
       ? `<span class="timeline-table" title="Bàn ${escapeHtml(tables)}"><i class="fa-solid fa-chair" aria-hidden="true"></i> ${escapeHtml(tables)}</span>`
@@ -2162,8 +2157,7 @@
             </span>
           </div>
           <div class="timeline-meta-row">
-            <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)}${escapeHtml(branchLabel)}</span>
-            ${areaMeta}
+            <span><i class="fa-solid fa-people-group" aria-hidden="true"></i> ${escapeHtml(booking.guest_count)} khách</span>
             ${tableMeta}
           </div>
           ${notice}
