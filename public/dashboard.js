@@ -230,6 +230,42 @@
     }).format(new Date(value));
   }
 
+  function bookingCreatedAgo(value, now = new Date()) {
+    if (!value) {
+      return '';
+    }
+
+    const createdAt = new Date(value);
+    if (Number.isNaN(createdAt.getTime())) {
+      return '';
+    }
+
+    const elapsedMinutes = Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / 60000));
+
+    if (elapsedMinutes < 1) {
+      return 'Đặt vừa xong';
+    }
+
+    if (elapsedMinutes < 60) {
+      return `Đặt từ ${elapsedMinutes} phút trước`;
+    }
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) {
+      return `Đặt từ ${elapsedHours} giờ trước`;
+    }
+
+    return `Đặt từ ${Math.floor(elapsedHours / 24)} ngày trước`;
+  }
+
+  function refreshBookingCreatedAgoLabels() {
+    const now = new Date();
+
+    for (const element of document.querySelectorAll('[data-booking-created-at]')) {
+      element.textContent = bookingCreatedAgo(element.dataset.bookingCreatedAt, now);
+    }
+  }
+
   function formatBookingHour(value) {
     if (!value) {
       return '-';
@@ -2101,6 +2137,10 @@
       : '';
     const customerMeta = bookingCustomerMeta(booking);
     const visitMeta = bookingVisitMeta(booking);
+    const createdAgo = bookingCreatedAgo(booking.created_at);
+    const createdMeta = createdAgo
+      ? `<div class="timeline-created-ago" title="Tạo lúc ${escapeHtml(formatDateTime(booking.created_at))}"><i class="fa-regular fa-clock" aria-hidden="true"></i><span data-booking-created-at="${escapeHtml(booking.created_at)}">${escapeHtml(createdAgo)}</span></div>`
+      : '';
 
     return `
       <div class="booking-timeline-item timeline-${escapeHtml(timelineState.tone)}" data-booking-id="${escapeHtml(booking.id)}">
@@ -2115,6 +2155,7 @@
             <div class="booking-card-main">
               <h3 class="timeline-customer">${escapeHtml(bookingCustomerTitle(booking))}</h3>
               ${customerMeta ? `<div class="booking-meta timeline-phone">${escapeHtml(customerMeta)}</div>` : ''}
+              ${createdMeta}
             </div>
             <span class="timeline-visit-count" title="${escapeHtml(visitMeta.title)}">
               <strong>${escapeHtml(visitMeta.label)}</strong>
@@ -4552,4 +4593,13 @@
   syncDashboardDateControls();
   syncBookingDateControls();
   render();
+
+  if (selectors.openBookings) {
+    window.setInterval(refreshBookingCreatedAgoLabels, 60000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        refreshBookingCreatedAgoLabels();
+      }
+    });
+  }
 })();
