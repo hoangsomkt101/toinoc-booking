@@ -108,6 +108,8 @@ Supporting endpoints:
 - `POST /api/users`
 - `GET /api/online-users`
 
+Customer phone recognition in booking forms uses global `GET /api/customers/suggest` and `GET /api/customers/lookup` queries; it is not restricted by branch.
+
 ## Domain Anchors
 - Booking statuses: `PENDING`, `CONFIRMED`, `CANCELLED`, `NO_SHOW`, `CHECKED_IN`, `CHECKED_OUT`, `COMPLETED`.
 - Table statuses: `AVAILABLE`, `RESERVED`, `OCCUPIED`, `BLOCKED`.

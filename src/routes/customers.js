@@ -58,7 +58,7 @@ router.get(
       throw badRequest('Số điện thoại là bắt buộc');
     }
 
-    const result = await customerService.lookupCustomerByPhone(req.query.phone, scopedCustomerQuery(req));
+    const result = await customerService.lookupCustomerByPhone(req.query.phone);
     res.json({ data: result });
   })
 );
@@ -71,7 +71,7 @@ router.get(
       throw badRequest('Số điện thoại là bắt buộc');
     }
 
-    const customers = await customerService.suggestCustomersByPhone(req.query.phone, scopedCustomerQuery(req));
+    const customers = await customerService.suggestCustomersByPhone(req.query.phone);
     res.json({ data: customers });
   })
 );

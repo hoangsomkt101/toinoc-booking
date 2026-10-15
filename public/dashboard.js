@@ -3255,10 +3255,18 @@
     return form?.querySelector('[data-customer-name], [name="customer_name"]') || document.getElementById('booking-customer-name');
   }
 
-  function customerLookupPath(scope, path, params = {}) {
-    const branchId = customerLookupForm(scope)?.querySelector('[name="branch_id"]')?.value || selectedBranchId();
+  function customerLookupPath(path, params = {}) {
+    const searchParams = new URLSearchParams();
 
-    return scopedPathWithParams(path, { ...params, branch_id: branchId });
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.set(key, value);
+      }
+    }
+
+    const query = searchParams.toString();
+
+    return query ? `${path}?${query}` : path;
   }
 
   function clearCustomerQuickfill(scope) {
@@ -3288,7 +3296,7 @@
           .slice(0, 3)
           .map((booking) => escapeHtml(`${formatDateTime(booking.booking_time)} · ${bookingStatusLabel(booking.status)} · ${booking.guest_count} khách`))
           .join('<br>')
-      : 'Chưa có booking trong phạm vi chi nhánh này.';
+      : 'Chưa có booking trước đó.';
 
     quickfill.innerHTML = `
       <div class="customer-quickfill-card">
@@ -3354,7 +3362,7 @@
     }
 
     try {
-      const customers = await request(customerLookupPath(scope, '/api/customers/suggest', { phone }));
+      const customers = await request(customerLookupPath('/api/customers/suggest', { phone }));
       renderCustomerSuggestions(customers || [], scope);
     } catch (error) {
       if (quickfill) {
@@ -3393,7 +3401,7 @@
     }
 
     try {
-      const result = await request(customerLookupPath(scope, '/api/customers/lookup', { phone }));
+      const result = await request(customerLookupPath('/api/customers/lookup', { phone }));
       const nameInput = customerNameInput(scope);
       if (result?.customer && nameInput && !nameInput.value.trim()) {
         nameInput.value = result.customer.customer_name;
